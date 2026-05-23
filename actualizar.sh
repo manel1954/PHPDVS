@@ -3,8 +3,8 @@
 # path usuario
 usuario="/home/pi"
 usuario="$usuario"
-fecha_imagen="24-05-26"
-nombre_imagen="PHPP-"
+fecha_imagen="25-05-26"
+nombre_imagen="PDVS-"
 version=$nombre_imagen$fecha_imagen
 
 # Añadir líneas vacías hasta tener al menos 58 líneas
