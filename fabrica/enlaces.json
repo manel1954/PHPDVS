@@ -1,0 +1,38 @@
+[
+    {
+        "nombre": "WEB ASSOCIACIOADER",
+        "url": "https://associacioader.com",
+        "bg": "#1a5490",
+        "fg": "#ffffff",
+        "fila": 1,
+        "columna": 1,
+        "local": false
+    },
+    {
+        "nombre": "WEB REM-ESP",
+        "url": "http://rem-esp.es/rem/asociacion/index.php",
+        "bg": "#1a5490",
+        "fg": "#ffffff",
+        "fila": 1,
+        "columna": 2,
+        "local": false
+    },
+    {
+        "nombre": "IPSC2-EA4Master",
+        "url": "http://eamaster04.xreflector.es/ipsc/",
+        "bg": "#1a5490",
+        "fg": "#ffffff",
+        "fila": 1,
+        "columna": 3,
+        "local": false
+    },
+    {
+        "nombre": "ADER.C4FM.ES",
+        "url": "https://ader.c4fm.es",
+        "bg": "#1a5490",
+        "fg": "#ffffff",
+        "fila": 2,
+        "columna": 1,
+        "local": false
+    }
+]

@@ -1,0 +1,10 @@
+{ "now" : 1779490752.8,
+  "messages" : 81263,
+  "aircraft" : [
+    {"hex":"344694","alt_baro":20575,"alt_geom":22000,"gs":378.2,"ias":270,"mach":0.596,"track":203.0,"mag_heading":203.2,"baro_rate":-1024,"geom_rate":-1024,"squawk":"2002","emergency":"none","nav_qnh":1012.8,"nav_altitude_mcp":11008,"lat":41.952597,"lon":1.891820,"nic":8,"rc":186,"seen_pos":16.5,"version":2,"nic_baro":1,"nac_p":9,"nac_v":1,"sil":3,"sil_type":"perhour","gva":2,"sda":3,"mlat":[],"tisb":[],"messages":57,"seen":16.2,"rssi":-7.7},
+    {"hex":"4067c4","flight":"EXS31YT ","alt_baro":33050,"alt_geom":34650,"gs":433.7,"ias":255,"tas":424,"mach":0.724,"track":169.9,"track_rate":0.03,"roll":0.4,"mag_heading":168.9,"baro_rate":0,"geom_rate":32,"squawk":"2247","emergency":"none","category":"A3","nav_altitude_mcp":32992,"nav_altitude_fms":33008,"nav_heading":168.8,"version":2,"nic_baro":1,"nac_p":9,"nac_v":2,"sil":3,"sil_type":"perhour","gva":2,"sda":2,"modea":true,"modec":true,"mlat":[],"tisb":[],"messages":3001,"seen":0.8,"rssi":-3.2},
+    {"hex":"44083b","flight":"EJU35XL ","alt_baro":24475,"alt_geom":26075,"gs":445.1,"ias":301,"tas":434,"mach":0.708,"track":166.6,"track_rate":0.06,"roll":0.0,"mag_heading":164.7,"baro_rate":-2304,"geom_rate":-2272,"squawk":"5204","emergency":"none","category":"A3","nav_qnh":1013.6,"nav_altitude_mcp":20000,"nav_heading":0.0,"version":2,"nic_baro":1,"nac_p":9,"nac_v":1,"sil":3,"sil_type":"perhour","gva":2,"sda":2,"modea":true,"mlat":[],"tisb":[],"messages":4764,"seen":7.0,"rssi":-10.9},
+    {"hex":"4d2007","category":"A3","version":2,"sil_type":"perhour","modea":true,"modec":true,"mlat":[],"tisb":[],"messages":3047,"seen":85.7,"rssi":-10.9},
+    {"hex":"4403f0","category":"A3","version":2,"sil_type":"perhour","modea":true,"mlat":[],"tisb":[],"messages":6254,"seen":291.4,"rssi":-11.3}
+  ]
+}

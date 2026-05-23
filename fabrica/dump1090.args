@@ -1,0 +1,10 @@
+--net
+--device 0
+--ppm 0
+--fix
+--gain -10 
+--lat 40.1234
+--lon -3.9876
+--write-json /var/www/html/dump1090
+--write-json-every 5 
+--modeac

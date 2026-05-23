@@ -1,0 +1,10 @@
+{ "now" : 1779490632.7,
+  "messages" : 76837,
+  "aircraft" : [
+    {"hex":"4067c4","flight":"EXS31YT ","alt_baro":33050,"alt_geom":34650,"gs":432.9,"ias":254,"tas":424,"mach":0.720,"track":169.8,"track_rate":0.00,"roll":-0.2,"mag_heading":168.9,"baro_rate":0,"geom_rate":32,"squawk":"2247","emergency":"none","category":"A3","nav_altitude_mcp":32992,"nav_altitude_fms":33008,"nav_heading":170.2,"version":2,"nic_baro":1,"nac_p":9,"nac_v":2,"sil":3,"sil_type":"perhour","gva":2,"sda":2,"modea":true,"modec":true,"mlat":[],"tisb":[],"messages":537,"seen":0.7,"rssi":-3.3},
+    {"hex":"44083b","alt_baro":29625,"alt_geom":31425,"gs":470.8,"ias":299,"tas":460,"mach":0.784,"track":166.6,"track_rate":0.03,"roll":0.2,"mag_heading":164.5,"baro_rate":-2304,"geom_rate":-2304,"squawk":"5204","category":"A3","nav_qnh":1013.6,"nav_altitude_mcp":20000,"nav_heading":0.0,"version":2,"nic_baro":1,"nac_p":9,"nac_v":1,"sil":3,"sil_type":"perhour","gva":2,"sda":2,"modea":true,"mlat":[],"tisb":[],"messages":3930,"seen":0.7,"rssi":-9.7},
+    {"hex":"3443d5","version":2,"sil_type":"perhour","modea":true,"mlat":[],"tisb":[],"messages":42,"seen":248.5,"rssi":-8.7},
+    {"hex":"4d2007","flight":"WMT49BD ","alt_baro":36000,"alt_geom":37750,"gs":452.8,"ias":258,"tas":448,"mach":0.780,"track":101.3,"track_rate":0.00,"roll":0.2,"mag_heading":98.4,"baro_rate":0,"geom_rate":0,"squawk":"1000","category":"A3","nav_qnh":1012.8,"nav_altitude_mcp":36000,"version":2,"nic_baro":1,"nac_p":9,"nac_v":2,"sil":3,"sil_type":"perhour","gva":2,"sda":3,"modea":true,"modec":true,"mlat":[],"tisb":[],"messages":2979,"seen":0.9,"rssi":-7.1},
+    {"hex":"4403f0","category":"A3","version":2,"sil_type":"perhour","modea":true,"mlat":[],"tisb":[],"messages":6254,"seen":171.3,"rssi":-11.3}
+  ]
+}

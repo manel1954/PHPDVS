@@ -1,0 +1,11 @@
+{ "now" : 1779489671.8,
+  "messages" : 39254,
+  "aircraft" : [
+    {"hex":"020140","flight":"MAC456Y ","alt_baro":37000,"alt_geom":38775,"gs":464.6,"ias":260,"tas":458,"mach":0.800,"track":231.4,"track_rate":-0.03,"roll":0.2,"mag_heading":232.4,"baro_rate":0,"geom_rate":0,"squawk":"4035","emergency":"none","category":"A3","nav_qnh":1013.6,"nav_altitude_mcp":36992,"version":2,"nic_baro":1,"nac_p":9,"nac_v":1,"sil":3,"sil_type":"perhour","gva":2,"sda":2,"modec":true,"mlat":[],"tisb":[],"messages":1489,"seen":0.7,"rssi":-7.5},
+    {"hex":"4cae9e","alt_baro":37525,"alt_geom":39225,"gs":447.2,"ias":255,"tas":454,"mach":0.796,"track":350.5,"track_rate":0.00,"roll":-0.2,"mag_heading":349.3,"baro_rate":832,"geom_rate":864,"squawk":"1066","category":"A3","nav_qnh":1013.6,"nav_altitude_mcp":40000,"nav_altitude_fms":40000,"nav_heading":350.2,"version":2,"nic_baro":1,"nac_p":11,"nac_v":2,"sil":3,"sil_type":"perhour","gva":2,"sda":2,"modea":true,"mlat":[],"tisb":[],"messages":150,"seen":12.3,"rssi":-10.6},
+    {"hex":"3475d9","alt_baro":8875,"alt_geom":9825,"gs":303.9,"track":172.1,"baro_rate":-1984,"squawk":"2021","emergency":"none","category":"A3","nav_qnh":1024.8,"nav_altitude_mcp":4000,"lat":41.244445,"lon":2.173857,"nic":8,"rc":186,"seen_pos":21.5,"version":2,"nic_baro":1,"nac_p":8,"nac_v":1,"sil":3,"sil_type":"perhour","mlat":[],"tisb":[],"messages":953,"seen":21.5,"rssi":-10.2},
+    {"hex":"4caa5f","alt_baro":20275,"tas":444,"track_rate":0.03,"roll":0.4,"squawk":"2035","category":"A3","nav_qnh":1013.6,"nav_altitude_mcp":6592,"nav_altitude_fms":10000,"nav_heading":163.8,"version":2,"nic_baro":1,"nac_p":8,"sil":3,"sil_type":"perhour","modea":true,"mlat":[],"tisb":[],"messages":4870,"seen":11.0,"rssi":-11.8},
+    {"hex":"346690","category":"A3","version":2,"sil_type":"perhour","modea":true,"mlat":[],"tisb":[],"messages":4840,"seen":285.3,"rssi":-9.1},
+    {"hex":"4ca6a6","category":"A3","version":2,"sil_type":"perhour","modea":true,"modec":true,"mlat":[],"tisb":[],"messages":2497,"seen":196.6,"rssi":-12.2}
+  ]
+}

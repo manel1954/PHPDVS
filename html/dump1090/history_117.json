@@ -1,0 +1,12 @@
+{ "now" : 1779485649.8,
+  "messages" : 1631254,
+  "aircraft" : [
+    {"hex":"4400c8","flight":"EJU61AV ","alt_baro":33000,"alt_geom":34725,"gs":457.7,"ias":269,"tas":446,"mach":0.760,"track":165.4,"track_rate":0.00,"roll":0.4,"mag_heading":164.0,"baro_rate":-64,"geom_rate":-32,"squawk":"2007","emergency":"none","category":"A3","nav_qnh":1013.6,"nav_altitude_mcp":32992,"version":2,"nic_baro":1,"nac_p":9,"nac_v":1,"sil":3,"sil_type":"perhour","gva":2,"sda":2,"modea":true,"modec":true,"mlat":[],"tisb":[],"messages":714,"seen":0.8,"rssi":-4.2},
+    {"hex":"4ca624","version":0,"sil_type":"unknown","mlat":[],"tisb":[],"messages":20,"seen":83.7,"rssi":-11.2},
+    {"hex":"4d2288","flight":"RYR74RR ","alt_baro":37000,"alt_geom":38725,"gs":452.6,"ias":254,"tas":450,"mach":0.784,"track":232.9,"track_rate":0.00,"roll":0.9,"mag_heading":232.7,"baro_rate":0,"geom_rate":0,"squawk":"4015","emergency":"none","category":"A3","nav_qnh":1013.6,"nav_altitude_mcp":36992,"nav_altitude_fms":37008,"nav_heading":232.7,"version":2,"nic_baro":1,"nac_p":8,"nac_v":1,"sil":3,"sil_type":"perhour","mlat":[],"tisb":[],"messages":222,"seen":1.4,"rssi":-11.9},
+    {"hex":"407862","flight":"EXS82T  ","alt_baro":33000,"alt_geom":34650,"gs":418.6,"ias":245,"tas":410,"mach":0.696,"track":165.3,"track_rate":0.00,"roll":-0.2,"mag_heading":164.5,"baro_rate":-128,"geom_rate":-96,"squawk":"2232","emergency":"none","category":"A3","nav_qnh":1013.6,"nav_altitude_mcp":32896,"nav_altitude_fms":33008,"nav_heading":165.2,"version":2,"nic_baro":1,"nac_p":9,"nac_v":1,"sil":3,"sil_type":"perhour","gva":2,"sda":2,"modea":true,"modec":true,"mlat":[],"tisb":[],"messages":2283,"seen":1.8,"rssi":-10.8},
+    {"hex":"347696","category":"A3","version":2,"sil_type":"perhour","modea":true,"mlat":[],"tisb":[],"messages":372,"seen":90.4,"rssi":-12.0},
+    {"hex":"345043","flight":"VLG33BP ","alt_baro":9875,"alt_geom":10775,"gs":280.0,"ias":231,"mach":0.420,"track":180.4,"mag_heading":177.2,"baro_rate":-1344,"geom_rate":-1056,"squawk":"1000","category":"A3","nav_qnh":1013.3,"nav_altitude_mcp":9008,"lat":41.358170,"lon":2.108704,"nic":8,"rc":186,"seen_pos":58.1,"version":2,"nac_v":1,"sil_type":"perhour","mlat":[],"tisb":[],"messages":474,"seen":12.4,"rssi":-12.1},
+    {"hex":"40622b","category":"A3","version":2,"sil_type":"perhour","modea":true,"mlat":[],"tisb":[],"messages":2886,"seen":99.1,"rssi":-12.1}
+  ]
+}

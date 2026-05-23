@@ -1,0 +1,12 @@
+{ "now" : 1779489581.7,
+  "messages" : 37125,
+  "aircraft" : [
+    {"hex":"020140","flight":"MAC456Y ","alt_baro":37000,"alt_geom":38775,"gs":464.0,"ias":259,"tas":458,"mach":0.800,"track":231.5,"track_rate":0.06,"roll":0.2,"mag_heading":232.6,"baro_rate":0,"geom_rate":0,"squawk":"4035","nav_qnh":1013.6,"nav_altitude_mcp":36992,"version":2,"nic_baro":1,"nac_p":9,"nac_v":1,"sil":3,"sil_type":"perhour","gva":2,"sda":2,"mlat":[],"tisb":[],"messages":135,"seen":1.2,"rssi":-7.8},
+    {"hex":"4cae9e","category":"A3","version":0,"sil_type":"unknown","mlat":[],"tisb":[],"messages":44,"seen":50.4,"rssi":-12.5},
+    {"hex":"3475d9","flight":"VLG89PM ","alt_baro":9775,"alt_geom":10725,"gs":300.1,"ias":250,"tas":294,"mach":0.452,"track":171.8,"track_rate":0.00,"roll":0.0,"mag_heading":168.9,"baro_rate":-448,"geom_rate":-384,"squawk":"2021","emergency":"none","category":"A3","nav_qnh":1012.8,"nav_altitude_mcp":8992,"lat":41.345184,"lon":2.154756,"nic":8,"rc":186,"seen_pos":4.6,"version":2,"nic_baro":1,"nac_p":8,"nac_v":1,"sil":3,"sil_type":"perhour","gva":1,"sda":2,"mlat":[],"tisb":[],"messages":899,"seen":2.3,"rssi":-8.5},
+    {"hex":"4caa5f","flight":"RYR35TJ ","alt_baro":24125,"alt_geom":25625,"gs":459.9,"ias":313,"tas":452,"mach":0.732,"track":164.9,"track_rate":0.03,"roll":0.4,"mag_heading":163.5,"baro_rate":-2368,"geom_rate":-2176,"squawk":"2035","emergency":"none","category":"A3","nav_qnh":1013.6,"nav_altitude_mcp":20000,"nav_altitude_fms":10000,"nav_heading":163.8,"version":2,"nic_baro":1,"nac_p":8,"nac_v":1,"sil":3,"sil_type":"perhour","gva":1,"sda":2,"modea":true,"mlat":[],"tisb":[],"messages":4631,"seen":0.8,"rssi":-7.8},
+    {"hex":"346690","category":"A3","version":2,"sil_type":"perhour","modea":true,"mlat":[],"tisb":[],"messages":4840,"seen":195.2,"rssi":-9.1},
+    {"hex":"4ca6a6","category":"A3","version":2,"sil_type":"perhour","modea":true,"modec":true,"mlat":[],"tisb":[],"messages":2497,"seen":106.5,"rssi":-12.2},
+    {"hex":"345042","category":"A3","version":2,"sil_type":"perhour","modea":true,"mlat":[],"tisb":[],"messages":3827,"seen":239.0,"rssi":-10.9}
+  ]
+}

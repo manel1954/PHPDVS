@@ -1,0 +1,11 @@
+{ "now" : 1779490842.9,
+  "messages" : 84104,
+  "aircraft" : [
+    {"hex":"71ba06","alt_baro":34000,"alt_geom":35625,"gs":488.5,"track":96.8,"geom_rate":0,"squawk":"1427","nav_qnh":1012.8,"nav_altitude_mcp":34016,"nav_heading":94.2,"nav_modes":["autopilot","vnav","lnav","tcas"],"version":0,"nic_baro":1,"nac_p":8,"nac_v":2,"sil":2,"sil_type":"unknown","mlat":[],"tisb":[],"messages":30,"seen":7.9,"rssi":-10.6},
+    {"hex":"4ca801","flight":"RYR9408 ","alt_baro":37000,"alt_geom":38725,"gs":453.3,"ias":253,"tas":448,"mach":0.784,"track":225.3,"track_rate":0.00,"roll":0.0,"mag_heading":225.7,"baro_rate":0,"geom_rate":0,"squawk":"4050","emergency":"none","category":"A3","nav_qnh":1013.6,"nav_altitude_mcp":36992,"nav_altitude_fms":37008,"nav_heading":225.0,"version":2,"nic_baro":1,"nac_p":8,"nac_v":1,"sil":3,"sil_type":"perhour","gva":1,"sda":2,"mlat":[],"tisb":[],"messages":154,"seen":5.7,"rssi":-10.1},
+    {"hex":"344694","alt_baro":19975,"nav_qnh":1012.8,"nav_altitude_mcp":11008,"lat":41.893112,"lon":1.858000,"nic":8,"rc":186,"seen_pos":69.3,"version":2,"nic_baro":1,"nac_p":9,"sil":3,"sil_type":"perhour","mlat":[],"tisb":[],"messages":68,"seen":69.3,"rssi":-11.1},
+    {"hex":"4067c4","flight":"EXS31YT ","alt_baro":32300,"alt_geom":33875,"gs":424.7,"ias":252,"tas":414,"mach":0.704,"track":169.8,"track_rate":0.00,"roll":0.2,"mag_heading":168.6,"baro_rate":-1088,"geom_rate":-1088,"squawk":"2247","emergency":"none","category":"A3","nav_altitude_mcp":20000,"nav_altitude_fms":7008,"nav_heading":168.8,"version":2,"nic_baro":1,"nac_p":9,"nac_v":2,"sil":3,"sil_type":"perhour","gva":2,"sda":2,"modea":true,"mlat":[],"tisb":[],"messages":4777,"seen":0.7,"rssi":-3.4},
+    {"hex":"44083b","flight":"EJU35XL ","alt_baro":20150,"alt_geom":21675,"gs":431.3,"ias":300,"tas":410,"mach":0.652,"track":161.5,"track_rate":0.00,"roll":0.5,"mag_heading":160.3,"baro_rate":-2688,"geom_rate":-2688,"squawk":"5204","emergency":"none","category":"A3","nav_qnh":1013.6,"nav_altitude_mcp":7008,"nav_heading":0.0,"version":2,"nic_baro":1,"nac_p":9,"nac_v":1,"sil":3,"sil_type":"perhour","gva":2,"sda":2,"modea":true,"mlat":[],"tisb":[],"messages":5005,"seen":6.0,"rssi":-11.3},
+    {"hex":"4d2007","category":"A3","version":2,"sil_type":"perhour","modea":true,"modec":true,"mlat":[],"tisb":[],"messages":3051,"seen":77.6,"rssi":-11.2}
+  ]
+}

@@ -1,0 +1,13 @@
+{ "now" : 1779485349.5,
+  "messages" : 1625122,
+  "aircraft" : [
+    {"hex":"347696","alt_baro":10200,"alt_geom":11175,"gs":314.0,"track":195.9,"baro_rate":-256,"version":0,"nac_p":8,"nac_v":1,"sil":2,"sil_type":"unknown","mlat":[],"tisb":[],"messages":5,"seen":1.5,"rssi":-9.9},
+    {"hex":"4009c6","flight":"BAW486  ","alt_baro":9225,"alt_geom":10350,"gs":303.0,"ias":250,"mach":0.444,"track":180.6,"mag_heading":178.4,"baro_rate":-960,"geom_rate":-960,"squawk":"1165","category":"A3","nav_qnh":1012.8,"nav_altitude_mcp":8992,"lat":41.383347,"lon":2.108582,"nic":8,"rc":186,"seen_pos":21.5,"version":2,"nic_baro":1,"nac_p":9,"nac_v":1,"sil":3,"sil_type":"perhour","modea":true,"mlat":[],"tisb":[],"messages":286,"seen":20.4,"rssi":-9.2},
+    {"hex":"345043","category":"A3","version":0,"sil_type":"unknown","mlat":[],"tisb":[],"messages":48,"seen":3.5,"rssi":-12.3},
+    {"hex":"406b49","version":0,"sil_type":"unknown","mlat":[],"tisb":[],"messages":51,"seen":141.4,"rssi":-11.8},
+    {"hex":"40622b","flight":"EZY46DM ","alt_baro":16175,"alt_geom":17375,"gs":353.2,"ias":283,"tas":366,"mach":0.572,"track":292.6,"track_rate":-0.34,"roll":-5.8,"mag_heading":294.4,"baro_rate":1088,"geom_rate":992,"squawk":"5370","emergency":"none","category":"A3","nav_qnh":1013.6,"nav_altitude_mcp":24000,"nav_heading":0.0,"lat":41.603165,"lon":2.300575,"nic":8,"rc":186,"seen_pos":2.3,"version":2,"nic_baro":1,"nac_p":9,"nac_v":1,"sil":3,"sil_type":"perhour","gva":2,"sda":2,"modea":true,"mlat":[],"tisb":[],"messages":2568,"seen":0.8,"rssi":-8.3},
+    {"hex":"406444","category":"A3","version":2,"sil_type":"perhour","modea":true,"modec":true,"mlat":[],"tisb":[],"messages":578,"seen":183.4,"rssi":-13.2},
+    {"hex":"3444d0","category":"A3","version":2,"sil_type":"perhour","modea":true,"mlat":[],"tisb":[],"messages":575,"seen":77.6,"rssi":-10.9},
+    {"hex":"394c0c","category":"A3","version":2,"sil_type":"perhour","modea":true,"mlat":[],"tisb":[],"messages":627,"seen":244.0,"rssi":-11.7}
+  ]
+}

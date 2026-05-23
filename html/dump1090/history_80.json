@@ -1,0 +1,11 @@
+{ "now" : 1779490902.9,
+  "messages" : 85032,
+  "aircraft" : [
+    {"hex":"71ba06","alt_baro":33975,"squawk":"1427","version":0,"sil_type":"unknown","mlat":[],"tisb":[],"messages":36,"seen":21.0,"rssi":-11.2},
+    {"hex":"4ca801","flight":"RYR9408 ","alt_baro":37000,"alt_geom":38725,"gs":452.6,"ias":253,"tas":448,"mach":0.780,"track":225.2,"track_rate":0.00,"roll":0.2,"mag_heading":225.5,"baro_rate":0,"geom_rate":0,"squawk":"4050","emergency":"none","category":"A3","nav_qnh":1013.6,"nav_altitude_mcp":36992,"nav_altitude_fms":37008,"nav_heading":225.0,"version":2,"nic_baro":1,"nac_p":8,"nac_v":1,"sil":3,"sil_type":"perhour","gva":1,"sda":2,"mlat":[],"tisb":[],"messages":426,"seen":2.9,"rssi":-9.3},
+    {"hex":"344694","version":2,"sil_type":"perhour","mlat":[],"tisb":[],"messages":68,"seen":129.3,"rssi":-11.1},
+    {"hex":"4067c4","flight":"EXS31YT ","alt_baro":31225,"alt_geom":32800,"gs":411.4,"ias":249,"tas":404,"mach":0.684,"track":169.9,"track_rate":0.00,"roll":0.4,"mag_heading":168.2,"baro_rate":-1024,"geom_rate":-1024,"squawk":"2247","emergency":"none","category":"A3","nav_altitude_mcp":20000,"nav_altitude_fms":7008,"nav_heading":168.8,"version":2,"nic_baro":1,"nac_p":9,"nac_v":2,"sil":3,"sil_type":"perhour","gva":2,"sda":2,"modea":true,"mlat":[],"tisb":[],"messages":5246,"seen":0.8,"rssi":-8.0},
+    {"hex":"44083b","alt_baro":20150,"alt_geom":21675,"gs":431.3,"ias":300,"mach":0.652,"track":161.5,"mag_heading":160.3,"baro_rate":-2688,"geom_rate":-2688,"squawk":"5204","emergency":"none","category":"A3","version":2,"nac_v":1,"sil_type":"perhour","modea":true,"mlat":[],"tisb":[],"messages":5005,"seen":66.0,"rssi":-11.3},
+    {"hex":"4d2007","category":"A3","version":2,"sil_type":"perhour","modea":true,"modec":true,"mlat":[],"tisb":[],"messages":3051,"seen":137.6,"rssi":-11.2}
+  ]
+}

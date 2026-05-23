@@ -1,0 +1,12 @@
+{ "now" : 1779489611.8,
+  "messages" : 37779,
+  "aircraft" : [
+    {"hex":"020140","flight":"MAC456Y ","alt_baro":37000,"alt_geom":38775,"gs":464.0,"ias":260,"tas":458,"mach":0.800,"track":231.5,"track_rate":0.00,"roll":-0.2,"mag_heading":232.4,"baro_rate":0,"geom_rate":-32,"squawk":"4035","emergency":"none","category":"A3","nav_qnh":1013.6,"nav_altitude_mcp":36992,"version":2,"nic_baro":1,"nac_p":9,"nac_v":1,"sil":3,"sil_type":"perhour","gva":2,"sda":2,"mlat":[],"tisb":[],"messages":439,"seen":1.5,"rssi":-8.3},
+    {"hex":"4cae9e","alt_baro":36800,"alt_geom":38475,"gs":446.0,"track":350.6,"baro_rate":768,"category":"A3","version":0,"nac_p":8,"nac_v":2,"sil":2,"sil_type":"unknown","mlat":[],"tisb":[],"messages":57,"seen":7.0,"rssi":-10.8},
+    {"hex":"3475d9","flight":"VLG89PM ","alt_baro":9500,"alt_geom":10450,"gs":300.1,"ias":250,"tas":294,"mach":0.452,"track":171.8,"track_rate":0.00,"roll":0.0,"mag_heading":168.9,"baro_rate":-512,"geom_rate":-384,"squawk":"2021","emergency":"none","category":"A3","nav_qnh":1012.8,"nav_altitude_mcp":8992,"lat":41.300633,"lon":2.163308,"nic":8,"rc":186,"seen_pos":2.2,"version":2,"nic_baro":1,"nac_p":8,"nac_v":1,"sil":3,"sil_type":"perhour","gva":1,"sda":2,"mlat":[],"tisb":[],"messages":925,"seen":1.6,"rssi":-9.8},
+    {"hex":"4caa5f","flight":"RYR35TJ ","alt_baro":22850,"alt_geom":24500,"gs":459.0,"ias":315,"tas":444,"mach":0.724,"track":164.8,"track_rate":0.03,"roll":0.4,"mag_heading":163.8,"baro_rate":-3136,"geom_rate":-3136,"squawk":"2035","category":"A3","nav_qnh":1013.6,"nav_altitude_mcp":6592,"nav_altitude_fms":10000,"nav_heading":163.8,"version":2,"nic_baro":1,"nac_p":8,"nac_v":1,"sil":3,"sil_type":"perhour","gva":1,"sda":2,"modea":true,"mlat":[],"tisb":[],"messages":4836,"seen":4.7,"rssi":-10.6},
+    {"hex":"346690","category":"A3","version":2,"sil_type":"perhour","modea":true,"mlat":[],"tisb":[],"messages":4840,"seen":225.2,"rssi":-9.1},
+    {"hex":"4ca6a6","category":"A3","version":2,"sil_type":"perhour","modea":true,"modec":true,"mlat":[],"tisb":[],"messages":2497,"seen":136.6,"rssi":-12.2},
+    {"hex":"345042","category":"A3","version":2,"sil_type":"perhour","modea":true,"mlat":[],"tisb":[],"messages":3827,"seen":269.0,"rssi":-10.9}
+  ]
+}

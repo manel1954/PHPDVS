@@ -1,0 +1,12 @@
+{ "now" : 1779490392.5,
+  "messages" : 68330,
+  "aircraft" : [
+    {"hex":"44083b","flight":"EJU35XL ","alt_baro":37000,"alt_geom":38775,"gs":460.8,"ias":255,"tas":452,"mach":0.788,"track":166.4,"track_rate":0.06,"roll":0.0,"mag_heading":165.4,"baro_rate":0,"geom_rate":0,"squawk":"5204","emergency":"none","category":"A3","nav_qnh":1013.6,"nav_altitude_mcp":36992,"nav_heading":0.0,"version":2,"nic_baro":1,"nac_p":9,"nac_v":1,"sil":3,"sil_type":"perhour","gva":2,"sda":2,"modea":true,"modec":true,"mlat":[],"tisb":[],"messages":1002,"seen":1.0,"rssi":-5.5},
+    {"hex":"3443d5","version":2,"sil_type":"perhour","modea":true,"mlat":[],"tisb":[],"messages":42,"seen":8.4,"rssi":-8.7},
+    {"hex":"4d2007","flight":"WMT49BD ","alt_baro":36000,"alt_geom":37750,"gs":454.0,"ias":257,"tas":448,"mach":0.776,"track":100.8,"track_rate":0.00,"roll":0.2,"mag_heading":98.3,"baro_rate":0,"geom_rate":32,"squawk":"1000","nav_qnh":1012.8,"nav_altitude_mcp":36000,"version":2,"nic_baro":1,"nac_p":9,"nac_v":2,"sil":3,"sil_type":"perhour","gva":2,"sda":3,"modea":true,"mlat":[],"tisb":[],"messages":319,"seen":2.1,"rssi":-7.1},
+    {"hex":"0641ee","category":"A5","version":2,"sil_type":"perhour","modea":true,"mlat":[],"tisb":[],"messages":834,"seen":138.1,"rssi":-10.4},
+    {"hex":"4403f0","flight":"EJU42YB ","alt_baro":25350,"alt_geom":27025,"gs":482.9,"ias":311,"tas":464,"mach":0.768,"track":169.6,"track_rate":0.00,"roll":0.2,"mag_heading":168.8,"baro_rate":-4800,"geom_rate":-4928,"squawk":"2037","emergency":"none","category":"A3","nav_qnh":1013.6,"nav_altitude_mcp":20000,"nav_heading":0.0,"version":2,"nic_baro":1,"nac_p":9,"nac_v":1,"sil":3,"sil_type":"perhour","gva":2,"sda":2,"modea":true,"mlat":[],"tisb":[],"messages":6081,"seen":1.6,"rssi":-10.6},
+    {"hex":"4cafd2","category":"A3","version":2,"sil_type":"perhour","modea":true,"mlat":[],"tisb":[],"messages":4772,"seen":93.7,"rssi":-9.1},
+    {"hex":"020140","category":"A3","version":2,"sil_type":"perhour","modea":true,"modec":true,"mlat":[],"tisb":[],"messages":7499,"seen":209.8,"rssi":-9.9}
+  ]
+}

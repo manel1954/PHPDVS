@@ -1,0 +1,12 @@
+{ "now" : 1779490422.5,
+  "messages" : 69314,
+  "aircraft" : [
+    {"hex":"44083b","flight":"EJU35XL ","alt_baro":37000,"alt_geom":38775,"gs":461.6,"ias":255,"tas":450,"mach":0.788,"track":166.6,"track_rate":-0.03,"roll":0.2,"mag_heading":165.4,"baro_rate":0,"geom_rate":0,"squawk":"5204","emergency":"none","category":"A3","nav_qnh":1013.6,"nav_altitude_mcp":36992,"nav_heading":0.0,"version":2,"nic_baro":1,"nac_p":9,"nac_v":1,"sil":3,"sil_type":"perhour","gva":2,"sda":2,"modea":true,"modec":true,"mlat":[],"tisb":[],"messages":1405,"seen":0.7,"rssi":-5.2},
+    {"hex":"3443d5","version":2,"sil_type":"perhour","modea":true,"mlat":[],"tisb":[],"messages":42,"seen":38.4,"rssi":-8.7},
+    {"hex":"4d2007","flight":"WMT49BD ","alt_baro":36000,"alt_geom":37750,"gs":454.2,"ias":258,"tas":448,"mach":0.776,"track":100.9,"track_rate":0.00,"roll":0.2,"mag_heading":98.4,"baro_rate":0,"geom_rate":0,"squawk":"1000","category":"A3","nav_qnh":1012.8,"nav_altitude_mcp":36000,"lat":41.205231,"lon":2.435120,"nic":8,"rc":186,"seen_pos":1.9,"version":2,"nic_baro":1,"nac_p":9,"nac_v":2,"sil":3,"sil_type":"perhour","gva":2,"sda":3,"modea":true,"mlat":[],"tisb":[],"messages":543,"seen":1.2,"rssi":-7.4},
+    {"hex":"0641ee","category":"A5","version":2,"sil_type":"perhour","modea":true,"mlat":[],"tisb":[],"messages":834,"seen":168.1,"rssi":-10.4},
+    {"hex":"4403f0","flight":"EJU42YB ","alt_baro":23650,"alt_geom":25300,"gs":469.3,"ias":319,"tas":456,"mach":0.740,"track":169.2,"track_rate":-0.03,"roll":0.2,"mag_heading":168.2,"baro_rate":-2560,"geom_rate":-2528,"squawk":"2037","emergency":"none","category":"A3","nav_qnh":1013.6,"nav_altitude_mcp":7008,"nav_heading":0.0,"version":2,"nic_baro":1,"nac_p":9,"nac_v":1,"sil":3,"sil_type":"perhour","gva":2,"sda":2,"modea":true,"mlat":[],"tisb":[],"messages":6220,"seen":1.1,"rssi":-9.8},
+    {"hex":"4cafd2","category":"A3","version":2,"sil_type":"perhour","modea":true,"mlat":[],"tisb":[],"messages":4772,"seen":123.7,"rssi":-9.1},
+    {"hex":"020140","category":"A3","version":2,"sil_type":"perhour","modea":true,"modec":true,"mlat":[],"tisb":[],"messages":7499,"seen":239.8,"rssi":-9.9}
+  ]
+}
