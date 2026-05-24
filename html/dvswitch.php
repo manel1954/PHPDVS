@@ -4,8 +4,19 @@
 // EA3EIZ · Associació ADER
 // =============================================
 
-$AB_INI  = '/opt/Analog_Bridge/Analog_Bridge.ini';
-$MB_INI  = '/opt/MMDVM_Bridge/MMDVM_Bridge.ini';
+$AB_INI      = '/opt/Analog_Bridge/Analog_Bridge.ini';
+$MB_INI      = '/opt/MMDVM_Bridge/MMDVM_Bridge.ini';
+$BM_CFG      = '/opt/dvswitch-gw/bm_config.json';
+$DMRPLUS_CFG = '/opt/dvswitch-gw/dmrplus_config.json';
+
+function loadCfg(string $file, array $defaults): array {
+    if (!file_exists($file)) return $defaults;
+    $d = json_decode(file_get_contents($file), true);
+    return is_array($d) ? array_merge($defaults, $d) : $defaults;
+}
+function saveCfg(string $file, array $data): void {
+    file_put_contents($file, json_encode($data, JSON_PRETTY_PRINT));
+}
 
 function iniGet(string $file, string $section, string $key): string {
     if (!file_exists($file)) return '';
@@ -128,6 +139,14 @@ if (isset($_GET['action'])) {
             switch ($sistema) {
 
                 case 'dmr_bm':
+                    // Guardar config BM en JSON
+                    saveCfg($BM_CFG, [
+                        'address'  => trim($_POST['bm_address']  ?? 'master.spain-dmr.es'),
+                        'port'     => trim($_POST['bm_port']     ?? '62031'),
+                        'password' => trim($_POST['bm_password'] ?? ''),
+                        'slot1'    => trim($_POST['bm_slot1']    ?? '0'),
+                        'slot2'    => trim($_POST['bm_slot2']    ?? '1'),
+                    ]);
                     iniSet($MB_INI, 'DMR', 'Enable', '1');
                     iniSet($MB_INI, 'DMR Network', 'Enable',   '1');
                     iniSet($MB_INI, 'DMR Network', 'Address',  trim($_POST['bm_address']  ?? 'master.spain-dmr.es'));
@@ -135,12 +154,20 @@ if (isset($_GET['action'])) {
                     iniSet($MB_INI, 'DMR Network', 'Password', trim($_POST['bm_password'] ?? ''));
                     iniSet($MB_INI, 'DMR Network', 'Slot1',    trim($_POST['bm_slot1']    ?? '0'));
                     iniSet($MB_INI, 'DMR Network', 'Slot2',    trim($_POST['bm_slot2']    ?? '1'));
-                    // Borrar Options BM
                     iniSetOrAdd($MB_INI, 'DMR Network', 'Options', '');
                     iniSet($AB_INI, 'AMBE_AUDIO',  'ambeMode', 'DMR');
                     break;
 
                 case 'dmr_plus':
+                    // Guardar config DMR+ en JSON
+                    saveCfg($DMRPLUS_CFG, [
+                        'address'  => trim($_POST['dmrplus_address']  ?? 'ipsc2-spain.xreflector.net'),
+                        'port'     => trim($_POST['dmrplus_port']     ?? '62031'),
+                        'password' => trim($_POST['dmrplus_password'] ?? 'passw0rd'),
+                        'slot1'    => trim($_POST['dmrplus_slot1']    ?? '1'),
+                        'slot2'    => trim($_POST['dmrplus_slot2']    ?? '1'),
+                        'options'  => trim($_POST['dmrplus_essid']    ?? '4374'),
+                    ]);
                     iniSet($MB_INI, 'DMR', 'Enable', '1');
                     iniSet($MB_INI, 'DMR Network', 'Enable',   '1');
                     iniSet($MB_INI, 'DMR Network', 'Address',  trim($_POST['dmrplus_address']  ?? 'ipsc2-spain.xreflector.net'));
@@ -214,21 +241,24 @@ $ab_ambeMode     = iniGet($AB_INI,'AMBE_AUDIO','ambeMode')     ?: 'DMR';
 $mb_Callsign     = iniGet($MB_INI,'General','Callsign') ?: 'EA3EIZ';
 $mb_Id           = iniGet($MB_INI,'General','Id')       ?: '214317526';
 
-// BrandMeister
-$bm_address      = iniGet($MB_INI,'DMR Network','Address')  ?: 'master.spain-dmr.es';
-$bm_port         = iniGet($MB_INI,'DMR Network','Port')     ?: '62031';
-$bm_password     = iniGet($MB_INI,'DMR Network','Password') ?: '';
-$bm_slot1        = iniGet($MB_INI,'DMR Network','Slot1')    ?: '0';
-$bm_slot2        = iniGet($MB_INI,'DMR Network','Slot2')    ?: '1';
+// BrandMeister — leer desde JSON persistente
+$_bm_def = ['address'=>'master.spain-dmr.es','port'=>'62031','password'=>'','slot1'=>'0','slot2'=>'1'];
+$_bm = loadCfg($BM_CFG, $_bm_def);
+$bm_address  = $_bm['address'];
+$bm_port     = $_bm['port'];
+$bm_password = $_bm['password'];
+$bm_slot1    = $_bm['slot1'];
+$bm_slot2    = $_bm['slot2'];
 
-// DMR+ — leer del ini si el sistema activo es dmr_plus, si no usar defaults
-$dmrplus_address  = iniGet($MB_INI,'DMR Network','Address')  ?: 'ipsc2-spain.xreflector.net';
-$dmrplus_port     = iniGet($MB_INI,'DMR Network','Port')     ?: '62031';
-$dmrplus_password = iniGet($MB_INI,'DMR Network','Password') ?: 'passw0rd';
-$dmrplus_slot1    = iniGet($MB_INI,'DMR Network','Slot1')    ?: '1';
-$dmrplus_slot2    = iniGet($MB_INI,'DMR Network','Slot2')    ?: '1';
-// Mostrar Options completo tal como está en el ini
-$dmrplus_essid = iniGet($MB_INI,'DMR Network','Options') ?: '4374';
+// DMR+ — leer desde JSON persistente
+$_dp_def = ['address'=>'ipsc2-spain.xreflector.net','port'=>'62031','password'=>'passw0rd','slot1'=>'1','slot2'=>'1','options'=>'4374'];
+$_dp = loadCfg($DMRPLUS_CFG, $_dp_def);
+$dmrplus_address  = $_dp['address'];
+$dmrplus_port     = $_dp['port'];
+$dmrplus_password = $_dp['password'];
+$dmrplus_slot1    = $_dp['slot1'];
+$dmrplus_slot2    = $_dp['slot2'];
+$dmrplus_essid    = $_dp['options'];
 
 // YSF
 $ysf_gw     = iniGet($MB_INI,'System Fusion Network','GatewayAddress') ?: '127.0.0.1';
