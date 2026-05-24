@@ -345,10 +345,7 @@ $mb_Slot2        = iniGet($MB_INI, 'DMR Network', 'Slot2')       ?: '1';
 
 <div class="header">
   <h1>⚡ DVSWITCH CONTROL · EA3EIZ</h1>
-  <div style="display:flex;gap:.5rem;">
-    <a href="/dvswitch" class="btn-back" style="border-color:var(--cyan);color:var(--cyan);">📊 DVSWITCH DASHBOARD</a>
-    <a href="mmdvm.php" class="btn-back">🏠 PANEL PHPPLUS</a>
-  </div>
+  <a href="mmdvm.php" class="btn-back">🏠 PANEL PHPPLUS</a>
 </div>
 
 <div class="grid">
