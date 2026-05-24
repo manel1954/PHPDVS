@@ -221,13 +221,16 @@ $bm_password     = iniGet($MB_INI,'DMR Network','Password') ?: '';
 $bm_slot1        = iniGet($MB_INI,'DMR Network','Slot1')    ?: '0';
 $bm_slot2        = iniGet($MB_INI,'DMR Network','Slot2')    ?: '1';
 
-// DMR+
-$dmrplus_address  = 'ipsc2-spain.xreflector.net';
-$dmrplus_port     = '62031';
-$dmrplus_password = 'passw0rd';
-$dmrplus_slot1    = '1';
-$dmrplus_slot2    = '1';
-$dmrplus_essid    = '4374';
+// DMR+ — leer del ini si el sistema activo es dmr_plus, si no usar defaults
+$dmrplus_address  = iniGet($MB_INI,'DMR Network','Address')  ?: 'ipsc2-spain.xreflector.net';
+$dmrplus_port     = iniGet($MB_INI,'DMR Network','Port')     ?: '62031';
+$dmrplus_password = iniGet($MB_INI,'DMR Network','Password') ?: 'passw0rd';
+$dmrplus_slot1    = iniGet($MB_INI,'DMR Network','Slot1')    ?: '1';
+$dmrplus_slot2    = iniGet($MB_INI,'DMR Network','Slot2')    ?: '1';
+// Extraer ESSID del campo Options (TS2_FIXED_ID=XXXX)
+$_mb_options_raw  = iniGet($MB_INI,'DMR Network','Options');
+preg_match('/TS2_FIXED_ID=(\d+)/', $_mb_options_raw, $_essid_m);
+$dmrplus_essid    = $_essid_m[1] ?? '4374';
 
 // YSF
 $ysf_gw     = iniGet($MB_INI,'System Fusion Network','GatewayAddress') ?: '127.0.0.1';
