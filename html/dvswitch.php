@@ -41,6 +41,29 @@ function iniSet(string $file, string $section, string $key, string $value): bool
     return $found;
 }
 
+
+// Igual que iniSet pero si la clave no existe la inserta al final de la sección
+function iniSetOrAdd(string $file, string $section, string $key, string $value): void {
+    if (!file_exists($file)) return;
+    if (iniSet($file, $section, $key, $value)) return;
+    $content = file_get_contents($file);
+    $lines = explode("\n", $content);
+    $inSection = false;
+    $insertAt = -1;
+    foreach ($lines as $i => $line) {
+        $trimmed = trim($line);
+        if (preg_match('/^\[(.+)\]$/', $trimmed, $m)) {
+            if ($inSection) { $insertAt = $i; break; }
+            $inSection = (strtolower($m[1]) === strtolower($section));
+        }
+    }
+    if ($insertAt === -1 && $inSection) $insertAt = count($lines);
+    if ($insertAt >= 0) {
+        array_splice($lines, $insertAt, 0, [$key . '=' . $value]);
+        file_put_contents($file, implode("\n", $lines));
+    }
+}
+
 header('X-Content-Type-Options: nosniff');
 
 if (isset($_GET['action'])) {
@@ -113,7 +136,7 @@ if (isset($_GET['action'])) {
                     iniSet($MB_INI, 'DMR Network', 'Slot1',    trim($_POST['bm_slot1']    ?? '0'));
                     iniSet($MB_INI, 'DMR Network', 'Slot2',    trim($_POST['bm_slot2']    ?? '1'));
                     // Borrar Options BM
-                    iniSet($MB_INI, 'DMR Network', 'Options',  '');
+                    iniSetOrAdd($MB_INI, 'DMR Network', 'Options', '');
                     iniSet($AB_INI, 'AMBE_AUDIO',  'ambeMode', 'DMR');
                     break;
 
@@ -126,7 +149,7 @@ if (isset($_GET['action'])) {
                     iniSet($MB_INI, 'DMR Network', 'Slot1',    trim($_POST['dmrplus_slot1']    ?? '1'));
                     iniSet($MB_INI, 'DMR Network', 'Slot2',    trim($_POST['dmrplus_slot2']    ?? '1'));
                     $ipsc2_id = trim($_POST['dmrplus_essid'] ?? '4374');
-                    iniSet($MB_INI, 'DMR Network', 'Options',  "TS2_FIXED_ID=$ipsc2_id");
+                    iniSetOrAdd($MB_INI, 'DMR Network', 'Options', "TS2_FIXED_ID=$ipsc2_id");
                     iniSet($AB_INI, 'AMBE_AUDIO',  'ambeMode', 'DMR');
                     break;
 
