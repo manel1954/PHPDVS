@@ -830,7 +830,13 @@ async function saveAll() {
     'dstar_gw','dstar_gwport','dstar_lport',
     'nxdn_gw','nxdn_gwport','nxdn_lport'
   ];
+  // Mostrar temporalmente todos los paneles para que los inputs sean accesibles
+  document.querySelectorAll('.sys-panel').forEach(p => p.style.display = 'block');
   ids.forEach(id => { const el = document.getElementById(id); if(el) fd.append(id, el.value); });
+  // Restaurar visibilidad
+  document.querySelectorAll('.sys-panel').forEach(p => p.style.display = '');
+  const visible = document.getElementById('panel-' + document.getElementById('sistema').value);
+  if (visible) visible.classList.add('visible');
 
   try {
     const r = await fetch('?action=save', {method:'POST',body:fd});
