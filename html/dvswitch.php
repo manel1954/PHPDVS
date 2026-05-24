@@ -148,8 +148,8 @@ if (isset($_GET['action'])) {
                     iniSet($MB_INI, 'DMR Network', 'Password', trim($_POST['dmrplus_password'] ?? 'passw0rd'));
                     iniSet($MB_INI, 'DMR Network', 'Slot1',    trim($_POST['dmrplus_slot1']    ?? '1'));
                     iniSet($MB_INI, 'DMR Network', 'Slot2',    trim($_POST['dmrplus_slot2']    ?? '1'));
-                    $ipsc2_id = trim($_POST['dmrplus_essid'] ?? '4374');
-                    iniSetOrAdd($MB_INI, 'DMR Network', 'Options', "TS2_FIXED_ID=$ipsc2_id");
+                    $ipsc2_options = trim($_POST['dmrplus_essid'] ?? '4374');
+                    iniSetOrAdd($MB_INI, 'DMR Network', 'Options', $ipsc2_options);
                     iniSet($AB_INI, 'AMBE_AUDIO',  'ambeMode', 'DMR');
                     break;
 
