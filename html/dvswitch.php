@@ -227,10 +227,8 @@ $dmrplus_port     = iniGet($MB_INI,'DMR Network','Port')     ?: '62031';
 $dmrplus_password = iniGet($MB_INI,'DMR Network','Password') ?: 'passw0rd';
 $dmrplus_slot1    = iniGet($MB_INI,'DMR Network','Slot1')    ?: '1';
 $dmrplus_slot2    = iniGet($MB_INI,'DMR Network','Slot2')    ?: '1';
-// Extraer ESSID del campo Options (TS2_FIXED_ID=XXXX)
-$_mb_options_raw  = iniGet($MB_INI,'DMR Network','Options');
-preg_match('/TS2_FIXED_ID=(\d+)/', $_mb_options_raw, $_essid_m);
-$dmrplus_essid    = $_essid_m[1] ?? '4374';
+// Mostrar Options completo tal como está en el ini
+$dmrplus_essid = iniGet($MB_INI,'DMR Network','Options') ?: '4374';
 
 // YSF
 $ysf_gw     = iniGet($MB_INI,'System Fusion Network','GatewayAddress') ?: '127.0.0.1';
@@ -255,7 +253,7 @@ $mode_nxdn = iniGet($MB_INI,'NXDN','Enable');
 $mb_options= iniGet($MB_INI,'DMR Network','Options');
 
 $sistema_activo = 'dmr_bm';
-if ($mode_dmr === '1' && strpos($mb_options,'TS2_FIXED_ID') !== false) $sistema_activo = 'dmr_plus';
+if ($mode_dmr === '1' && ($mb_options !== '' && $mb_options !== null)) $sistema_activo = 'dmr_plus';
 elseif ($mode_dmr === '1')   $sistema_activo = 'dmr_bm';
 elseif ($mode_ysf === '1')   $sistema_activo = 'ysf';
 elseif ($mode_dstar === '1') $sistema_activo = 'dstar';
@@ -651,7 +649,7 @@ $tgs = ['214'=>'España','2141'=>'Cataluña','21465'=>'ADER','9'=>'Local 9','8'=
       </div>
     </div>
     <div style="font-size:.7rem;color:var(--muted);margin-top:.3rem;">
-      Se guardará como: <span style="color:var(--orange)">Options=TS2_FIXED_ID=<span id="dmrplus_essid_preview"><?= htmlspecialchars($dmrplus_essid) ?></span></span>
+      Se guardará como: <span style="color:var(--orange)">Options=<span id="dmrplus_essid_preview"><?= htmlspecialchars($dmrplus_essid) ?></span></span>
     </div>
   </div>
 
