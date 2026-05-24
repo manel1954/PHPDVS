@@ -563,9 +563,58 @@ $tgs = ['214'=>'España','2141'=>'Cataluña','21465'=>'ADER','9'=>'Local 9','8'=
   <!-- Panel DMR+ IPSC2 -->
   <div class="sys-panel <?= $sistema_activo==='dmr_plus'?'visible':'' ?>" id="panel-dmr_plus">
     <div class="section-title orange">🟠 DMR+ · IPSC2</div>
+
+    <!-- Desplegable servidores IPSC2 -->
+    <div class="form-group">
+      <label>🌐 Seleccionar Servidor IPSC2</label>
+      <select id="ipsc2_selector" onchange="selectIPSC2(this)"
+        style="background:#0a0e1a;border:1px solid var(--orange);color:var(--orange);font-family:'Share Tech Mono',monospace;font-size:.82rem;padding:.42rem .55rem;width:100%;">
+        <option value="">— Selecciona servidor —</option>
+        <optgroup label="🇪🇸 España">
+          <option value="ipsc2-spain.xreflector.net|62031|4374">IPSC2-Spain · ES · ESSID 4374</option>
+          <option value="ipsc2-es1.xreflector.net|62031|214">IPSC2-ES1 · España TG214</option>
+          <option value="ipsc2-cat.xreflector.net|62031|2141">IPSC2-CAT · Cataluña TG2141</option>
+          <option value="ipsc2-es2.xreflector.net|62031|2142">IPSC2-ES2 · España 2</option>
+          <option value="ipsc2-4370.xreflector.net|62031|4370">IPSC2-4370 · EA · xreflector</option>
+        </optgroup>
+        <optgroup label="🇩🇪 Alemania">
+          <option value="ipsc2-germany.xreflector.net|62031|262">IPSC2-Germany · DE</option>
+          <option value="ipsc2-dl.xreflector.net|62031|262">IPSC2-DL · Alemania</option>
+        </optgroup>
+        <optgroup label="🇫🇷 Francia">
+          <option value="ipsc2-france.xreflector.net|62031|208">IPSC2-France · F</option>
+        </optgroup>
+        <optgroup label="🇬🇧 Reino Unido">
+          <option value="ipsc2-freestar.xreflector.net|62031|235">IPSC2-FreeSTAR · UK</option>
+          <option value="ipsc2-uk.xreflector.net|62031|235">IPSC2-UK · GB</option>
+        </optgroup>
+        <optgroup label="🇮🇹 Italia">
+          <option value="ipsc2-italy.xreflector.net|62031|222">IPSC2-Italy · IT</option>
+        </optgroup>
+        <optgroup label="🇳🇱 Países Bajos">
+          <option value="ipsc2-netherlands.xreflector.net|62031|204">IPSC2-Netherlands · PA</option>
+        </optgroup>
+        <optgroup label="🇦🇹 Austria">
+          <option value="ipsc2-austria.xreflector.net|62031|232">IPSC2-Austria · OE</option>
+        </optgroup>
+        <optgroup label="🇵🇱 Polonia">
+          <option value="ipsc2-poland.xreflector.net|62031|260">IPSC2-Poland · SP</option>
+        </optgroup>
+        <optgroup label="🇦🇺 Australia">
+          <option value="ipsc2-australia.xreflector.net|62031|505">IPSC2-Australia · VK</option>
+        </optgroup>
+        <optgroup label="🇺🇸 USA">
+          <option value="ipsc2-usa.xreflector.net|62031|311">IPSC2-USA · K</option>
+        </optgroup>
+        <optgroup label="🌍 Mundial">
+          <option value="ipsc2-master.xreflector.net|62031|91">IPSC2-Master · Mundial TG91</option>
+        </optgroup>
+      </select>
+    </div>
+
     <div class="form-row3">
       <div class="form-group">
-        <label>Servidor IPSC2</label>
+        <label>Servidor IPSC2 (manual)</label>
         <input type="text" id="dmrplus_address" value="<?= htmlspecialchars($dmrplus_address) ?>">
       </div>
       <div class="form-group">
@@ -580,18 +629,19 @@ $tgs = ['214'=>'España','2141'=>'Cataluña','21465'=>'ADER','9'=>'Local 9','8'=
     <div class="form-row3">
       <div class="form-group">
         <label>ESSID / ID (Options)</label>
-        <input type="text" id="dmrplus_essid" value="<?= htmlspecialchars($dmrplus_essid) ?>" placeholder="4374">
+        <input type="text" id="dmrplus_essid" value="<?= htmlspecialchars($dmrplus_essid) ?>" placeholder="4374"
+          oninput="document.getElementById('dmrplus_essid_preview').textContent=this.value">
       </div>
       <div class="form-group">
         <label>Slot 1</label>
-        <select id="dmrplus_slot1" class="enable-sel <?= $dmrplus_slot1==='1'?'is-on':'is-off' ?>" onchange="this.className='enable-sel '+(this.value==='1'?'is-on':'is-off')">
+        <select id="dmrplus_slot1" class="enable-sel is-on" onchange="this.className='enable-sel '+(this.value==='1'?'is-on':'is-off')">
           <option value="0">0 — OFF</option>
           <option value="1" selected>1 — ON</option>
         </select>
       </div>
       <div class="form-group">
         <label>Slot 2</label>
-        <select id="dmrplus_slot2" class="enable-sel <?= $dmrplus_slot2==='1'?'is-on':'is-off' ?>" onchange="this.className='enable-sel '+(this.value==='1'?'is-on':'is-off')">
+        <select id="dmrplus_slot2" class="enable-sel is-on" onchange="this.className='enable-sel '+(this.value==='1'?'is-on':'is-off')">
           <option value="0">0 — OFF</option>
           <option value="1" selected>1 — ON</option>
         </select>
@@ -706,6 +756,18 @@ async function toggleSvc(svc, el) {
     if (d.ok) { setSvcUI(svc==='analog_bridge'?'ab':'mb', d.active); showToast(svc+(d.active?' ACTIVADO':' DETENIDO')); }
   } catch(e) {}
   setTimeout(() => el.disabled = false, 800);
+}
+
+// ── Selector IPSC2 ───────────────────────────
+function selectIPSC2(sel) {
+  const val = sel.value;
+  if (!val) return;
+  const parts = val.split('|');
+  if (parts.length < 3) return;
+  document.getElementById('dmrplus_address').value = parts[0];
+  document.getElementById('dmrplus_port').value    = parts[1];
+  document.getElementById('dmrplus_essid').value   = parts[2];
+  document.getElementById('dmrplus_essid_preview').textContent = parts[2];
 }
 
 // ── Selector de sistema ───────────────────────
