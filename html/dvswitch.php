@@ -529,9 +529,78 @@ $tgs = ['214'=>'España','2141'=>'Cataluña','21465'=>'ADER','9'=>'Local 9','8'=
   <!-- Panel DMR BrandMeister -->
   <div class="sys-panel <?= $sistema_activo==='dmr_bm'?'visible':'' ?>" id="panel-dmr_bm">
     <div class="section-title cyan">🌐 DMR · BrandMeister</div>
+
+    <!-- Desplegable servidores BrandMeister -->
+    <div class="form-group">
+      <label>🌐 Seleccionar Servidor BrandMeister</label>
+      <select id="bm_selector" onchange="selectBM(this)"
+        style="background:#0a0e1a;border:1px solid var(--cyan);color:var(--cyan);font-family:'Share Tech Mono',monospace;font-size:.82rem;padding:.42rem .55rem;width:100%;">
+        <option value="">— Selecciona servidor —</option>
+        <optgroup label="🇪🇸 España">
+          <option value="master.spain-dmr.es|62031">BM Spain · master.spain-dmr.es</option>
+          <option value="spain.brandmeister.network|62031">BM Spain · brandmeister.network</option>
+        </optgroup>
+        <optgroup label="🇩🇪 Alemania">
+          <option value="bm.db0sda.de|62031">BM Germany · db0sda</option>
+          <option value="germany.brandmeister.network|62031">BM Germany · brandmeister.network</option>
+        </optgroup>
+        <optgroup label="🇫🇷 Francia">
+          <option value="france.brandmeister.network|62031">BM France</option>
+        </optgroup>
+        <optgroup label="🇬🇧 Reino Unido">
+          <option value="uk.brandmeister.network|62031">BM United Kingdom</option>
+        </optgroup>
+        <optgroup label="🇮🇹 Italia">
+          <option value="italy.brandmeister.network|62031">BM Italy</option>
+        </optgroup>
+        <optgroup label="🇳🇱 Países Bajos">
+          <option value="netherlands.brandmeister.network|62031">BM Netherlands</option>
+        </optgroup>
+        <optgroup label="🇦🇹 Austria">
+          <option value="austria.brandmeister.network|62031">BM Austria</option>
+        </optgroup>
+        <optgroup label="🇵🇱 Polonia">
+          <option value="poland.brandmeister.network|62031">BM Poland</option>
+        </optgroup>
+        <optgroup label="🇧🇪 Bélgica">
+          <option value="belgium.brandmeister.network|62031">BM Belgium</option>
+        </optgroup>
+        <optgroup label="🇨🇭 Suiza">
+          <option value="switzerland.brandmeister.network|62031">BM Switzerland</option>
+        </optgroup>
+        <optgroup label="🇸🇪 Suecia">
+          <option value="sweden.brandmeister.network|62031">BM Sweden</option>
+        </optgroup>
+        <optgroup label="🇳🇴 Noruega">
+          <option value="norway.brandmeister.network|62031">BM Norway</option>
+        </optgroup>
+        <optgroup label="🇩🇰 Dinamarca">
+          <option value="denmark.brandmeister.network|62031">BM Denmark</option>
+        </optgroup>
+        <optgroup label="🇷🇺 Rusia">
+          <option value="russia.brandmeister.network|62031">BM Russia</option>
+        </optgroup>
+        <optgroup label="🇦🇺 Australia">
+          <option value="australia.brandmeister.network|62031">BM Australia</option>
+        </optgroup>
+        <optgroup label="🇺🇸 USA">
+          <option value="usa.brandmeister.network|62031">BM USA</option>
+        </optgroup>
+        <optgroup label="🇨🇦 Canadá">
+          <option value="canada.brandmeister.network|62031">BM Canada</option>
+        </optgroup>
+        <optgroup label="🇧🇷 Brasil">
+          <option value="brazil.brandmeister.network|62031">BM Brazil</option>
+        </optgroup>
+        <optgroup label="🌍 Mundial">
+          <option value="brandmeister.network|62031">BM Master · Global</option>
+        </optgroup>
+      </select>
+    </div>
+
     <div class="form-row3">
       <div class="form-group">
-        <label>Servidor BM</label>
+        <label>Servidor BM (manual)</label>
         <input type="text" id="bm_address" value="<?= htmlspecialchars($bm_address) ?>">
       </div>
       <div class="form-group">
@@ -757,6 +826,16 @@ async function toggleSvc(svc, el) {
     if (d.ok) { setSvcUI(svc==='analog_bridge'?'ab':'mb', d.active); showToast(svc+(d.active?' ACTIVADO':' DETENIDO')); }
   } catch(e) {}
   setTimeout(() => el.disabled = false, 800);
+}
+
+// ── Selector BrandMeister ────────────────────
+function selectBM(sel) {
+  const val = sel.value;
+  if (!val) return;
+  const parts = val.split('|');
+  if (parts.length < 2) return;
+  document.getElementById('bm_address').value = parts[0];
+  document.getElementById('bm_port').value    = parts[1];
 }
 
 // ── Selector IPSC2 ───────────────────────────
