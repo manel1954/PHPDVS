@@ -849,7 +849,7 @@ button.btn-header { font-family: var(--font-mono); }
 <div class="dropdown-wrap" id="dropActualizaciones">
   <button class="btn-header cyan">⬇ Actualizaciones ▾</button>
   <div class="dropdown-menu-custom">
-    <button class="dropdown-item-custom" onclick="runUpdate('imagen')">🖼 Actualizar Imagen</button>
+    <button class="dropdown-item-custom" onclick="runUpdate('imagen')">🔁 Actualizar Imagen</button>
     <button class="dropdown-item-custom" onclick="runUpdate('ids')">📋 Actualizar IDs</button>
     <button class="dropdown-item-custom" onclick="runUpdate('ysf')">📡 Actualizar Reflectores YSF</button>
     <button class="dropdown-item-custom" onclick="window.location.href='dstar_json_converter.php'">📡 Actualizar Reflectores D-STAR</button>
@@ -857,7 +857,7 @@ button.btn-header { font-family: var(--font-mono); }
 </div>
 <button class="btn-header cyan" onclick="xtTtydOpen()">🖥️Terminal</button>
 <a href="extra.php" class="btn-header amber">⚙️Menu Extra</a>
-<button id="btnReboot" class="btn-header red" onclick="rebootPi()">🔌Reiniciar Pi</button>
+<button id="btnReboot" class="btn-header red" onclick="rebootPi()">⏻ Reiniciar Pi</button>
 </div>
 </header>
 <main class="ctrl-body">
