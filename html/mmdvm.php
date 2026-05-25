@@ -577,6 +577,9 @@ if ($action === 'nxdn-transmission') {
 * { box-sizing: border-box; }
 body { background:#00004d; color: var(--text); font-family: var(--font-ui); font-size: 1rem; min-height: 100vh; padding: 0; margin: 0; }
 
+.ctrl-header-inner { width: 100%; max-width: 1400px; margin: 0 auto; display: flex; flex-direction: column; align-items: center; gap: .6rem; }
+
+
 .ctrl-header { border-bottom: 2px solid #ffffff; padding: 1rem 2rem; display: flex; flex-direction: column; align-items: center; gap: .6rem; }
 
 .ctrl-header-top { display: flex; align-items: center; gap: .8rem; }
@@ -833,6 +836,15 @@ button.btn-header { font-family: var(--font-mono); }
 </head>
 <body>
 <header class="ctrl-header" style="background-color:#000000">
+  <div class="ctrl-header-inner">
+    <div class="ctrl-header-top">
+      ...
+    </div>
+    <div class="ctrl-header-btns">
+      ...
+    </div>
+  </div>
+</header>
 <div class="ctrl-header-top">
 <a href="https://associacioader.com" target="_blank">
   <img src="Logo_Ader.png" alt="EA3EIZ" style="height:40px; width:auto;">
