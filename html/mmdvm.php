@@ -830,7 +830,7 @@ button.btn-header { font-family: var(--font-mono); }
 </style>
 </head>
 <body>
-<header class="ctrl-header" style="color:#f00">
+<header class="ctrl-header" style="background-color:#f00">
 <div class="ctrl-header-top">
 <a href="https://associacioader.com" target="_blank">
   <img src="Logo_Ader.png" alt="EA3EIZ" style="height:40px; width:auto;">
