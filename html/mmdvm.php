@@ -838,7 +838,9 @@ button.btn-header { font-family: var(--font-mono); }
 <header class="ctrl-header" style="background-color:#000000">
   <div class="ctrl-header-inner">
 
-
+    <div class="ctrl-header-top">
+      ...
+    </div>
   </div>
 <a href="https://associacioader.com" target="_blank">
   <img src="Logo_Ader.png" alt="EA3EIZ" style="height:40px; width:auto;">
