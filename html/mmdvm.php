@@ -1073,6 +1073,30 @@ button.btn-header { font-family: var(--font-mono); }
 <div id="nxdnPanelMmd" class="log-panel" style="display:none;"><div class="log-panel-header"><span class="svc-name" style="color:#ffd700;">▸ MMDVMHost NXDN</span><button class="btn-clear" onclick="clearLog('logNxdnMmd')">limpiar</button></div><div class="log-output" id="logNxdnMmd">Esperando MMDVMHost NXDN…</div></div>
 <div id="nxdnPanelGw" class="log-panel" style="display:none;"><div class="log-panel-header"><span class="svc-name" style="color:#ffc400;">▸ NXDNGateway</span><button class="btn-clear" onclick="clearLog('logNxdnGw')">limpiar</button></div><div class="log-output" id="logNxdnGw">Esperando NXDNGateway…</div></div>
 </div>
+
+
+
+
+<!-- DVSwitch Dashboard -->
+<div style="margin-top:2rem;">
+  <div class="panel-label" style="color:var(--cyan);">▸ DVSwitch Dashboard</div>
+  <div style="background:var(--surface);border:1px solid var(--border);border-radius:8px;overflow:hidden;">
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:.5rem 1rem;background:rgba(0,0,0,.3);border-bottom:1px solid var(--border);">
+      <span style="font-family:var(--font-mono);font-size:.75rem;color:var(--cyan);letter-spacing:.1em;text-transform:uppercase;">⚡ DVSwitch Monitor</span>
+      <a href="http://<?php echo $_SERVER['SERVER_ADDR']; ?>/dvswitch" target="_blank" class="btn btn-sm btn-outline-info" style="font-family:var(--font-mono);font-size:.65rem;">↗ Abrir en ventana</a>
+    </div>
+    <iframe
+      src="http://<?php echo $_SERVER['SERVER_ADDR']; ?>/dvswitch"
+      style="width:100%;height:600px;border:none;display:block;background:#000;"
+      loading="lazy"
+      title="DVSwitch Dashboard">
+    </iframe>
+  </div>
+</div>
+
+
+
+
 </main>
 
 <!-- Modal Editor Ficheros -->
