@@ -194,13 +194,17 @@ if ($action === 'status') {
     header('Content-Type: application/json'); echo json_encode(['gateway'=>$gw,'mmdvm'=>$mmd]); exit;
 }
 if ($action === 'start') {
-    saveState('dmr','on'); shell_exec('sudo systemctl start dmrgateway 2>/dev/null'); sleep(2);
+    saveState('dmr','on');
+    shell_exec('sudo systemctl enable dmrgateway mmdvmhost 2>/dev/null');
+    shell_exec('sudo systemctl start dmrgateway 2>/dev/null'); sleep(2);
     shell_exec('sudo systemctl start mmdvmhost 2>/dev/null');
     header('Content-Type: application/json'); echo json_encode(['ok'=>true]); exit;
 }
 if ($action === 'stop') {
-    saveState('dmr','off'); shell_exec('sudo systemctl stop mmdvmhost 2>/dev/null'); sleep(1);
+    saveState('dmr','off');
+    shell_exec('sudo systemctl stop mmdvmhost 2>/dev/null'); sleep(1);
     shell_exec('sudo systemctl stop dmrgateway 2>/dev/null');
+    shell_exec('sudo systemctl disable dmrgateway mmdvmhost 2>/dev/null');
     header('Content-Type: application/json'); echo json_encode(['ok'=>true]); exit;
 }
 if ($action === 'update-imagen') { $output = shell_exec('sudo sh /home/pi/A108/actualiza_imagen.sh 2>&1'); header('Content-Type: application/json'); echo json_encode(['ok'=>true,'output'=>htmlspecialchars($output??'(sin salida)')]); exit; }
@@ -214,11 +218,11 @@ if ($action === 'ysf-status') {
     $active = ($pid && is_numeric($pid) && file_exists('/proc/'.$pid)) ? 'active' : 'inactive';
     header('Content-Type: application/json'); echo json_encode(['ysf'=>$active]); exit;
 }
-if ($action === 'ysf-start')  { saveState('ysf','on'); shell_exec('sudo systemctl start ysfgateway 2>/dev/null'); sleep(1); header('Content-Type: application/json'); echo json_encode(['ok'=>true]); exit; }
-if ($action === 'ysf-stop')   { saveState('ysf','off'); shell_exec('sudo systemctl stop ysfgateway 2>/dev/null'); header('Content-Type: application/json'); echo json_encode(['ok'=>true]); exit; }
+if ($action === 'ysf-start')  { saveState('ysf','on'); shell_exec('sudo systemctl enable ysfgateway 2>/dev/null'); shell_exec('sudo systemctl start ysfgateway 2>/dev/null'); sleep(1); header('Content-Type: application/json'); echo json_encode(['ok'=>true]); exit; }
+if ($action === 'ysf-stop')   { saveState('ysf','off'); shell_exec('sudo systemctl stop ysfgateway 2>/dev/null'); shell_exec('sudo systemctl disable ysfgateway 2>/dev/null'); header('Content-Type: application/json'); echo json_encode(['ok'=>true]); exit; }
 if ($action === 'mmdvmysf-status') { $st = trim(shell_exec('systemctl is-active mmdvmysf 2>/dev/null')); header('Content-Type: application/json'); echo json_encode(['mmdvmysf'=>$st]); exit; }
-if ($action === 'mmdvmysf-start')  { saveState('ysf','on'); shell_exec('sudo systemctl start mmdvmysf 2>/dev/null'); header('Content-Type: application/json'); echo json_encode(['ok'=>true]); exit; }
-if ($action === 'mmdvmysf-stop')   { saveState('ysf','off'); shell_exec('sudo systemctl stop ysfgateway 2>/dev/null'); sleep(1); shell_exec('sudo systemctl stop mmdvmysf 2>/dev/null'); header('Content-Type: application/json'); echo json_encode(['ok'=>true]); exit; }
+if ($action === 'mmdvmysf-start')  { saveState('ysf','on'); shell_exec('sudo systemctl enable mmdvmysf 2>/dev/null'); shell_exec('sudo systemctl start mmdvmysf 2>/dev/null'); header('Content-Type: application/json'); echo json_encode(['ok'=>true]); exit; }
+if ($action === 'mmdvmysf-stop')   { saveState('ysf','off'); shell_exec('sudo systemctl stop ysfgateway 2>/dev/null'); sleep(1); shell_exec('sudo systemctl stop mmdvmysf 2>/dev/null'); shell_exec('sudo systemctl disable mmdvmysf ysfgateway 2>/dev/null'); header('Content-Type: application/json'); echo json_encode(['ok'=>true]); exit; }
 if ($action === 'mmdvmysf-logs')   { $lines = intval($_GET['lines']??15); $log = shell_exec("sudo journalctl -u mmdvmysf -n {$lines} --no-pager --output=short 2>/dev/null"); header('Content-Type: application/json'); echo json_encode(['mmdvmysf'=>htmlspecialchars($log??'')]); exit; }
 if ($action === 'reboot')          { shell_exec('sudo /usr/bin/systemctl reboot 2>/dev/null'); header('Content-Type: application/json'); echo json_encode(['ok'=>true]); exit; }
 if ($action === 'display-restart') { shell_exec('sudo systemctl daemon-reload 2>/dev/null'); shell_exec('sudo systemctl enable displaydriver 2>/dev/null'); shell_exec('sudo systemctl restart displaydriver 2>/dev/null'); header('Content-Type: application/json'); echo json_encode(['ok'=>true]); exit; }
@@ -432,8 +436,8 @@ if ($action === 'dstar-status') {
     header('Content-Type: application/json'); echo json_encode(['gateway'=>$gw,'mmdvm'=>$mmd,'stopped'=>$stopped]); exit;
 }
 // ── CAMBIO 2: saveState en dstar-start y dstar-stop ──────────────────────────
-if ($action === 'dstar-start') { saveState('dstar','on'); shell_exec('sudo /usr/local/bin/dstar-start.sh 2>/dev/null &'); header('Content-Type: application/json'); echo json_encode(['ok'=>true]); exit; }
-if ($action === 'dstar-stop')  { saveState('dstar','off'); shell_exec('sudo /usr/local/bin/dstar-stop.sh 2>/dev/null &'); header('Content-Type: application/json'); echo json_encode(['ok'=>true]); exit; }
+if ($action === 'dstar-start') { saveState('dstar','on'); shell_exec('sudo systemctl enable mmdvmdstar dstargateway 2>/dev/null'); shell_exec('sudo /usr/local/bin/dstar-start.sh 2>/dev/null &'); header('Content-Type: application/json'); echo json_encode(['ok'=>true]); exit; }
+if ($action === 'dstar-stop')  { saveState('dstar','off'); shell_exec('sudo /usr/local/bin/dstar-stop.sh 2>/dev/null &'); sleep(1); shell_exec('sudo systemctl disable mmdvmdstar dstargateway 2>/dev/null'); header('Content-Type: application/json'); echo json_encode(['ok'=>true]); exit; }
 if ($action === 'dstar-logs')  {
     $lines=intval($_GET['lines']??15);
     $gw  = shell_exec("sudo journalctl -u dstargateway -n {$lines} --no-pager --output=short 2>/dev/null");
@@ -506,6 +510,7 @@ if ($action === 'nxdn-status') {
 }
 if ($action === 'nxdn-start') {
     saveState('nxdn','on');
+    shell_exec('sudo systemctl enable mmdvmnxdn nxdngateway 2>/dev/null');
     shell_exec('sudo systemctl start mmdvmnxdn 2>/dev/null');
     sleep(2);
     shell_exec('sudo systemctl start nxdngateway 2>/dev/null');
@@ -518,6 +523,7 @@ if ($action === 'nxdn-stop') {
     shell_exec('sudo systemctl stop nxdngateway 2>/dev/null');
     sleep(1);
     shell_exec('sudo systemctl stop mmdvmnxdn 2>/dev/null');
+    shell_exec('sudo systemctl disable mmdvmnxdn nxdngateway 2>/dev/null');
     header('Content-Type: application/json');
     echo json_encode(['ok'=>true]);
     exit;
@@ -1430,44 +1436,15 @@ document.getElementById('xtInp').addEventListener('keydown',async function(e){
 });
 })();
 
-// ── CAMBIO 3: bloque init con enforcement del estado guardado ─────────────────
+// ── Bloque init ───────────────────────────────────────────────────────────────
 (async()=>{
     await fetchStationInfo();
     setInterval(fetchStationInfo,60000);
-
-    // Leer estado guardado ANTES de actuar
-    let savedState={dmr:'off',ysf:'off',dstar:'off',nxdn:'off'};
-    try{const r=await fetch('?action=read-state');savedState=await r.json();}catch(e){}
-
     await checkStatus();
     await checkYSFStatus();
     await checkMMDVMYSFStatus();
     await checkDStarStatus();
     await checkNXDNStatus();
-
-    // Si systemd arrancó algo que debía estar OFF, pararlo
-    if(savedState.ysf==='off'&&(ysfRunning||mmdvmYsfRunning)){
-        await fetch('?action=mmdvmysf-stop');
-        await fetch('?action=ysf-stop');
-        ysfRunning=false;mmdvmYsfRunning=false;
-        setYSFToggle(false);setDot('dot-ysf','off');setDot('dot-mmdvmysf','off');showYSFIdle();
-    }
-    if(savedState.nxdn==='off'&&nxdnRunning){
-        await fetch('?action=nxdn-stop');
-        nxdnRunning=false;
-        setNXDNToggle(false);setDot('dot-nxdngw','off');setDot('dot-nxdnmmd','off');showNXDNIdle();
-    }
-    if(savedState.dstar==='off'&&dstarRunning){
-        await fetch('?action=dstar-stop');
-        dstarRunning=false;
-        setDSTARToggle(false);setDot('dot-dstargw','off');setDot('dot-dstarmmd','off');showDStarIdle();
-    }
-    if(savedState.dmr==='off'&&running){
-        await fetch('?action=stop');
-        running=false;
-        setDMRToggle(false);setDot('dot-gateway','off');setDot('dot-mmdvm','off');setDot('dot-mosquitto','off');showIdle();
-    }
-
     setInterval(checkStatus,10000);
     setInterval(checkYSFStatus,8000);
     setInterval(checkMMDVMYSFStatus,8000);
