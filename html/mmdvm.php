@@ -855,8 +855,8 @@ button.btn-header { font-family: var(--font-mono); }
     <button class="dropdown-item-custom" onclick="window.location.href='dstar_json_converter.php'">📡 Actualizar Reflectores D-STAR</button>
   </div>
 </div>
-<button class="btn-header cyan" onclick="xtTtydOpen()">🖥️Terminal</button>
-<a href="extra.php" class="btn-header amber">⚙️Menu Extra</a>
+<button class="btn-header cyan" onclick="xtTtydOpen()">🖥️ Terminal</button>
+<a href="extra.php" class="btn-header amber">⚙️ Menu Extra</a>
 <button id="btnReboot" class="btn-header red" onclick="rebootPi()">⏻ Reiniciar Pi</button>
 </div>
 </header>
