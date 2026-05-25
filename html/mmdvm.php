@@ -294,6 +294,23 @@ if ($action === 'ysf-logs') {
     header('Content-Type: application/json'); echo json_encode(['ysf'=>htmlspecialchars($log??'')]); exit;
 }
 
+// ── CAMBIO 1: acción read-state ───────────────────────────────────────────────
+if ($action === 'read-state') {
+    $file = '/var/lib/mmdvm-state';
+    $state = ['dmr'=>'off','ysf'=>'off','dstar'=>'off','nxdn'=>'off'];
+    if (file_exists($file)) {
+        foreach (file($file, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES) as $line) {
+            if (strpos($line,'=') !== false) {
+                [$k,$v] = explode('=', $line, 2);
+                $state[trim($k)] = trim($v);
+            }
+        }
+    }
+    header('Content-Type: application/json');
+    echo json_encode($state);
+    exit;
+}
+
 function lookupCall($callsign) {
     $datFiles=['/home/pi/MMDVMHost/DMRIds.dat','/etc/DMRIds.dat','/usr/local/etc/DMRIds.dat'];
     $cs=strtoupper(trim($callsign));
@@ -414,8 +431,9 @@ if ($action === 'dstar-status') {
     $stopped=file_exists('/var/lib/dstar-stopped');
     header('Content-Type: application/json'); echo json_encode(['gateway'=>$gw,'mmdvm'=>$mmd,'stopped'=>$stopped]); exit;
 }
-if ($action === 'dstar-start') { shell_exec('sudo /usr/local/bin/dstar-start.sh 2>/dev/null &'); header('Content-Type: application/json'); echo json_encode(['ok'=>true]); exit; }
-if ($action === 'dstar-stop')  { shell_exec('sudo /usr/local/bin/dstar-stop.sh 2>/dev/null &'); header('Content-Type: application/json'); echo json_encode(['ok'=>true]); exit; }
+// ── CAMBIO 2: saveState en dstar-start y dstar-stop ──────────────────────────
+if ($action === 'dstar-start') { saveState('dstar','on'); shell_exec('sudo /usr/local/bin/dstar-start.sh 2>/dev/null &'); header('Content-Type: application/json'); echo json_encode(['ok'=>true]); exit; }
+if ($action === 'dstar-stop')  { saveState('dstar','off'); shell_exec('sudo /usr/local/bin/dstar-stop.sh 2>/dev/null &'); header('Content-Type: application/json'); echo json_encode(['ok'=>true]); exit; }
 if ($action === 'dstar-logs')  {
     $lines=intval($_GET['lines']??15);
     $gw  = shell_exec("sudo journalctl -u dstargateway -n {$lines} --no-pager --output=short 2>/dev/null");
@@ -1412,14 +1430,44 @@ document.getElementById('xtInp').addEventListener('keydown',async function(e){
 });
 })();
 
+// ── CAMBIO 3: bloque init con enforcement del estado guardado ─────────────────
 (async()=>{
     await fetchStationInfo();
     setInterval(fetchStationInfo,60000);
+
+    // Leer estado guardado ANTES de actuar
+    let savedState={dmr:'off',ysf:'off',dstar:'off',nxdn:'off'};
+    try{const r=await fetch('?action=read-state');savedState=await r.json();}catch(e){}
+
     await checkStatus();
     await checkYSFStatus();
     await checkMMDVMYSFStatus();
     await checkDStarStatus();
     await checkNXDNStatus();
+
+    // Si systemd arrancó algo que debía estar OFF, pararlo
+    if(savedState.ysf==='off'&&(ysfRunning||mmdvmYsfRunning)){
+        await fetch('?action=mmdvmysf-stop');
+        await fetch('?action=ysf-stop');
+        ysfRunning=false;mmdvmYsfRunning=false;
+        setYSFToggle(false);setDot('dot-ysf','off');setDot('dot-mmdvmysf','off');showYSFIdle();
+    }
+    if(savedState.nxdn==='off'&&nxdnRunning){
+        await fetch('?action=nxdn-stop');
+        nxdnRunning=false;
+        setNXDNToggle(false);setDot('dot-nxdngw','off');setDot('dot-nxdnmmd','off');showNXDNIdle();
+    }
+    if(savedState.dstar==='off'&&dstarRunning){
+        await fetch('?action=dstar-stop');
+        dstarRunning=false;
+        setDSTARToggle(false);setDot('dot-dstargw','off');setDot('dot-dstarmmd','off');showDStarIdle();
+    }
+    if(savedState.dmr==='off'&&running){
+        await fetch('?action=stop');
+        running=false;
+        setDMRToggle(false);setDot('dot-gateway','off');setDot('dot-mmdvm','off');setDot('dot-mosquitto','off');showIdle();
+    }
+
     setInterval(checkStatus,10000);
     setInterval(checkYSFStatus,8000);
     setInterval(checkMMDVMYSFStatus,8000);
