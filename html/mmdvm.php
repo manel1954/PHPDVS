@@ -786,7 +786,7 @@ button.btn-header { font-family: var(--font-mono); }
 .restore-msg.ok { color: var(--green); border-color: var(--green); background: rgba(0,255,159,.06); }
 .restore-msg.err { color: var(--red); border-color: var(--red); background: rgba(255,69,96,.06); }
 .restore-msg.loading { color: var(--amber); border-color: var(--amber); background: rgba(255,179,0,.06); }
-.install-output { font-family: var(--font-mono); font-size: .72rem; color: #b5a97a; background: #060c10; border: 1px solid var(--border); border-radius: 4px; padding: .8rem; height: 200px; overflow-y: auto; white-space: pre-wrap; word-break: break-all; margin-bottom: 1rem; display: none; }
+.install-output { font-family: var(--font-mono); font-size: .72rem; color: #b5a97a; background: #fff; border: 1px solid var(--border); border-radius: 4px; padding: .8rem; height: 200px; overflow-y: auto; white-space: pre-wrap; word-break: break-all; margin-bottom: 1rem; display: none; }
 .install-output.visible { display: block; }
 .dropdown-wrap { position: relative; display: inline-block; }
 .dropdown-menu-custom { display: none; position: absolute; top: 100%; left: 50%; transform: translateX(-50%); background:#696969; border: 1px solid var(--border); border-radius: 6px; min-width: 270px; z-index: 1000; box-shadow: 0 8px 24px rgba(0,0,0,.5); overflow: hidden; padding-top: .4rem; }
