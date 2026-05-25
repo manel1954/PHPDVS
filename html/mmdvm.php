@@ -1078,7 +1078,7 @@ button.btn-header { font-family: var(--font-mono); }
 
 
 <!-- DVSwitch Dashboard -->
-<div style="margin-top:2rem;">
+<!-- <div style="margin-top:2rem;">
   <div class="panel-label" style="color:var(--cyan);">▸ DVSwitch Dashboard</div>
   <div style="background:var(--surface);border:1px solid var(--border);border-radius:8px;overflow:hidden;">
     <div style="display:flex;align-items:center;justify-content:space-between;padding:.5rem 1rem;background:rgba(0,0,0,.3);border-bottom:1px solid var(--border);">
@@ -1092,7 +1092,7 @@ button.btn-header { font-family: var(--font-mono); }
       title="DVSwitch Dashboard">
     </iframe>
   </div>
-</div>
+</div> -->
 
 
 
