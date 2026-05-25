@@ -840,8 +840,8 @@ button.btn-header { font-family: var(--font-mono); }
 <a href="https://associacioader.com" target="_blank">
   <img src="Logo_Ader.png" alt="EA3EIZ" style="height:40px; width:auto;">
 </a>
-<span style="color:#c9d1d9;font-size:.8rem;">PANEL SISTEMAS DIGITALES PARA RADIOAFICIONADOS PHPDVS</span>
-<span style="color:#00008b;font-size:.8rem;">PHPDVS</span>
+<span style="color:#c9d1d9;font-size:1.2rem;">PANEL SISTEMAS DIGITALES PARA RADIOAFICIONADOS</span>
+<span style="color:cyan;font-size:1.2rem;">PHPDVS</span>
 
 </div>
 <div class="ctrl-header-btns">
