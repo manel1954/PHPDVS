@@ -139,7 +139,6 @@ if (isset($_GET['action'])) {
             switch ($sistema) {
 
                 case 'dmr_bm':
-                    // Guardar config BM en JSON
                     saveCfg($BM_CFG, [
                         'address'  => trim($_POST['bm_address']  ?? 'master.spain-dmr.es'),
                         'port'     => trim($_POST['bm_port']     ?? '62031'),
@@ -159,7 +158,6 @@ if (isset($_GET['action'])) {
                     break;
 
                 case 'dmr_plus':
-                    // Guardar config DMR+ en JSON
                     saveCfg($DMRPLUS_CFG, [
                         'address'  => trim($_POST['dmrplus_address']  ?? 'ipsc2-spain.xreflector.net'),
                         'port'     => trim($_POST['dmrplus_port']     ?? '62031'),
@@ -290,6 +288,32 @@ elseif ($mode_dstar === '1') $sistema_activo = 'dstar';
 elseif ($mode_nxdn === '1')  $sistema_activo = 'nxdn';
 
 $tgs = ['214'=>'España','2141'=>'Cataluña','21465'=>'ADER','9'=>'Local 9','8'=>'Local 8','91'=>'Mundial','113'=>'Europa','2'=>'Echo BM'];
+
+// ── Leer YSFHosts.txt ────────────────────────
+$ysf_hosts_file = '/home/pi/YSFClients/YSFGateway/YSFHosts.txt';
+$ysf_es   = [];
+$ysf_rest = [];
+if (file_exists($ysf_hosts_file)) {
+    foreach (file($ysf_hosts_file, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES) as $line) {
+        $line = trim($line);
+        if ($line === '' || $line[0] === ';' || $line[0] === '#') continue;
+        $parts = explode(';', $line);
+        if (count($parts) < 5) continue;
+        $name = trim($parts[1]);
+        $desc = trim($parts[2]);
+        $host = trim($parts[3]);
+        $port = trim($parts[4]);
+        if (empty($host) || !is_numeric($port)) continue;
+        $entry = ['name'=>$name, 'desc'=>$desc, 'host'=>$host, 'port'=>$port];
+        if (stripos($name, 'ES-') === 0) {
+            $ysf_es[] = $entry;
+        } else {
+            $ysf_rest[] = $entry;
+        }
+    }
+    usort($ysf_es,   fn($a,$b) => strcmp($a['name'], $b['name']));
+    usort($ysf_rest, fn($a,$b) => strcmp($a['name'], $b['name']));
+}
 ?>
 <!DOCTYPE html>
 <html lang="es">
@@ -559,8 +583,6 @@ $tgs = ['214'=>'España','2141'=>'Cataluña','21465'=>'ADER','9'=>'Local 9','8'=
   <!-- Panel DMR BrandMeister -->
   <div class="sys-panel <?= $sistema_activo==='dmr_bm'?'visible':'' ?>" id="panel-dmr_bm">
     <div class="section-title cyan">🌐 DMR · BrandMeister</div>
-
-    <!-- Desplegable servidores BrandMeister -->
     <div class="form-group">
       <label>🌐 Seleccionar Servidor BrandMeister</label>
       <select id="bm_selector" onchange="selectBM(this)"
@@ -627,7 +649,6 @@ $tgs = ['214'=>'España','2141'=>'Cataluña','21465'=>'ADER','9'=>'Local 9','8'=
         </optgroup>
       </select>
     </div>
-
     <div class="form-row3">
       <div class="form-group">
         <label>Servidor BM (manual)</label>
@@ -663,8 +684,6 @@ $tgs = ['214'=>'España','2141'=>'Cataluña','21465'=>'ADER','9'=>'Local 9','8'=
   <!-- Panel DMR+ IPSC2 -->
   <div class="sys-panel <?= $sistema_activo==='dmr_plus'?'visible':'' ?>" id="panel-dmr_plus">
     <div class="section-title orange">🟠 DMR+ · IPSC2</div>
-
-    <!-- Desplegable servidores IPSC2 -->
     <div class="form-group">
       <label>🌐 Seleccionar Servidor IPSC2</label>
       <select id="ipsc2_selector" onchange="selectIPSC2(this)"
@@ -692,347 +711,3 @@ $tgs = ['214'=>'España','2141'=>'Cataluña','21465'=>'ADER','9'=>'Local 9','8'=
           <option value="ipsc2-italy.xreflector.net|62031|222">IPSC2-Italy · IT</option>
         </optgroup>
         <optgroup label="🇳🇱 Países Bajos">
-          <option value="ipsc2-netherlands.xreflector.net|62031|204">IPSC2-Netherlands · PA</option>
-        </optgroup>
-        <optgroup label="🇦🇹 Austria">
-          <option value="ipsc2-austria.xreflector.net|62031|232">IPSC2-Austria · OE</option>
-        </optgroup>
-        <optgroup label="🇵🇱 Polonia">
-          <option value="ipsc2-poland.xreflector.net|62031|260">IPSC2-Poland · SP</option>
-        </optgroup>
-        <optgroup label="🇦🇺 Australia">
-          <option value="ipsc2-australia.xreflector.net|62031|505">IPSC2-Australia · VK</option>
-        </optgroup>
-        <optgroup label="🇺🇸 USA">
-          <option value="ipsc2-usa.xreflector.net|62031|311">IPSC2-USA · K</option>
-        </optgroup>
-        <optgroup label="🌍 Mundial">
-          <option value="ipsc2-master.xreflector.net|62031|91">IPSC2-Master · Mundial TG91</option>
-        </optgroup>
-      </select>
-    </div>
-
-    <div class="form-row3">
-      <div class="form-group">
-        <label>Servidor IPSC2 (manual)</label>
-        <input type="text" id="dmrplus_address" value="<?= htmlspecialchars($dmrplus_address) ?>">
-      </div>
-      <div class="form-group">
-        <label>Puerto</label>
-        <input type="number" id="dmrplus_port" value="<?= htmlspecialchars($dmrplus_port) ?>">
-      </div>
-      <div class="form-group">
-        <label>Password</label>
-        <input type="password" id="dmrplus_password" value="<?= htmlspecialchars($dmrplus_password) ?>">
-      </div>
-    </div>
-    <div class="form-row3">
-      <div class="form-group">
-        <label>ESSID / ID (Options)</label>
-        <input type="text" id="dmrplus_essid" value="<?= htmlspecialchars($dmrplus_essid) ?>" placeholder="4374"
-          oninput="document.getElementById('dmrplus_essid_preview').textContent=this.value">
-      </div>
-      <div class="form-group">
-        <label>Slot 1</label>
-        <select id="dmrplus_slot1" class="enable-sel is-on" onchange="this.className='enable-sel '+(this.value==='1'?'is-on':'is-off')">
-          <option value="0">0 — OFF</option>
-          <option value="1" selected>1 — ON</option>
-        </select>
-      </div>
-      <div class="form-group">
-        <label>Slot 2</label>
-        <select id="dmrplus_slot2" class="enable-sel is-on" onchange="this.className='enable-sel '+(this.value==='1'?'is-on':'is-off')">
-          <option value="0">0 — OFF</option>
-          <option value="1" selected>1 — ON</option>
-        </select>
-      </div>
-    </div>
-    <div style="font-size:.7rem;color:var(--muted);margin-top:.3rem;">
-      Se guardará como: <span style="color:var(--orange)">Options=<span id="dmrplus_essid_preview"><?= htmlspecialchars($dmrplus_essid) ?></span></span>
-    </div>
-  </div>
-
-  <!-- Panel YSF -->
-  <div class="sys-panel <?= $sistema_activo==='ysf'?'visible':'' ?>" id="panel-ysf">
-    <div class="section-title green">🟢 SYSTEM FUSION · ES-ADER</div>
-
-    <!-- Desplegable reflectores YSF -->
-    <div class="form-group">
-      <label>🌐 Seleccionar Reflector YSF</label>
-      <select id="ysf_selector" onchange="selectYSF(this)"
-        style="background:#0a0e1a;border:1px solid var(--green);color:var(--green);font-family:'Share Tech Mono',monospace;font-size:.82rem;padding:.42rem .55rem;width:100%;">
-        <option value="">— Selecciona reflector —</option>
-        <optgroup label="🇪🇸 España">
-          <option value="127.0.0.1|4210|3200">ES-ADER · Local (127.0.0.1)</option>
-          <option value="aderdigitales.ddns.net|42000|3200">ES-ADER · aderdigitales.ddns.net</option>
-          <option value="ysf.eb3jt.es|42000|3200">ES-EB3JT · Cataluña</option>
-          <option value="ysf.ea4rct.es|42000|3200">ES-EA4RCT · Madrid</option>
-          <option value="ysf.ea5gvk.es|42000|3200">ES-EA5GVK · Valencia</option>
-          <option value="ysf.ea7hg.es|42000|3200">ES-EA7HG · Andalucía</option>
-        </optgroup>
-        <optgroup label="🌍 Internacional">
-          <option value="register.ysfreflector.com|42000|3200">YSF · register.ysfreflector.com</option>
-          <option value="ysf.k4usd.us|42000|3200">YSF · USA K4USD</option>
-          <option value="ysf.db0pf.de|42000|3200">YSF · Alemania DB0PF</option>
-          <option value="ysf.on0arf.be|42000|3200">YSF · Bélgica ON0ARF</option>
-          <option value="ysf.f5nlg.fr|42000|3200">YSF · Francia F5NLG</option>
-          <option value="ysf.pi1nhv.nl|42000|3200">YSF · Países Bajos PI1NHV</option>
-          <option value="ysf.vk2rz.net|42000|3200">YSF · Australia VK2RZ</option>
-        </optgroup>
-        <optgroup label="🔗 FCS Rooms">
-          <option value="fcs001.xreflector.net|42000|3200">FCS001 · España</option>
-          <option value="fcs002.xreflector.net|42000|3200">FCS002 · Alemania</option>
-          <option value="fcs003.xreflector.net|42000|3200">FCS003 · Francia</option>
-          <option value="fcs004.xreflector.net|42000|3200">FCS004 · UK</option>
-          <option value="fcs224.xreflector.net|42000|3200">FCS224 · Cataluña</option>
-          <option value="fcs232.xreflector.net|42000|3200">FCS232 · Austria</option>
-        </optgroup>
-      </select>
-    </div>
-
-    <div class="form-row3">
-      <div class="form-group">
-        <label>Gateway Address</label>
-        <input type="text" id="ysf_gw" value="<?= htmlspecialchars($ysf_gw) ?>">
-      </div>
-      <div class="form-group">
-        <label>Gateway Port</label>
-        <input type="number" id="ysf_gwport" value="<?= htmlspecialchars($ysf_gwport) ?>">
-      </div>
-      <div class="form-group">
-        <label>Local Port</label>
-        <input type="number" id="ysf_lport" value="<?= htmlspecialchars($ysf_lport) ?>">
-      </div>
-    </div>
-  </div>
-
-  <!-- Panel D-Star -->
-  <div class="sys-panel <?= $sistema_activo==='dstar'?'visible':'' ?>" id="panel-dstar">
-    <div class="section-title blue">🔵 D-STAR · XLX266</div>
-    <div class="form-row3">
-      <div class="form-group">
-        <label>Gateway Address</label>
-        <input type="text" id="dstar_gw" value="<?= htmlspecialchars($dstar_gw) ?>">
-      </div>
-      <div class="form-group">
-        <label>Gateway Port</label>
-        <input type="number" id="dstar_gwport" value="<?= htmlspecialchars($dstar_gwport) ?>">
-      </div>
-      <div class="form-group">
-        <label>Local Port</label>
-        <input type="number" id="dstar_lport" value="<?= htmlspecialchars($dstar_lport) ?>">
-      </div>
-    </div>
-  </div>
-
-  <!-- Panel NXDN -->
-  <div class="sys-panel <?= $sistema_activo==='nxdn'?'visible':'' ?>" id="panel-nxdn">
-    <div class="section-title violet">🟣 NXDN · Reflector 21465</div>
-    <div class="form-row3">
-      <div class="form-group">
-        <label>Gateway Address</label>
-        <input type="text" id="nxdn_gw" value="<?= htmlspecialchars($nxdn_gw) ?>">
-      </div>
-      <div class="form-group">
-        <label>Gateway Port</label>
-        <input type="number" id="nxdn_gwport" value="<?= htmlspecialchars($nxdn_gwport) ?>">
-      </div>
-      <div class="form-group">
-        <label>Local Port</label>
-        <input type="number" id="nxdn_lport" value="<?= htmlspecialchars($nxdn_lport) ?>">
-      </div>
-    </div>
-  </div>
-
-</div><!-- /card selector -->
-
-<!-- ══ GUARDAR ══════════════════════════════════════ -->
-<button class="btn-save" id="btnSave" onclick="saveAll()">
-  💾 GUARDAR CONFIGURACIÓN Y REINICIAR SERVICIOS
-</button>
-
-<!-- ══ LOG ══════════════════════════════════════════ -->
-<div class="term-wrap">
-  <div class="term-header">
-    <span>📋 JOURNAL LOG</span>
-    <div class="term-tabs">
-      <button class="term-tab active" id="tab-mb" onclick="switchLog('mmdvm_bridge')">MMDVM_Bridge</button>
-      <button class="term-tab" id="tab-ab" onclick="switchLog('analog_bridge')">Analog_Bridge</button>
-    </div>
-  </div>
-  <div class="term-box" id="termBox">Cargando...</div>
-</div>
-
-<div id="toast">✔ OK</div>
-
-<script>
-let _logSvc = 'mmdvm_bridge';
-
-// ── Status servicios ──────────────────────────
-async function loadStatus() {
-  try {
-    const r = await fetch('?action=status&t=' + Date.now());
-    const d = await r.json();
-    setSvcUI('ab', d.ab === 'active');
-    setSvcUI('mb', d.mb === 'active');
-  } catch(e) {}
-}
-function setSvcUI(prefix, active) {
-  document.getElementById(prefix+'-badge').textContent = active ? 'ACTIVO' : 'DETENIDO';
-  document.getElementById(prefix+'-badge').className   = 'badge ' + (active ? 'on' : 'off');
-  document.getElementById('sw-'+prefix).checked        = active;
-}
-async function toggleSvc(svc, el) {
-  el.disabled = true;
-  try {
-    const fd = new FormData(); fd.append('svc', svc);
-    const r = await fetch('?action=toggle', {method:'POST',body:fd});
-    const d = await r.json();
-    if (d.ok) { setSvcUI(svc==='analog_bridge'?'ab':'mb', d.active); showToast(svc+(d.active?' ACTIVADO':' DETENIDO')); }
-  } catch(e) {}
-  setTimeout(() => el.disabled = false, 800);
-}
-
-// ── Selector BrandMeister ────────────────────
-function selectBM(sel) {
-  const val = sel.value;
-  if (!val) return;
-  const parts = val.split('|');
-  if (parts.length < 2) return;
-  document.getElementById('bm_address').value = parts[0];
-  document.getElementById('bm_port').value    = parts[1];
-}
-
-// ── Selector IPSC2 ───────────────────────────
-function selectIPSC2(sel) {
-  const val = sel.value;
-  if (!val) return;
-  const parts = val.split('|');
-  if (parts.length < 3) return;
-  document.getElementById('dmrplus_address').value = parts[0];
-  document.getElementById('dmrplus_port').value    = parts[1];
-  document.getElementById('dmrplus_essid').value   = parts[2];
-  document.getElementById('dmrplus_essid_preview').textContent = parts[2];
-}
-
-// ── Selector YSF ─────────────────────────────
-function selectYSF(sel) {
-  const val = sel.value;
-  if (!val) return;
-  const parts = val.split('|');
-  if (parts.length < 3) return;
-  document.getElementById('ysf_gw').value     = parts[0];
-  document.getElementById('ysf_gwport').value  = parts[1];
-  document.getElementById('ysf_lport').value   = parts[2];
-}
-
-// ── Selector de sistema ───────────────────────
-const sisColors = {
-  dmr_bm: 'var(--cyan)', dmr_plus: 'var(--orange)',
-  ysf: 'var(--green)', dstar: 'var(--blue)', nxdn: 'var(--violet)'
-};
-const sisLabels = {
-  dmr_bm: 'DMR BRANDMEISTER', dmr_plus: 'DMR+ IPSC2',
-  ysf: 'YSF / C4FM', dstar: 'D-STAR', nxdn: 'NXDN'
-};
-
-function setSistema(sis, btn) {
-  // Ocultar todos los paneles
-  document.querySelectorAll('.sys-panel').forEach(p => p.classList.remove('visible'));
-  // Desactivar todos los botones
-  document.querySelectorAll('.sis-btn').forEach(b => b.className = 'sis-btn');
-  // Activar el elegido
-  btn.classList.add('active-' + sis);
-  document.getElementById('panel-' + sis).classList.add('visible');
-  document.getElementById('sistema').value = sis;
-  // Actualizar label
-  const lbl = document.getElementById('sisActivoLabel');
-  lbl.textContent = sisLabels[sis];
-  lbl.style.borderColor = sisColors[sis];
-  lbl.style.color = sisColors[sis];
-}
-
-// ── TalkGroup rápido ──────────────────────────
-function setTG(tg, btn) {
-  document.getElementById('ab_txTg').value = tg;
-  document.getElementById('tgActivo').textContent = tg;
-  document.querySelectorAll('.tg-btn').forEach(b => b.classList.remove('active'));
-  btn.classList.add('active');
-}
-document.getElementById('ab_txTg').addEventListener('input', function() {
-  document.getElementById('tgActivo').textContent = this.value;
-  document.querySelectorAll('.tg-btn').forEach(b => b.classList.remove('active'));
-});
-
-// Preview ESSID DMR+
-document.addEventListener('input', e => {
-  if (e.target.id === 'dmrplus_essid') {
-    document.getElementById('dmrplus_essid_preview').textContent = e.target.value;
-  }
-});
-
-// ── Guardar ───────────────────────────────────
-async function saveAll() {
-  const btn = document.getElementById('btnSave');
-  btn.disabled = true; btn.textContent = '⏳ GUARDANDO...';
-
-  const fd = new FormData();
-  const ids = [
-    'ab_gatewayDmrId','ab_repeaterID','ab_txTg','ab_txTs','ab_ambeMode',
-    'mb_Callsign','mb_Id','sistema',
-    'bm_address','bm_port','bm_password','bm_slot1','bm_slot2',
-    'dmrplus_address','dmrplus_port','dmrplus_password','dmrplus_essid','dmrplus_slot1','dmrplus_slot2',
-    'ysf_gw','ysf_gwport','ysf_lport',
-    'dstar_gw','dstar_gwport','dstar_lport',
-    'nxdn_gw','nxdn_gwport','nxdn_lport'
-  ];
-  // Mostrar temporalmente todos los paneles para que los inputs sean accesibles
-  document.querySelectorAll('.sys-panel').forEach(p => p.style.display = 'block');
-  ids.forEach(id => { const el = document.getElementById(id); if(el) fd.append(id, el.value); });
-  // Restaurar visibilidad
-  document.querySelectorAll('.sys-panel').forEach(p => p.style.display = '');
-  const visible = document.getElementById('panel-' + document.getElementById('sistema').value);
-  if (visible) visible.classList.add('visible');
-
-  try {
-    const r = await fetch('?action=save', {method:'POST',body:fd});
-    const d = await r.json();
-    showToast(d.msg, !d.ok);
-  } catch(e) { showToast('Error de conexión', true); }
-
-  btn.disabled = false;
-  btn.textContent = '💾 GUARDAR CONFIGURACIÓN Y REINICIAR SERVICIOS';
-}
-
-// ── Log ───────────────────────────────────────
-async function loadLog() {
-  try {
-    const fd = new FormData(); fd.append('svc', _logSvc);
-    const r = await fetch('?action=log', {method:'POST',body:fd});
-    const box = document.getElementById('termBox');
-    box.textContent = await r.text();
-    box.scrollTop = box.scrollHeight;
-  } catch(e) {}
-}
-function switchLog(svc) {
-  _logSvc = svc;
-  document.getElementById('tab-mb').classList.toggle('active', svc==='mmdvm_bridge');
-  document.getElementById('tab-ab').classList.toggle('active', svc==='analog_bridge');
-  loadLog();
-}
-
-// ── Toast ─────────────────────────────────────
-function showToast(msg, err=false) {
-  const t = document.getElementById('toast');
-  t.textContent = (err?'✕ ':'✔ ') + msg;
-  t.className = err ? 'err' : '';
-  t.style.display = 'block';
-  setTimeout(() => t.style.display='none', 3500);
-}
-
-loadStatus(); loadLog();
-setInterval(loadStatus, 3000);
-setInterval(loadLog, 4000);
-</script>
-</body>
-</html>
