@@ -830,7 +830,7 @@ button.btn-header { font-family: var(--font-mono); }
 </style>
 </head>
 <body>
-<header class="ctrl-header">
+<header class="ctrl-header" style="color:#f00">
 <div class="ctrl-header-top">
 <a href="https://associacioader.com" target="_blank">
   <img src="Logo_Ader.png" alt="EA3EIZ" style="height:40px; width:auto;">
@@ -838,9 +838,9 @@ button.btn-header { font-family: var(--font-mono); }
 <h1>PANEL SISTEMAS DIGITALES PARA RADIOAFICIONADOS PHPDVS</h1>
 </div>
 <div class="ctrl-header-btns">
-<a href="editor_general_config.php" class="btn-header red"> 📄 editor general </a>
+<a href="editor_general_config.php" class="btn-header red"> ✏️ editor general </a>
 <a href="?action=backup-configs" class="btn-header amber"> 💾 Hacer copia de seguridad </a>
-<button onclick="openRestore()" class="btn-header cyan"> 📂 Restaurar copia de seguridad </button>
+<button onclick="openRestore()" class="btn-header cyan"> ✅  Restaurar copia de seguridad </button>
 <div class="dropdown-wrap" id="dropActualizaciones">
   <button class="btn-header cyan">⬇ Actualizaciones ▾</button>
   <div class="dropdown-menu-custom">
