@@ -843,7 +843,7 @@ button.btn-header { font-family: var(--font-mono); }
 </a>
 <span style="color:amber;font-size:1.9rem;font-family: Bebas Neue, sans-serif;">PANEL SISTEMAS DIGITALES</span>
 <span style="color:#ff8c00;font-size:1.9rem;font-family: Bebas Neue, sans-serif;">PARA RADIOAFICIONADOS</span>
-<span style="color:cyan;font-size:1.9rem;font-family: Bebas Neue, sans-serif;">PHPDVS</span>
+<span style="color:#4169f1;font-size:1.9rem;font-family: Bebas Neue, sans-serif;">PHPDVS</span>
 
 </div>
 <div class="ctrl-header-btns">
