@@ -572,6 +572,7 @@ if ($action === 'nxdn-transmission') {
 <title>Panel PHPPLUS ADER</title>
 <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
 <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Rajdhani:wght@500;700&family=Orbitron:wght@700;900&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&display=swap" rel="stylesheet">
 <style>
 :root { --bg: #032354; --surface: #111720; --border: #1e2d3d; --green: #00ff9f; --green-dim: #00cc7a; --red: #ff4560; --amber: #ffb300; --cyan: #00d4ff; --violet: #b57aff; --text: #a8b9cc; --text-dim: #4a5568; --font-mono: 'Share Tech Mono', monospace; --font-ui: 'Rajdhani', sans-serif; --font-orb: 'Orbitron', monospace; }
 * { box-sizing: border-box; }
@@ -840,7 +841,7 @@ button.btn-header { font-family: var(--font-mono); }
 <a href="https://associacioader.com" target="_blank">
   <img src="Logo_Ader.png" alt="EA3EIZ" style="height:40px; width:auto;">
 </a>
-<span style="color:#c9d1d9;font-size:1.9rem;font-family: 'bebas', sans-serif;">PANEL SISTEMAS DIGITALES PARA RADIOAFICIONADOS</span>
+<span style="color:#c9d1d9;font-size:1.9rem;font-family: Bebas Neue, sans-serif;">PANEL SISTEMAS DIGITALES PARA RADIOAFICIONADOS</span>
 <span style="color:cyan;font-size:1.9rem;">PHPDVS</span>
 
 </div>
