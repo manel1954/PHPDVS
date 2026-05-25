@@ -755,6 +755,41 @@ $tgs = ['214'=>'España','2141'=>'Cataluña','21465'=>'ADER','9'=>'Local 9','8'=
   <!-- Panel YSF -->
   <div class="sys-panel <?= $sistema_activo==='ysf'?'visible':'' ?>" id="panel-ysf">
     <div class="section-title green">🟢 SYSTEM FUSION · ES-ADER</div>
+
+    <!-- Desplegable reflectores YSF -->
+    <div class="form-group">
+      <label>🌐 Seleccionar Reflector YSF</label>
+      <select id="ysf_selector" onchange="selectYSF(this)"
+        style="background:#0a0e1a;border:1px solid var(--green);color:var(--green);font-family:'Share Tech Mono',monospace;font-size:.82rem;padding:.42rem .55rem;width:100%;">
+        <option value="">— Selecciona reflector —</option>
+        <optgroup label="🇪🇸 España">
+          <option value="127.0.0.1|4210|3200">ES-ADER · Local (127.0.0.1)</option>
+          <option value="aderdigitales.ddns.net|42000|3200">ES-ADER · aderdigitales.ddns.net</option>
+          <option value="ysf.eb3jt.es|42000|3200">ES-EB3JT · Cataluña</option>
+          <option value="ysf.ea4rct.es|42000|3200">ES-EA4RCT · Madrid</option>
+          <option value="ysf.ea5gvk.es|42000|3200">ES-EA5GVK · Valencia</option>
+          <option value="ysf.ea7hg.es|42000|3200">ES-EA7HG · Andalucía</option>
+        </optgroup>
+        <optgroup label="🌍 Internacional">
+          <option value="register.ysfreflector.com|42000|3200">YSF · register.ysfreflector.com</option>
+          <option value="ysf.k4usd.us|42000|3200">YSF · USA K4USD</option>
+          <option value="ysf.db0pf.de|42000|3200">YSF · Alemania DB0PF</option>
+          <option value="ysf.on0arf.be|42000|3200">YSF · Bélgica ON0ARF</option>
+          <option value="ysf.f5nlg.fr|42000|3200">YSF · Francia F5NLG</option>
+          <option value="ysf.pi1nhv.nl|42000|3200">YSF · Países Bajos PI1NHV</option>
+          <option value="ysf.vk2rz.net|42000|3200">YSF · Australia VK2RZ</option>
+        </optgroup>
+        <optgroup label="🔗 FCS Rooms">
+          <option value="fcs001.xreflector.net|42000|3200">FCS001 · España</option>
+          <option value="fcs002.xreflector.net|42000|3200">FCS002 · Alemania</option>
+          <option value="fcs003.xreflector.net|42000|3200">FCS003 · Francia</option>
+          <option value="fcs004.xreflector.net|42000|3200">FCS004 · UK</option>
+          <option value="fcs224.xreflector.net|42000|3200">FCS224 · Cataluña</option>
+          <option value="fcs232.xreflector.net|42000|3200">FCS232 · Austria</option>
+        </optgroup>
+      </select>
+    </div>
+
     <div class="form-row3">
       <div class="form-group">
         <label>Gateway Address</label>
@@ -878,6 +913,17 @@ function selectIPSC2(sel) {
   document.getElementById('dmrplus_port').value    = parts[1];
   document.getElementById('dmrplus_essid').value   = parts[2];
   document.getElementById('dmrplus_essid_preview').textContent = parts[2];
+}
+
+// ── Selector YSF ─────────────────────────────
+function selectYSF(sel) {
+  const val = sel.value;
+  if (!val) return;
+  const parts = val.split('|');
+  if (parts.length < 3) return;
+  document.getElementById('ysf_gw').value     = parts[0];
+  document.getElementById('ysf_gwport').value  = parts[1];
+  document.getElementById('ysf_lport').value   = parts[2];
 }
 
 // ── Selector de sistema ───────────────────────
