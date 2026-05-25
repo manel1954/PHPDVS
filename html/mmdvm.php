@@ -1336,7 +1336,32 @@ function closeUpdate(){document.getElementById('updateModal').classList.remove('
 const UPDATE_TITLES={imagen:'🖼 Actualizar Imagen',ids:'📋 Actualizar IDs',ysf:'📡 Actualizar Reflectores YSF'};
 const UPDATE_ACTIONS={imagen:'?action=update-imagen',ids:'?action=update-ids',ysf:'?action=update-ysf'};
 async function runUpdate(type){document.getElementById('dropActualizaciones').classList.remove('open');document.getElementById('updateTitle').textContent=UPDATE_TITLES[type];const con=document.getElementById('updateConsole');con.textContent='⏳ Ejecutando, espera…';document.getElementById('updateCloseBtn').disabled=true;document.getElementById('updateModal').classList.add('open');try{const r=await fetch(UPDATE_ACTIONS[type]);const d=await r.json();con.textContent=d.output||'(sin salida)';con.scrollTop=con.scrollHeight;}catch(e){con.textContent='✖ Error de red: '+e.message;}finally{document.getElementById('updateCloseBtn').disabled=false;}}
-async function rebootPi(){if(!confirm('¿Seguro que quieres reiniciar la Raspberry Pi?'))return;const btn=document.getElementById('btnReboot');btn.textContent='⏻ Reiniciando…';btn.disabled=true;await fetch('?action=reboot');}
+async function rebootPi(){
+    if(!confirm('¿Seguro que quieres reiniciar la Raspberry Pi?'))return;
+    const btn=document.getElementById('btnReboot');
+    btn.textContent='⏻ Reiniciando…';
+    btn.disabled=true;
+    try{await fetch('?action=reboot');}catch(e){}
+    // Esperar a que el servidor caiga
+    let caido=false;
+    for(let i=0;i<30;i++){
+        await new Promise(r=>setTimeout(r,2000));
+        try{await fetch('?action=sysinfo',{signal:AbortSignal.timeout(2000)});}
+        catch(e){caido=true;break;}
+    }
+    // Ahora esperar a que vuelva y recargar
+    btn.textContent='⏻ Esperando arranque…';
+    for(let i=0;i<60;i++){
+        await new Promise(r=>setTimeout(r,3000));
+        try{
+            const r=await fetch('?action=sysinfo',{signal:AbortSignal.timeout(3000)});
+            if(r.ok){location.reload();return;}
+        }catch(e){}
+    }
+    // Si tras 3 min no responde, mostrar aviso
+    btn.textContent='⏻ Sin respuesta — recarga manual';
+    btn.disabled=false;
+}
 function closeInstalar(){document.getElementById('installModal').classList.remove('open');}
 async function confirmarInstalacion(){const btn=document.getElementById('btnInstalarOk');const msg=document.getElementById('installMsg');const out=document.getElementById('installOutput');btn.disabled=true;btn.textContent='⏳ Instalando…';msg.className='restore-msg loading';msg.style.display='block';msg.textContent='⏳ Ejecutando instalador, espera…';out.className='install-output visible';out.textContent='';try{const r=await fetch('?action=install-display');const d=await r.json();out.textContent=d.output||'(sin salida)';out.scrollTop=out.scrollHeight;msg.className='restore-msg ok';msg.textContent='✔ Instalación completada.';btn.textContent='✔ Cerrar';btn.disabled=false;btn.onclick=function(){closeInstalar();};}catch(e){msg.className='restore-msg err';msg.textContent='✖ Error durante la instalación.';btn.textContent='▶ Confirmar instalación';btn.disabled=false;}}
 function openRestore(){document.getElementById('restoreModal').classList.add('open');document.getElementById('restoreFile').value='';const msg=document.getElementById('restoreMsg');msg.style.display='none';msg.className='restore-msg';}
