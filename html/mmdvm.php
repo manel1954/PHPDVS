@@ -843,13 +843,13 @@ button.btn-header { font-family: var(--font-mono); }
 <h1>PANEL SISTEMAS DIGITALES PARA RADIOAFICIONADOS PHPDVS</h1>
 </div>
 <div class="ctrl-header-btns">
-<a href="editor_general_config.php" class="btn-header red"> ✏️ editor general </a>
+<a href="editor_general_config.php" class="btn-header white"> ✏️ editor general </a>
 <a href="?action=backup-configs" class="btn-header amber"> 💾 Hacer copia de seguridad </a>
 <button onclick="openRestore()" class="btn-header cyan"> 💿 Restaurar copia de seguridad </button>
 <div class="dropdown-wrap" id="dropActualizaciones">
   <button class="btn-header cyan">⬇ Actualizaciones ▾</button>
   <div class="dropdown-menu-custom">
-    <button class="dropdown-item-custom" onclick="runUpdate('imagen')">🔁 Actualizar Imagen</button>
+    <button class="dropdown-item-custom" onclick="runUpdate('imagen')">⬇ Actualizar Imagen</button>
     <button class="dropdown-item-custom" onclick="runUpdate('ids')">📋 Actualizar IDs</button>
     <button class="dropdown-item-custom" onclick="runUpdate('ysf')">📡 Actualizar Reflectores YSF</button>
     <button class="dropdown-item-custom" onclick="window.location.href='dstar_json_converter.php'">📡 Actualizar Reflectores D-STAR</button>
