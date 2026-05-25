@@ -1087,7 +1087,7 @@ button.btn-header { font-family: var(--font-mono); }
     </div>
     <iframe
       src="http://<?php echo $_SERVER['SERVER_ADDR']; ?>/dvswitch"
-      style="width:100%;height:1100px;border:none;display:block;background:#000;"
+      style="width:100%;height:1000px;border:none;display:block;background:#000;"
       loading="lazy"
       title="DVSwitch Dashboard">
     </iframe>
