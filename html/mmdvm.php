@@ -844,10 +844,10 @@ button.btn-header { font-family: var(--font-mono); }
 </div>
 <div class="ctrl-header-btns">
 <a href="editor_general_config.php" class="btn btn-success btn-sm"> ✏️ Editor General </a>
-<a href="?action=backup-configs" class="btn-header amber"> 💾 Hacer copia de seguridad </a>
-<button onclick="openRestore()" class="btn-header cyan"> 💿 Restaurar copia de seguridad </button>
+<a href="?action=backup-configs" class="btn btn-success btn-sm"> 💾 Hacer copia de seguridad </a>
+<button onclick="openRestore()" class="btn btn-success btn-sm"> 💿 Restaurar copia de seguridad </button>
 <div class="dropdown-wrap" id="dropActualizaciones">
-  <button class="btn-header cyan">⬇ Actualizaciones ▾</button>
+  <button class="btn btn-succccess btn-sm">⬇ Actualizaciones ▾</button>
   <div class="dropdown-menu-custom">
     <button class="dropdown-item-custom" onclick="runUpdate('imagen')">⬇ Actualizar Imagen</button>
     <button class="dropdown-item-custom" onclick="runUpdate('ids')">📋 Actualizar IDs</button>
@@ -855,9 +855,9 @@ button.btn-header { font-family: var(--font-mono); }
     <button class="dropdown-item-custom" onclick="window.location.href='dstar_json_converter.php'">📡 Actualizar Reflectores D-STAR</button>
   </div>
 </div>
-<button class="btn-header cyan" onclick="xtTtydOpen()">🖥️ Terminal</button>
-<a href="extra.php" class="btn-header amber">⚙️ Menu Extra</a>
-<button id="btnReboot" class="btn-header red" onclick="rebootPi()">⏻ Reiniciar Pi</button>
+<button class="btn btn-success btn-sm" onclick="xtTtydOpen()">🖥️ Terminal</button>
+<a href="extra.php" class="btn btn-warning btn-sm">⚙️ Menu Extra</a>
+<button id="btnReboot" class="btn btn-danger btn-sm" onclick="rebootPi()">⏻ Reiniciar Pi</button>
 </div>
 </header>
 <main class="ctrl-body">
