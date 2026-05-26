@@ -338,13 +338,25 @@ function lookupCall($callsign) {
 
 // ── DMR2YSF ───────────────────────────────────────────────────────────────────
 if ($action === 'dmr2ysf-status') {
-    $st = trim(shell_exec('systemctl is-active dmr2ysf 2>/dev/null'));
+    $s1 = trim(shell_exec('systemctl is-active mmdvmdmr2ysf 2>/dev/null'));
+    $s2 = trim(shell_exec('systemctl is-active ysfgw-dmr2ysf 2>/dev/null'));
+    $s3 = trim(shell_exec('systemctl is-active dmr2ysf 2>/dev/null'));
+    $active = ($s1 === 'active' || $s2 === 'active' || $s3 === 'active') ? 'active' : 'inactive';
     header('Content-Type: application/json');
-    echo json_encode(['dmr2ysf' => $st]);
+    echo json_encode(['dmr2ysf' => $active, 's1' => $s1, 's2' => $s2, 's3' => $s3]);
     exit;
 }
 if ($action === 'dmr2ysf-start') {
     saveState('dmr2ysf','on');
+    // 1. MMDVMHost DMR2YSF instance
+    shell_exec('sudo systemctl enable mmdvmdmr2ysf 2>/dev/null');
+    shell_exec('sudo systemctl start mmdvmdmr2ysf 2>/dev/null');
+    sleep(2);
+    // 2. YSFGateway para DMR2YSF
+    shell_exec('sudo systemctl enable ysfgw-dmr2ysf 2>/dev/null');
+    shell_exec('sudo systemctl start ysfgw-dmr2ysf 2>/dev/null');
+    sleep(1);
+    // 3. DMR2YSF MMDVM_CM
     shell_exec('sudo systemctl enable dmr2ysf 2>/dev/null');
     shell_exec('sudo systemctl start dmr2ysf 2>/dev/null');
     header('Content-Type: application/json');
@@ -353,8 +365,12 @@ if ($action === 'dmr2ysf-start') {
 }
 if ($action === 'dmr2ysf-stop') {
     saveState('dmr2ysf','off');
+    // Parar en orden inverso
     shell_exec('sudo systemctl stop dmr2ysf 2>/dev/null');
-    shell_exec('sudo systemctl disable dmr2ysf 2>/dev/null');
+    sleep(1);
+    shell_exec('sudo systemctl stop ysfgw-dmr2ysf 2>/dev/null');
+    shell_exec('sudo systemctl stop mmdvmdmr2ysf 2>/dev/null');
+    shell_exec('sudo systemctl disable dmr2ysf mmdvmdmr2ysf ysfgw-dmr2ysf 2>/dev/null');
     header('Content-Type: application/json');
     echo json_encode(['ok' => true]);
     exit;
@@ -1043,6 +1059,8 @@ button.btn-header { font-family: var(--font-mono); }
 <div class="status-item"><div class="dot" id="dot-nxdnmmd"></div><span style="color:#ffd700">MMDVMHost NXDN</span></div>
 <div class="status-item"><div class="dot" id="dot-nxdngw"></div><span style="color:#ffd700">NXDNGateway</span></div>
 <div class="section-divider"></div>
+<div class="status-item"><div class="dot" id="dot-dmr2ysf-mmd"></div><span style="color:#00ffcc">MMDVMDmr2ysf</span></div>
+<div class="status-item"><div class="dot" id="dot-dmr2ysf-ysf"></div><span style="color:#00ffcc">YSFgw-Dmr2ysf</span></div>
 <div class="status-item"><div class="dot" id="dot-dmr2ysf"></div><span style="color:#00ffcc">DMR2YSF</span></div>
 </div>
 <div class="controls-section">
@@ -1657,7 +1675,7 @@ async function fetchDmr2ysfTransmission(){try{const r=await fetch('?action=dmr2y
 
 async function fetchDmr2ysfLogs(){try{const r=await fetch('?action=dmr2ysf-logs&lines=15');const d=await r.json();const el=document.getElementById('logDmr2ysf');const atBot=el.scrollHeight-el.clientHeight<=el.scrollTop+10;el.innerHTML=colorize(d.dmr2ysf);if(atBot)el.scrollTop=el.scrollHeight;}catch(e){}}
 
-async function checkDmr2ysfStatus(){try{const r=await fetch('?action=dmr2ysf-status');const d=await r.json();const active=d.dmr2ysf==='active';setDot('dot-dmr2ysf',active?'active':'off');dmr2ysfRunning=active;setDMR2YSFToggle(active);if(active){startDmr2ysfLogs();startDmr2ysfTxPoll();}}catch(e){}}
+async function checkDmr2ysfStatus(){try{const r=await fetch('?action=dmr2ysf-status');const d=await r.json();const active=d.dmr2ysf==='active';setDot('dot-dmr2ysf-mmd',d.s1==='active'?'active':'off');setDot('dot-dmr2ysf-ysf',d.s2==='active'?'active':'off');setDot('dot-dmr2ysf',d.s3==='active'?'active':'off');dmr2ysfRunning=active;setDMR2YSFToggle(active);if(active){startDmr2ysfLogs();startDmr2ysfTxPoll();}}catch(e){}}
 
 async function toggleDMR2YSF(chk){const wasOn=!chk.checked;const sw=document.getElementById('swDMR2YSF');chk.checked=wasOn;sw.classList.add('busy');
 try{
@@ -1668,7 +1686,7 @@ try{
         const r=await fetch('?action=dmr2ysf-status');
         const d=await r.json();
         const isOn=d.dmr2ysf==='active';
-        if(wasOn&&!isOn){ok=true;setDot('dot-dmr2ysf','off');dmr2ysfRunning=false;setDMR2YSFToggle(false);stopDmr2ysfLogs();stopDmr2ysfTxPoll();showDmr2ysfIdle();clearLog('logDmr2ysf');break;}
+        if(wasOn&&!isOn){ok=true;setDot('dot-dmr2ysf-mmd','off');setDot('dot-dmr2ysf-ysf','off');setDot('dot-dmr2ysf','off');dmr2ysfRunning=false;setDMR2YSFToggle(false);stopDmr2ysfLogs();stopDmr2ysfTxPoll();showDmr2ysfIdle();clearLog('logDmr2ysf');break;}
         if(!wasOn&&isOn){ok=true;setDot('dot-dmr2ysf','active');dmr2ysfRunning=true;setDMR2YSFToggle(true);startDmr2ysfLogs();startDmr2ysfTxPoll();break;}
     }
     if(!ok)await checkDmr2ysfStatus();
