@@ -12,6 +12,7 @@ $files = [
     'mmdvmdstar'   => '/home/pi/MMDVMHost/MMDVMDSTAR.ini',
     'mmdvmnxdn'    => '/home/pi/MMDVMHost/MMDVMNXDN.ini',
     'nxdngateway'  => '/home/pi/NXDNClients/NXDNGateway/NXDNGateway.ini',
+    'dmr2ysf'      => '/home/pi/MMDVM_CM/DMR2YSF/DMR2YSF.ini',
 ];
 
 $key  = $_GET['file'] ?? '';
