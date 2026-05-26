@@ -5,84 +5,75 @@ $INI_PATH = '/home/pi/NXDNClients/NXDNGateway/NXDNGateway.ini';
 
 $SECTIONS = [
     'General' => [
-        ['key' => 'Callsign',      'label' => 'Indicativo',           'type' => 'str'],
-        ['key' => 'Id',            'label' => 'NXDN ID',              'type' => 'int'],
-        ['key' => 'RptAddress',    'label' => 'Dirección repetidor',  'type' => 'str'],
-        ['key' => 'RptPort',       'label' => 'Puerto repetidor',     'type' => 'int'],
-        ['key' => 'LocalAddress',  'label' => 'Dirección local',      'type' => 'str'],
-        ['key' => 'LocalPort',     'label' => 'Puerto local',         'type' => 'int'],
-        ['key' => 'NetworkStart',  'label' => 'Network Start (0/1)',  'type' => 'int'],
-        ['key' => 'UserControl',   'label' => 'User Control (0/1)',   'type' => 'int'],
-        ['key' => 'Debug',         'label' => 'Debug (0/1)',          'type' => 'int'],
-        ['key' => 'Daemon',        'label' => 'Daemon (0/1)',         'type' => 'int'],
+        ['key' => 'Callsign',     'label' => 'Indicativo',              'type' => 'str'],
+        ['key' => 'Suffix',       'label' => 'Sufijo',                  'type' => 'str'],
+        ['key' => 'RptProtocol',  'label' => 'Protocolo repetidor',     'type' => 'str'],
+        ['key' => 'RptAddress',   'label' => 'Dirección repetidor',     'type' => 'str'],
+        ['key' => 'RptPort',      'label' => 'Puerto repetidor',        'type' => 'int'],
+        ['key' => 'LocalPort',    'label' => 'Puerto local',            'type' => 'int'],
+        ['key' => 'Debug',        'label' => 'Debug (0/1)',             'type' => 'int'],
+        ['key' => 'Daemon',       'label' => 'Daemon (0/1)',            'type' => 'int'],
     ],
     'Info' => [
-        ['key' => 'RXFrequency',   'label' => 'Frecuencia RX (Hz)',  'type' => 'int'],
-        ['key' => 'TXFrequency',   'label' => 'Frecuencia TX (Hz)',  'type' => 'int'],
-        ['key' => 'Power',         'label' => 'Potencia (W)',         'type' => 'int'],
-        ['key' => 'Latitude',      'label' => 'Latitud',              'type' => 'str'],
-        ['key' => 'Longitude',     'label' => 'Longitud',             'type' => 'str'],
-        ['key' => 'Height',        'label' => 'Altura (m)',           'type' => 'int'],
-        ['key' => 'Location',      'label' => 'Localización',         'type' => 'str'],
-        ['key' => 'Description',   'label' => 'Descripción',          'type' => 'str'],
-        ['key' => 'URL',           'label' => 'URL',                  'type' => 'str'],
+        ['key' => 'RXFrequency',  'label' => 'Frecuencia RX (Hz)',      'type' => 'int'],
+        ['key' => 'TXFrequency',  'label' => 'Frecuencia TX (Hz)',      'type' => 'int'],
+        ['key' => 'Power',        'label' => 'Potencia (W)',            'type' => 'int'],
+        ['key' => 'Latitude',     'label' => 'Latitud',                 'type' => 'str'],
+        ['key' => 'Longitude',    'label' => 'Longitud',                'type' => 'str'],
+        ['key' => 'Height',       'label' => 'Altura (m)',              'type' => 'int'],
+        ['key' => 'Name',         'label' => 'Nombre',                  'type' => 'str'],
+        ['key' => 'Description',  'label' => 'Descripción',             'type' => 'str'],
     ],
     'Log' => [
-        ['key' => 'DisplayLevel',  'label' => 'Nivel pantalla (0-5)', 'type' => 'int'],
-        ['key' => 'FileLevel',     'label' => 'Nivel fichero (0-5)', 'type' => 'int'],
-        ['key' => 'FilePath',      'label' => 'Ruta logs',            'type' => 'str'],
-        ['key' => 'FileRoot',      'label' => 'Prefijo fichero log',  'type' => 'str'],
+        ['key' => 'DisplayLevel', 'label' => 'Nivel pantalla (0-5)',    'type' => 'int'],
+        ['key' => 'MQTTLevel',    'label' => 'Nivel MQTT (0-5)',        'type' => 'int'],
     ],
-    'NXDN Network 1' => [
-        ['key' => 'Enabled',       'label' => 'Habilitado (0/1)',     'type' => 'int'],
-        ['key' => 'Name',          'label' => 'Nombre',               'type' => 'str'],
-        ['key' => 'Address',       'label' => 'Dirección',            'type' => 'str'],
-        ['key' => 'Port',          'label' => 'Puerto',               'type' => 'int'],
-        ['key' => 'Local',         'label' => 'Puerto local',         'type' => 'int'],
-        ['key' => 'Debug',         'label' => 'Debug (0/1)',          'type' => 'int'],
-    ],
-    'NXDN Network 2' => [
-        ['key' => 'Enabled',       'label' => 'Habilitado (0/1)',     'type' => 'int'],
-        ['key' => 'Name',          'label' => 'Nombre',               'type' => 'str'],
-        ['key' => 'Address',       'label' => 'Dirección',            'type' => 'str'],
-        ['key' => 'Port',          'label' => 'Puerto',               'type' => 'int'],
-        ['key' => 'Local',         'label' => 'Puerto local',         'type' => 'int'],
-        ['key' => 'Debug',         'label' => 'Debug (0/1)',          'type' => 'int'],
-    ],
-    'NXDN Network 3' => [
-        ['key' => 'Enabled',       'label' => 'Habilitado (0/1)',     'type' => 'int'],
-        ['key' => 'Name',          'label' => 'Nombre',               'type' => 'str'],
-        ['key' => 'Address',       'label' => 'Dirección',            'type' => 'str'],
-        ['key' => 'Port',          'label' => 'Puerto',               'type' => 'int'],
-        ['key' => 'Local',         'label' => 'Puerto local',         'type' => 'int'],
-        ['key' => 'Debug',         'label' => 'Debug (0/1)',          'type' => 'int'],
+    'Network' => [
+        ['key' => 'Port',              'label' => 'Puerto local',            'type' => 'int'],
+        ['key' => 'HostsFile1',        'label' => 'Fichero hosts 1',         'type' => 'str'],
+        ['key' => 'ReloadTime',        'label' => 'Tiempo recarga (min)',    'type' => 'int'],
+        ['key' => 'ParrotAddress',     'label' => 'Dirección Parrot',        'type' => 'str'],
+        ['key' => 'ParrotPort',        'label' => 'Puerto Parrot',           'type' => 'int'],
+        ['key' => 'NXDN2DMRAddress',   'label' => 'NXDN2DMR Address',        'type' => 'str'],
+        ['key' => 'NXDN2DMRPort',      'label' => 'NXDN2DMR Port',           'type' => 'int'],
+        ['key' => 'Static',            'label' => 'Reflector estático',      'type' => 'int'],
+        ['key' => 'RFHangTime',        'label' => 'RF Hang Time (s)',        'type' => 'int'],
+        ['key' => 'NetHangTime',       'label' => 'Net Hang Time (s)',       'type' => 'int'],
+        ['key' => 'Debug',             'label' => 'Debug (0/1)',             'type' => 'int'],
     ],
     'Voice' => [
-        ['key' => 'Enabled',       'label' => 'Habilitado (0/1)',     'type' => 'int'],
-        ['key' => 'Language',      'label' => 'Idioma',               'type' => 'str'],
+        ['key' => 'Enabled',      'label' => 'Habilitado (0/1)',        'type' => 'int'],
+        ['key' => 'Language',     'label' => 'Idioma',                  'type' => 'str'],
+        ['key' => 'Directory',    'label' => 'Directorio audio',        'type' => 'str'],
+    ],
+    'MQTT' => [
+        ['key' => 'Address',      'label' => 'Dirección',               'type' => 'str'],
+        ['key' => 'Port',         'label' => 'Puerto',                  'type' => 'int'],
+        ['key' => 'Keepalive',    'label' => 'Keepalive (s)',           'type' => 'int'],
+        ['key' => 'Auth',         'label' => 'Auth (0/1)',              'type' => 'int'],
+        ['key' => 'Username',     'label' => 'Usuario',                 'type' => 'str'],
+        ['key' => 'Password',     'label' => 'Contraseña',             'type' => 'str'],
+        ['key' => 'Name',         'label' => 'Nombre MQTT',            'type' => 'str'],
     ],
 ];
 
 $SEC_COLORS = [
-    'General'        => '#a8b9cc',
-    'Info'           => '#b57aff',
-    'Log'            => '#00d4ff',
-    'NXDN Network 1' => '#ffd700',
-    'NXDN Network 2' => '#ffc400',
-    'NXDN Network 3' => '#ffaa00',
-    'Voice'          => '#00ff9f',
+    'General' => '#a8b9cc',
+    'Info'    => '#b57aff',
+    'Log'     => '#00d4ff',
+    'Network' => '#ffd700',
+    'Voice'   => '#00ff9f',
+    'MQTT'    => '#ffb300',
 ];
 
-// Opciones de reflectores NXDN conocidos
 $FIELD_OPTIONS = [
-    'NXDN Network 1' => [
-        'Address' => [
-            ['label' => '--- Selecciona reflector ---',        'value' => ''],
-            ['label' => 'NXDN Ref 21465 (ADER ES)',            'value' => 'aderdigitales.ddns.net'],
-            ['label' => 'NXDN Ref 65000 (España)',             'value' => '212.237.3.141'],
-            ['label' => 'NXDN Ref 10 (Worldwide)',             'value' => 'nxdn.nagoya.org'],
+    'Network' => [
+        'Static' => [
+            ['label' => '--- Selecciona reflector ---',   'value' => ''],
+            ['label' => 'NXDN Ref 21465 (ADER ES)',       'value' => '21465'],
+            ['label' => 'NXDN Ref 65000 (España)',        'value' => '65000'],
+            ['label' => 'NXDN Ref 10 (Worldwide)',        'value' => '10'],
         ],
-        'Port' => [],
     ],
 ];
 
@@ -137,7 +128,8 @@ function writeIniValues($path, $sections, $newValues) {
             $result[] = $line;
         }
     }
-    file_put_contents($path, implode('', $result));
+    $bytes = file_put_contents($path, implode('', $result));
+    if ($bytes === false) return ['ok' => false, 'msg' => 'Error al escribir: ' . $path];
     return ['ok' => true, 'msg' => 'Configuración guardada correctamente'];
 }
 
@@ -241,6 +233,11 @@ function postKey($sec, $key) { return str_replace(' ', '_', $sec) . '_' . $key; 
     font-size: .9rem; padding: .5rem .8rem; outline: none; transition: border-color .2s;
   }
   input[type=text]:focus, input[type=number]:focus { border-color: var(--nxdn); }
+  input[type=password] {
+    width: 100%; background: var(--surface); border: 1px solid var(--border);
+    border-radius: 4px; color: var(--nxdn); font-family: var(--font-mono);
+    font-size: .9rem; padding: .5rem .8rem; outline: none; transition: border-color .2s;
+  }
   .field-hint { font-family: var(--font-mono); font-size: .65rem; color: var(--text-dim); margin-top: .2rem; }
   .enabled-row { margin-bottom: 1.2rem; padding-bottom: 1rem; border-bottom: 1px solid var(--border); }
   .enabled-select {
@@ -409,6 +406,8 @@ function postKey($sec, $key) { return str_replace(' ', '_', $sec) . '_' . $key; 
                   <?php endforeach; ?>
                 </div>
               </div>
+            <?php elseif ($field['key'] === 'Password'): ?>
+              <input type="password" id="<?= $pKey ?>" name="<?= $pKey ?>" value="<?= htmlspecialchars($val) ?>">
             <?php else: ?>
               <input
                 type="<?= $field['type'] === 'int' ? 'number' : 'text' ?>"
