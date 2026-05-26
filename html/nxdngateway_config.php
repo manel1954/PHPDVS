@@ -66,14 +66,45 @@ $SEC_COLORS = [
     'MQTT'    => '#ffb300',
 ];
 
+// ── Cargar reflectores desde NXDNHosts.json ──────────────────────────────────
+$NXDN_HOSTS_FILE = '/home/pi/NXDNClients/NXDNGateway/NXDNHosts.json';
+$nxdn_reflectors = [];
+
+if (file_exists($NXDN_HOSTS_FILE)) {
+    $json = json_decode(file_get_contents($NXDN_HOSTS_FILE), true);
+    if (isset($json['reflectors']) && is_array($json['reflectors'])) {
+        foreach ($json['reflectors'] as $ref) {
+            $id      = intval($ref['designator'] ?? 0);
+            $name    = trim($ref['name'] ?? '');
+            $country = strtoupper(trim($ref['country'] ?? ''));
+            $sponsor = trim($ref['sponsor'] ?? '');
+            if ($id <= 0) continue;
+            $label = $id;
+            if ($name !== '')    $label .= ' · ' . $name;
+            if ($country !== '') $label .= ' [' . $country . ']';
+            if ($sponsor !== '') $label .= ' — ' . $sponsor;
+            $nxdn_reflectors[] = [
+                'label'   => $label,
+                'value'   => (string)$id,
+                'country' => $country,
+            ];
+        }
+        // Ordenar: primero ES, luego por ID numérico
+        usort($nxdn_reflectors, function($a, $b) {
+            $aES = ($a['country'] === 'ES') ? 0 : 1;
+            $bES = ($b['country'] === 'ES') ? 0 : 1;
+            if ($aES !== $bES) return $aES - $bES;
+            return intval($a['value']) - intval($b['value']);
+        });
+    }
+}
+
+// Opción vacía al inicio
+array_unshift($nxdn_reflectors, ['label' => '--- Selecciona reflector ---', 'value' => '', 'country' => '']);
+
 $FIELD_OPTIONS = [
     'Network' => [
-        'Static' => [
-            ['label' => '--- Selecciona reflector ---',   'value' => ''],
-            ['label' => 'NXDN Ref 21465 (ADER ES)',       'value' => '21465'],
-            ['label' => 'NXDN Ref 65000 (España)',        'value' => '65000'],
-            ['label' => 'NXDN Ref 10 (Worldwide)',        'value' => '10'],
-        ],
+        'Static' => $nxdn_reflectors,
     ],
 ];
 
@@ -396,6 +427,12 @@ function postKey($sec, $key) { return str_replace(' ', '_', $sec) . '_' . $key; 
                   <span class="arrow">▼</span>
                 </button>
                 <div class="custom-select-list">
+                  <div style="padding:.4rem .5rem;border-bottom:1px solid var(--border);position:sticky;top:0;background:#0d1e2a;z-index:1;">
+                    <input type="text" placeholder="🔍 Buscar..." oninput="filterNXDN(this)"
+                      style="width:100%;background:var(--surface);border:1px solid var(--nxdn);color:var(--nxdn);
+                             font-family:var(--font-mono);font-size:.75rem;padding:.3rem .5rem;outline:none;"
+                      onclick="event.stopPropagation()">
+                  </div>
                   <?php foreach ($opts as $opt): ?>
                   <div class="custom-select-option <?= $opt['value'] === $val ? 'selected' : '' ?>"
                        data-value="<?= htmlspecialchars($opt['value']) ?>"
@@ -438,6 +475,15 @@ function postKey($sec, $key) { return str_replace(' ', '_', $sec) . '_' . $key; 
 </div>
 
 <script>
+function filterNXDN(input) {
+  const term = input.value.trim().toLowerCase();
+  const list = input.closest('.custom-select-list');
+  list.querySelectorAll('.custom-select-option').forEach(opt => {
+    const txt = opt.textContent.toLowerCase();
+    opt.style.display = (term === '' || txt.indexOf(term) >= 0) ? '' : 'none';
+  });
+}
+
 function switchTab(btn, tabId, color) {
   document.querySelectorAll('.tab-btn').forEach(b => {
     b.classList.remove('active');
