@@ -144,7 +144,7 @@ label { font-size:.75rem; color:var(--text-dim); letter-spacing:.1em; text-trans
 </head>
 <body>
 <div class="login-box">
-  <div class="login-logo"><img src="Logo_REM-ESP_EA4RCR.png" alt="EA4RCR" onerror="this.style.display='none'"></div>
+  <div class="login-logo"><img src="Logo_Ader.png" alt="EA3EIZ" onerror="this.style.display='none'"></div>
   <div class="login-title">MMDVM Control</div>
   <div class="login-sub">ACCESO PHPPLUS</div>
   <div class="lock-icon">🔒</div>
