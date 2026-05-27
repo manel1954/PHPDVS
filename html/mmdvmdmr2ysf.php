@@ -61,7 +61,16 @@ if ($action === 'save-file') {
         echo json_encode(['ok'=>false,'msg'=>'Ruta vacía']);
         exit;
     }
-    $result = file_put_contents($path, $content);
+    $result = @file_put_contents($path, $content);
+    if ($result === false) {
+        // Intentar con sudo tee para ficheros fuera del webroot
+        $tmpFile = tempnam('/tmp', 'mmdvm_save_');
+        file_put_contents($tmpFile, $content);
+        $escaped = escapeshellarg($path);
+        $out = shell_exec("sudo /bin/cp " . escapeshellarg($tmpFile) . " {$escaped} 2>&1");
+        @unlink($tmpFile);
+        $result = file_exists($path) ? true : false;
+    }
     header('Content-Type: application/json');
     echo json_encode($result !== false ? ['ok'=>true,'msg'=>'Guardado correctamente'] : ['ok'=>false,'msg'=>'Error al escribir el fichero']);
     exit;
@@ -226,6 +235,74 @@ if ($action === 'ysf-status') {
     $pid = trim(@file_get_contents('/tmp/ysfgateway.pid'));
     $active = ($pid && is_numeric($pid) && file_exists('/proc/'.$pid)) ? 'active' : 'inactive';
     header('Content-Type: application/json'); echo json_encode(['ysf'=>$active]); exit;
+}
+if ($action === 'mmdvmdmr2ysf-config-read') {
+    $path = '/home/pi/MMDVMHost/MMDVMDMR2YSF.ini';
+    $ini  = parseMMDVMIni($path);
+    header('Content-Type: application/json');
+    echo json_encode([
+        'ok'   => file_exists($path),
+        // General
+        'Callsign'      => $ini['General']['Callsign']      ?? '',
+        'Id'            => $ini['General']['Id']            ?? '',
+        'Timeout'       => $ini['General']['Timeout']       ?? '180',
+        'Duplex'        => $ini['General']['Duplex']        ?? '0',
+        'RXFrequency'   => $ini['Info']['RXFrequency']      ?? '0',
+        'TXFrequency'   => $ini['Info']['TXFrequency']      ?? '0',
+        // DMR Network
+        'DmrEnable'     => $ini['DMR Network']['Enable']       ?? '1',
+        'DmrType'       => $ini['DMR Network']['Type']         ?? 'Direct',
+        'DmrLocalAddr'  => $ini['DMR Network']['LocalAddress'] ?? '127.0.0.1',
+        'DmrLocalPort'  => $ini['DMR Network']['LocalPort']    ?? '62031',
+        'DmrRemoteAddr' => $ini['DMR Network']['RemoteAddress']?? '127.0.0.1',
+        'DmrRemotePort' => $ini['DMR Network']['RemotePort']   ?? '62032',
+        'DmrPassword'   => $ini['DMR Network']['Password']     ?? '',
+        'DmrJitter'     => $ini['DMR Network']['Jitter']       ?? '360',
+    ]);
+    exit;
+}
+if ($action === 'mmdvmdmr2ysf-config-save') {
+    $path = '/home/pi/MMDVMHost/MMDVMDMR2YSF.ini';
+    if (!file_exists($path)) { header('Content-Type: application/json'); echo json_encode(['ok'=>false,'msg'=>'Fichero no encontrado']); exit; }
+    $content = file_get_contents($path);
+    $map = [
+        'General'     => ['Callsign','Id','Timeout','Duplex'],
+        'Info'        => ['RXFrequency','TXFrequency'],
+        'DMR Network' => ['Enable'=>'DmrEnable','Type'=>'DmrType','LocalAddress'=>'DmrLocalAddr',
+                          'LocalPort'=>'DmrLocalPort','RemoteAddress'=>'DmrRemoteAddr',
+                          'RemotePort'=>'DmrRemotePort','Password'=>'DmrPassword','Jitter'=>'DmrJitter'],
+    ];
+    // Reemplazar valores en el contenido
+    $currentSection = '';
+    $lines = explode("\n", $content);
+    foreach ($lines as &$line) {
+        $trimmed = trim($line);
+        if (preg_match('/^\[(.+)\]$/', $trimmed, $m)) { $currentSection = trim($m[1]); continue; }
+        if (preg_match('/^([^=;#]+)=(.*)$/', $trimmed, $m)) {
+            $key = trim($m[1]);
+            if (!isset($map[$currentSection])) continue;
+            $sectionMap = $map[$currentSection];
+            // Buscar si este key tiene un POST field
+            $postKey = is_array($sectionMap) && isset($sectionMap[$key]) ? $sectionMap[$key]
+                     : (in_array($key, $sectionMap) ? $key : null);
+            if ($postKey && isset($_POST[$postKey])) {
+                $line = $key . '=' . trim($_POST[$postKey]);
+            }
+        }
+    }
+    unset($line);
+    $newContent = implode("\n", $lines);
+    $result = @file_put_contents($path, $newContent);
+    if ($result === false) {
+        $tmp = tempnam('/tmp', 'mmdvm_cfg_');
+        file_put_contents($tmp, $newContent);
+        shell_exec("sudo /bin/cp " . escapeshellarg($tmp) . " " . escapeshellarg($path) . " 2>&1");
+        @unlink($tmp);
+        $result = true;
+    }
+    header('Content-Type: application/json');
+    echo json_encode(['ok'=>true,'msg'=>'Guardado correctamente']);
+    exit;
 }
 if ($action === 'ysf-start')  { saveState('ysf','on'); shell_exec('sudo systemctl enable ysfgateway 2>/dev/null'); shell_exec('sudo systemctl start ysfgateway 2>/dev/null'); sleep(1); header('Content-Type: application/json'); echo json_encode(['ok'=>true]); exit; }
 if ($action === 'ysf-stop')   { saveState('ysf','off'); shell_exec('sudo systemctl stop ysfgateway 2>/dev/null'); shell_exec('sudo systemctl disable ysfgateway 2>/dev/null'); header('Content-Type: application/json'); echo json_encode(['ok'=>true]); exit; }
@@ -1155,9 +1232,10 @@ button.btn-header { font-family: var(--font-mono); }
     <div class="auto-badge" id="dmr2ysfRefreshBadge" style="display:none;color:#00ffcc;"><div class="dot-sm" style="background:#00ffcc;"></div> DMR2YSF activo</div>
     <div class="service-card-btns" style="margin-top:.6rem;">
       <a href="dmr2ysf_config.php" class="ini-btn edit" style="flex:1;justify-content:center;color:#00ffcc;border-color:rgba(0,255,204,.3);">⚙ DMR2YSF CONFIG</a>
-      <a href="edit_ini.php?file=dmr2ysf" class="ini-btn view" style="flex:1;justify-content:center;color:#00ffcc;border-color:rgba(0,255,204,.3);">📄 editar DMR2YSF.ini</a>
+      <button onclick="openDmr2ysfConfigModal()" class="ini-btn edit" style="flex:1;justify-content:center;color:#00ffcc;border-color:rgba(0,255,204,.3);">⚙ MMDVMDMR2YSF CONFIG</button>
     </div>
     <div class="service-card-btns" style="margin-top:.4rem;">
+      <a href="edit_ini.php?file=dmr2ysf" class="ini-btn view" style="flex:1;justify-content:center;color:#00ffcc;border-color:rgba(0,255,204,.3);">📄 editar DMR2YSF.ini</a>
       <button onclick="feditOpen('/home/pi/MMDVMHost/MMDVMDMR2YSF.ini')" class="ini-btn edit" style="flex:1;justify-content:center;color:#00ffcc;border-color:rgba(0,255,204,.3);">📄 editar MMDVMDMR2YSF.ini</button>
     </div>
   </div>
@@ -1287,6 +1365,44 @@ button.btn-header { font-family: var(--font-mono); }
 <div class="log-grid" id="dmr2ysfLogPanels" style="display:none;">
 <div id="dmr2ysfPanel" class="log-panel"><div class="log-panel-header"><span class="svc-name" style="color:#00ffcc;">▸ DMR2YSF</span><button class="btn-clear" onclick="clearLog('logDmr2ysf')">limpiar</button></div><div class="log-output" id="logDmr2ysf">Esperando DMR2YSF…</div></div>
 <div id="ysfgwDmr2ysfPanel" class="log-panel"><div class="log-panel-header"><span class="svc-name" style="color:#00ffcc;">▸ YSFGateway DMR2YSF</span><button class="btn-clear" onclick="clearLog('logYsfGwDmr2ysf')">limpiar</button></div><div class="log-output" id="logYsfGwDmr2ysf">Esperando YSFGateway DMR2YSF…</div></div>
+</div>
+<!-- Modal Config MMDVMDMR2YSF -->
+<div id="dmr2ysfCfgModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:9700;align-items:center;justify-content:center;" onclick="if(event.target===this)closeDmr2ysfConfigModal()">
+<div style="background:var(--surface);border:1px solid #00ffcc44;border-radius:8px;padding:1.5rem;width:700px;max-width:96vw;max-height:90vh;overflow-y:auto;display:flex;flex-direction:column;gap:.8rem;">
+  <div style="font-family:var(--font-mono);font-size:.8rem;color:#00ffcc;letter-spacing:.12em;text-transform:uppercase;border-bottom:1px solid #00ffcc33;padding-bottom:.6rem;">⚙ MMDVMDMR2YSF.ini — Configuración</div>
+
+  <div style="font-family:var(--font-mono);font-size:.65rem;color:#007060;letter-spacing:.1em;text-transform:uppercase;margin-top:.4rem;">[General]</div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:.7rem;">
+    <div><label style="font-family:var(--font-mono);font-size:.65rem;color:var(--text-dim);display:block;margin-bottom:.25rem;">Callsign</label><input id="d2cfg_Callsign" style="width:100%;background:#060c10;border:1px solid #00ffcc33;border-radius:3px;color:#00ffcc;font-family:var(--font-mono);font-size:.82rem;padding:.35rem .6rem;outline:none;" onfocus="this.style.borderColor='#00ffcc'" onblur="this.style.borderColor='#00ffcc33'"></div>
+    <div><label style="font-family:var(--font-mono);font-size:.65rem;color:var(--text-dim);display:block;margin-bottom:.25rem;">DMR ID</label><input id="d2cfg_Id" style="width:100%;background:#060c10;border:1px solid #00ffcc33;border-radius:3px;color:#00ffcc;font-family:var(--font-mono);font-size:.82rem;padding:.35rem .6rem;outline:none;" onfocus="this.style.borderColor='#00ffcc'" onblur="this.style.borderColor='#00ffcc33'"></div>
+    <div><label style="font-family:var(--font-mono);font-size:.65rem;color:var(--text-dim);display:block;margin-bottom:.25rem;">Timeout (s)</label><input id="d2cfg_Timeout" style="width:100%;background:#060c10;border:1px solid #00ffcc33;border-radius:3px;color:#00ffcc;font-family:var(--font-mono);font-size:.82rem;padding:.35rem .6rem;outline:none;" onfocus="this.style.borderColor='#00ffcc'" onblur="this.style.borderColor='#00ffcc33'"></div>
+    <div><label style="font-family:var(--font-mono);font-size:.65rem;color:var(--text-dim);display:block;margin-bottom:.25rem;">Duplex (0/1)</label><input id="d2cfg_Duplex" style="width:100%;background:#060c10;border:1px solid #00ffcc33;border-radius:3px;color:#00ffcc;font-family:var(--font-mono);font-size:.82rem;padding:.35rem .6rem;outline:none;" onfocus="this.style.borderColor='#00ffcc'" onblur="this.style.borderColor='#00ffcc33'"></div>
+  </div>
+
+  <div style="font-family:var(--font-mono);font-size:.65rem;color:#007060;letter-spacing:.1em;text-transform:uppercase;margin-top:.4rem;">[Info]</div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:.7rem;">
+    <div><label style="font-family:var(--font-mono);font-size:.65rem;color:var(--text-dim);display:block;margin-bottom:.25rem;">RX Frequency (Hz)</label><input id="d2cfg_RXFrequency" style="width:100%;background:#060c10;border:1px solid #00ffcc33;border-radius:3px;color:#00ffcc;font-family:var(--font-mono);font-size:.82rem;padding:.35rem .6rem;outline:none;" onfocus="this.style.borderColor='#00ffcc'" onblur="this.style.borderColor='#00ffcc33'"></div>
+    <div><label style="font-family:var(--font-mono);font-size:.65rem;color:var(--text-dim);display:block;margin-bottom:.25rem;">TX Frequency (Hz)</label><input id="d2cfg_TXFrequency" style="width:100%;background:#060c10;border:1px solid #00ffcc33;border-radius:3px;color:#00ffcc;font-family:var(--font-mono);font-size:.82rem;padding:.35rem .6rem;outline:none;" onfocus="this.style.borderColor='#00ffcc'" onblur="this.style.borderColor='#00ffcc33'"></div>
+  </div>
+
+  <div style="font-family:var(--font-mono);font-size:.65rem;color:#007060;letter-spacing:.1em;text-transform:uppercase;margin-top:.4rem;">[DMR Network]</div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:.7rem;">
+    <div><label style="font-family:var(--font-mono);font-size:.65rem;color:var(--text-dim);display:block;margin-bottom:.25rem;">Enable (0/1)</label><input id="d2cfg_DmrEnable" style="width:100%;background:#060c10;border:1px solid #00ffcc33;border-radius:3px;color:#00ffcc;font-family:var(--font-mono);font-size:.82rem;padding:.35rem .6rem;outline:none;" onfocus="this.style.borderColor='#00ffcc'" onblur="this.style.borderColor='#00ffcc33'"></div>
+    <div><label style="font-family:var(--font-mono);font-size:.65rem;color:var(--text-dim);display:block;margin-bottom:.25rem;">Type (Direct/Gateway)</label><input id="d2cfg_DmrType" style="width:100%;background:#060c10;border:1px solid #00ffcc33;border-radius:3px;color:#00ffcc;font-family:var(--font-mono);font-size:.82rem;padding:.35rem .6rem;outline:none;" onfocus="this.style.borderColor='#00ffcc'" onblur="this.style.borderColor='#00ffcc33'"></div>
+    <div><label style="font-family:var(--font-mono);font-size:.65rem;color:var(--text-dim);display:block;margin-bottom:.25rem;">Local Address</label><input id="d2cfg_DmrLocalAddr" style="width:100%;background:#060c10;border:1px solid #00ffcc33;border-radius:3px;color:#00ffcc;font-family:var(--font-mono);font-size:.82rem;padding:.35rem .6rem;outline:none;" onfocus="this.style.borderColor='#00ffcc'" onblur="this.style.borderColor='#00ffcc33'"></div>
+    <div><label style="font-family:var(--font-mono);font-size:.65rem;color:var(--text-dim);display:block;margin-bottom:.25rem;">Local Port</label><input id="d2cfg_DmrLocalPort" style="width:100%;background:#060c10;border:1px solid #00ffcc33;border-radius:3px;color:#00ffcc;font-family:var(--font-mono);font-size:.82rem;padding:.35rem .6rem;outline:none;" onfocus="this.style.borderColor='#00ffcc'" onblur="this.style.borderColor='#00ffcc33'"></div>
+    <div><label style="font-family:var(--font-mono);font-size:.65rem;color:var(--text-dim);display:block;margin-bottom:.25rem;">Remote Address</label><input id="d2cfg_DmrRemoteAddr" style="width:100%;background:#060c10;border:1px solid #00ffcc33;border-radius:3px;color:#00ffcc;font-family:var(--font-mono);font-size:.82rem;padding:.35rem .6rem;outline:none;" onfocus="this.style.borderColor='#00ffcc'" onblur="this.style.borderColor='#00ffcc33'"></div>
+    <div><label style="font-family:var(--font-mono);font-size:.65rem;color:var(--text-dim);display:block;margin-bottom:.25rem;">Remote Port</label><input id="d2cfg_DmrRemotePort" style="width:100%;background:#060c10;border:1px solid #00ffcc33;border-radius:3px;color:#00ffcc;font-family:var(--font-mono);font-size:.82rem;padding:.35rem .6rem;outline:none;" onfocus="this.style.borderColor='#00ffcc'" onblur="this.style.borderColor='#00ffcc33'"></div>
+    <div><label style="font-family:var(--font-mono);font-size:.65rem;color:var(--text-dim);display:block;margin-bottom:.25rem;">Password</label><input id="d2cfg_DmrPassword" type="text" style="width:100%;background:#060c10;border:1px solid #00ffcc33;border-radius:3px;color:#00ffcc;font-family:var(--font-mono);font-size:.82rem;padding:.35rem .6rem;outline:none;" onfocus="this.style.borderColor='#00ffcc'" onblur="this.style.borderColor='#00ffcc33'"></div>
+    <div><label style="font-family:var(--font-mono);font-size:.65rem;color:var(--text-dim);display:block;margin-bottom:.25rem;">Jitter (ms)</label><input id="d2cfg_DmrJitter" style="width:100%;background:#060c10;border:1px solid #00ffcc33;border-radius:3px;color:#00ffcc;font-family:var(--font-mono);font-size:.82rem;padding:.35rem .6rem;outline:none;" onfocus="this.style.borderColor='#00ffcc'" onblur="this.style.borderColor='#00ffcc33'"></div>
+  </div>
+
+  <div id="d2cfgMsg" style="font-family:var(--font-mono);font-size:.75rem;display:none;padding:.4rem .8rem;border-radius:4px;border:1px solid;margin-top:.4rem;"></div>
+  <div style="display:flex;gap:.8rem;margin-top:.4rem;">
+    <button onclick="saveDmr2ysfConfigModal()" style="flex:1;background:#00ffcc22;color:#00ffcc;border:1px solid #00ffcc55;border-radius:6px;font-family:var(--font-mono);font-size:.8rem;letter-spacing:.08em;text-transform:uppercase;padding:.6rem;cursor:pointer;transition:background .2s;" onmouseover="this.style.background='#00ffcc33'" onmouseout="this.style.background='#00ffcc22'">💾 Guardar</button>
+    <button onclick="closeDmr2ysfConfigModal()" style="flex:1;background:transparent;color:var(--text-dim);border:1px solid var(--border);border-radius:6px;font-family:var(--font-mono);font-size:.8rem;letter-spacing:.08em;text-transform:uppercase;padding:.6rem;cursor:pointer;transition:all .2s;" onmouseover="this.style.borderColor='#00ffcc';this.style.color='#00ffcc'" onmouseout="this.style.borderColor='';this.style.color=''">✖ Cerrar</button>
+  </div>
+</div>
 </div>
 
 </main>
@@ -1741,6 +1857,45 @@ function stopDmr2ysfTxPoll(){clearInterval(dmr2ysfTxTimer);dmr2ysfTxTimer=null;}
     startMMDVMYSFLogs();
     startYSFTransmissionPoll();
 })();
+// ── Modal Config MMDVMDMR2YSF ─────────────────────────────────────────────────
+const d2cfgFields=['Callsign','Id','Timeout','Duplex','RXFrequency','TXFrequency','DmrEnable','DmrType','DmrLocalAddr','DmrLocalPort','DmrRemoteAddr','DmrRemotePort','DmrPassword','DmrJitter'];
+async function openDmr2ysfConfigModal(){
+    const modal=document.getElementById('dmr2ysfCfgModal');
+    const msg=document.getElementById('d2cfgMsg');
+    msg.style.display='none';
+    modal.style.display='flex';
+    d2cfgFields.forEach(f=>{const el=document.getElementById('d2cfg_'+f);if(el)el.value='…';});
+    try{
+        const r=await fetch('?action=mmdvmdmr2ysf-config-read');
+        const d=await r.json();
+        d2cfgFields.forEach(f=>{const el=document.getElementById('d2cfg_'+f);if(el&&d[f]!==undefined)el.value=d[f];});
+    }catch(e){
+        msg.className='';msg.style.cssText='font-family:var(--font-mono);font-size:.75rem;display:block;padding:.4rem .8rem;border-radius:4px;border:1px solid var(--red);color:var(--red);background:rgba(255,69,96,.06);margin-top:.4rem;';
+        msg.textContent='✖ Error al leer el fichero';
+    }
+}
+function closeDmr2ysfConfigModal(){document.getElementById('dmr2ysfCfgModal').style.display='none';}
+async function saveDmr2ysfConfigModal(){
+    const msg=document.getElementById('d2cfgMsg');
+    msg.style.cssText='font-family:var(--font-mono);font-size:.75rem;display:block;padding:.4rem .8rem;border-radius:4px;border:1px solid var(--amber);color:var(--amber);background:rgba(255,179,0,.06);margin-top:.4rem;';
+    msg.textContent='⏳ Guardando…';
+    const body=d2cfgFields.map(f=>{const el=document.getElementById('d2cfg_'+f);return el?encodeURIComponent(f)+'='+encodeURIComponent(el.value):'';}).filter(Boolean).join('&');
+    try{
+        const r=await fetch('?action=mmdvmdmr2ysf-config-save',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body});
+        const d=await r.json();
+        if(d.ok){
+            msg.style.cssText='font-family:var(--font-mono);font-size:.75rem;display:block;padding:.4rem .8rem;border-radius:4px;border:1px solid #00ffcc;color:#00ffcc;background:rgba(0,255,204,.06);margin-top:.4rem;';
+            msg.textContent='✔ Guardado correctamente';
+            setTimeout(()=>{msg.style.display='none';},3000);
+        }else{
+            msg.style.cssText='font-family:var(--font-mono);font-size:.75rem;display:block;padding:.4rem .8rem;border-radius:4px;border:1px solid var(--red);color:var(--red);background:rgba(255,69,96,.06);margin-top:.4rem;';
+            msg.textContent='✖ '+(d.msg||'Error al guardar');
+        }
+    }catch(e){
+        msg.style.cssText='font-family:var(--font-mono);font-size:.75rem;display:block;padding:.4rem .8rem;border-radius:4px;border:1px solid var(--red);color:var(--red);background:rgba(255,69,96,.06);margin-top:.4rem;';
+        msg.textContent='✖ Error de red: '+e.message;
+    }
+}
 </script>
 </body>
 </html>
