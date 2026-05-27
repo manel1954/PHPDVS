@@ -386,6 +386,13 @@ if ($action === 'dmr2ysf-logs') {
     echo json_encode(['dmr2ysf' => htmlspecialchars($log ?? '')]);
     exit;
 }
+if ($action === 'ysfgw-dmr2ysf-logs') {
+    $lines = intval($_GET['lines'] ?? 15);
+    $log = shell_exec("sudo journalctl -u ysfgw-dmr2ysf -n {$lines} --no-pager --output=short 2>/dev/null");
+    header('Content-Type: application/json');
+    echo json_encode(['ysfgwdmr2ysf' => htmlspecialchars($log ?? '')]);
+    exit;
+}
 if ($action === 'dmr2ysf-transmission') {
     $stateFile = '/tmp/dmr2ysf_tx_state.json';
     $lhFile    = '/tmp/dmr2ysf_lastheard.json';
@@ -1276,6 +1283,7 @@ button.btn-header { font-family: var(--font-mono); }
 </div>
 <div class="log-grid" id="dmr2ysfLogPanels" style="display:none;">
 <div id="dmr2ysfPanel" class="log-panel"><div class="log-panel-header"><span class="svc-name" style="color:#00ffcc;">▸ DMR2YSF</span><button class="btn-clear" onclick="clearLog('logDmr2ysf')">limpiar</button></div><div class="log-output" id="logDmr2ysf">Esperando DMR2YSF…</div></div>
+<div id="ysfgwDmr2ysfPanel" class="log-panel"><div class="log-panel-header"><span class="svc-name" style="color:#00ffcc;">▸ YSFGateway DMR2YSF</span><button class="btn-clear" onclick="clearLog('logYsfGwDmr2ysf')">limpiar</button></div><div class="log-output" id="logYsfGwDmr2ysf">Esperando YSFGateway DMR2YSF…</div></div>
 </div>
 
 </main>
@@ -1680,7 +1688,8 @@ function renderDmr2ysfLastHeard(list,activeCall){const body=document.getElementB
 
 async function fetchDmr2ysfTransmission(){try{const r=await fetch('?action=dmr2ysf-transmission');const d=await r.json();if(d.active){dmr2ysfLastActiveTs=Date.now();showDmr2ysfActive(d);}else{if(dmr2ysfCurrentlyActive&&(Date.now()-dmr2ysfLastActiveTs)>DMR2YSF_IDLE_TIMEOUT)showDmr2ysfIdle();}renderDmr2ysfLastHeard(d.lastHeard||[],d.active?d.callsign:null);}catch(e){if(dmr2ysfCurrentlyActive&&(Date.now()-dmr2ysfLastActiveTs)>DMR2YSF_IDLE_TIMEOUT)showDmr2ysfIdle();}}
 
-async function fetchDmr2ysfLogs(){try{const r=await fetch('?action=dmr2ysf-logs&lines=15');const d=await r.json();const el=document.getElementById('logDmr2ysf');const atBot=el.scrollHeight-el.clientHeight<=el.scrollTop+10;el.innerHTML=colorize(d.dmr2ysf);if(atBot)el.scrollTop=el.scrollHeight;}catch(e){}}
+async function fetchDmr2ysfLogs(){try{const r=await fetch('?action=dmr2ysf-logs&lines=15');const d=await r.json();const el=document.getElementById('logDmr2ysf');const atBot=el.scrollHeight-el.clientHeight<=el.scrollTop+10;el.innerHTML=colorize(d.dmr2ysf);if(atBot)el.scrollTop=el.scrollHeight;}catch(e){}
+try{const r2=await fetch('?action=ysfgw-dmr2ysf-logs&lines=15');const d2=await r2.json();const el2=document.getElementById('logYsfGwDmr2ysf');const atBot2=el2.scrollHeight-el2.clientHeight<=el2.scrollTop+10;el2.innerHTML=colorize(d2.ysfgwdmr2ysf);if(atBot2)el2.scrollTop=el2.scrollHeight;}catch(e){}}
 
 async function checkDmr2ysfStatus(){try{const r=await fetch('?action=dmr2ysf-status');const d=await r.json();const active=d.dmr2ysf==='active';setDot('dot-dmr2ysf-mmd',d.s1==='active'?'active':'off');setDot('dot-dmr2ysf-ysf',d.s2==='active'?'active':'off');setDot('dot-dmr2ysf',d.s3==='active'?'active':'off');dmr2ysfRunning=active;setDMR2YSFToggle(active);if(active){startDmr2ysfLogs();startDmr2ysfTxPoll();}}catch(e){}}
 
@@ -1693,7 +1702,7 @@ try{
         const r=await fetch('?action=dmr2ysf-status');
         const d=await r.json();
         const isOn=d.dmr2ysf==='active';
-        if(wasOn&&!isOn){ok=true;setDot('dot-dmr2ysf-mmd','off');setDot('dot-dmr2ysf-ysf','off');setDot('dot-dmr2ysf','off');dmr2ysfRunning=false;setDMR2YSFToggle(false);stopDmr2ysfLogs();stopDmr2ysfTxPoll();showDmr2ysfIdle();clearLog('logDmr2ysf');break;}
+        if(wasOn&&!isOn){ok=true;setDot('dot-dmr2ysf-mmd','off');setDot('dot-dmr2ysf-ysf','off');setDot('dot-dmr2ysf','off');dmr2ysfRunning=false;setDMR2YSFToggle(false);stopDmr2ysfLogs();stopDmr2ysfTxPoll();showDmr2ysfIdle();clearLog('logDmr2ysf');clearLog('logYsfGwDmr2ysf');break;}
         if(!wasOn&&isOn){ok=true;setDot('dot-dmr2ysf','active');dmr2ysfRunning=true;setDMR2YSFToggle(true);startDmr2ysfLogs();startDmr2ysfTxPoll();break;}
     }
     if(!ok)await checkDmr2ysfStatus();
