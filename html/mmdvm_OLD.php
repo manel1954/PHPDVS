@@ -3,7 +3,6 @@ require_once __DIR__ . '/auth.php';
 header('X-Content-Type-Options: nosniff');
 $action = $_GET['action'] ?? '';
 
-
 function saveState($key, $value) {
     $file = '/var/lib/mmdvm-state';
     $lines = file_exists($file) ? file($file, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES) : [];
