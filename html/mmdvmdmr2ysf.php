@@ -1157,6 +1157,9 @@ button.btn-header { font-family: var(--font-mono); }
       <a href="dmr2ysf_config.php" class="ini-btn edit" style="flex:1;justify-content:center;color:#00ffcc;border-color:rgba(0,255,204,.3);">⚙ DMR2YSF CONFIG</a>
       <a href="edit_ini.php?file=dmr2ysf" class="ini-btn view" style="flex:1;justify-content:center;color:#00ffcc;border-color:rgba(0,255,204,.3);">📄 editar DMR2YSF.ini</a>
     </div>
+    <div class="service-card-btns" style="margin-top:.4rem;">
+      <button onclick="feditOpen('/home/pi/MMDVMHost/MMDVMDMR2YSF.ini')" class="ini-btn edit" style="flex:1;justify-content:center;color:#00ffcc;border-color:rgba(0,255,204,.3);">📄 editar MMDVMDMR2YSF.ini</button>
+    </div>
   </div>
 </div>
 <div class="display-row" style="margin-top:1rem;">
