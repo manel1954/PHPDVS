@@ -1152,6 +1152,7 @@ button.btn-header { font-family: var(--font-mono); }
     </div>
   </div>
 </div>
+<div class="display-row" style="margin-top:1rem;">
   <div id="dmrDisplayPanel">
     <div class="panel-label">▸ DMR Display</div>
     <div class="nextion">
