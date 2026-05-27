@@ -61,16 +61,7 @@ if ($action === 'save-file') {
         echo json_encode(['ok'=>false,'msg'=>'Ruta vacía']);
         exit;
     }
-    $result = @file_put_contents($path, $content);
-    if ($result === false) {
-        // Intentar con sudo tee para ficheros fuera del webroot
-        $tmpFile = tempnam('/tmp', 'mmdvm_save_');
-        file_put_contents($tmpFile, $content);
-        $escaped = escapeshellarg($path);
-        $out = shell_exec("sudo /bin/cp " . escapeshellarg($tmpFile) . " {$escaped} 2>&1");
-        @unlink($tmpFile);
-        $result = file_exists($path) ? true : false;
-    }
+    $result = file_put_contents($path, $content);
     header('Content-Type: application/json');
     echo json_encode($result !== false ? ['ok'=>true,'msg'=>'Guardado correctamente'] : ['ok'=>false,'msg'=>'Error al escribir el fichero']);
     exit;
@@ -153,22 +144,13 @@ if ($action === 'station-info') {
     $nxdnIpRaw  = trim($nxdnIni['General']['Address'] ?? '');
     $nxdnIp     = ($nxdnIpRaw !== '' && $nxdnIpRaw !== '0.0.0.0') ? $nxdnIpRaw : $ip;
 
-    // DMR2YSF
-    $dmr2ysfIniPath = '/home/pi/MMDVM_CM/DMR2YSF/DMR2YSF.ini';
-    $dmr2ysfIni = parseMMDVMIni($dmr2ysfIniPath);
-    $dmr2ysfDmrId  = $dmr2ysfIni['DMR Network']['Id']             ?? '—';
-    $dmr2ysfGw     = $dmr2ysfIni['YSF Network']['GatewayAddress'] ?? '—';
-    $dmr2ysfDefTG  = $dmr2ysfIni['DMR Network']['DefaultDstTG']   ?? '—';
-    $dmr2ysfYsfGw  = ($dmr2ysfIni['YSF Network']['GatewayAddress'] ?? '127.0.0.1') . ':' . ($dmr2ysfIni['YSF Network']['GatewayPort'] ?? '4200');
-
     header('Content-Type: application/json');
     echo json_encode([
         'callsign'=>strtoupper(trim($callsign)),'dmrid'=>trim($dmrid),'freq'=>$freq,'freqRX'=>$freqRX,
         'port'=>$port?:'—','ip'=>$ip,'locator'=>$locator,'location'=>trim($location),'desc'=>trim($desc),'lat'=>$lat,'lon'=>$lon,
         'ysfPort'=>$ysfPort?:'—','ysfFreqRX'=>$ysfFreqRX,'ysfFreqTX'=>$ysfFreqTX,'ysfIp'=>$ysfIp?:'—',
         'dstarPort'=>$dstarPort?:'—','dstarFreqRX'=>$dstarFreqRX,'dstarFreqTX'=>$dstarFreqTX,'dstarIp'=>$dstarIp?:'—',
-        'nxdnPort'=>$nxdnPort?:'—','nxdnFreqRX'=>$nxdnFreqRX,'nxdnFreqTX'=>$nxdnFreqTX,'nxdnIp'=>$nxdnIp?:'—',
-        'dmr2ysfDmrId'=>$dmr2ysfDmrId,'dmr2ysfGw'=>$dmr2ysfGw,'dmr2ysfDefTG'=>$dmr2ysfDefTG,'dmr2ysfYsfGw'=>$dmr2ysfYsfGw,
+        'nxdnPort'=>$nxdnPort?:'—','nxdnFreqRX'=>$nxdnFreqRX,'nxdnFreqTX'=>$nxdnFreqTX,'nxdnIp'=>$nxdnIp?:'—'
     ]);
     exit;
 }
@@ -235,76 +217,6 @@ if ($action === 'ysf-status') {
     $pid = trim(@file_get_contents('/tmp/ysfgateway.pid'));
     $active = ($pid && is_numeric($pid) && file_exists('/proc/'.$pid)) ? 'active' : 'inactive';
     header('Content-Type: application/json'); echo json_encode(['ysf'=>$active]); exit;
-}
-if ($action === 'mmdvmdmr2ysf-config-read') {
-    $path = '/home/pi/MMDVMHost/MMDVMDMR2YSF.ini';
-    $ini  = parseMMDVMIni($path);
-    header('Content-Type: application/json');
-    echo json_encode([
-        'ok'   => file_exists($path),
-        // General
-        'Callsign'      => $ini['General']['Callsign']      ?? '',
-        'Id'            => $ini['General']['Id']            ?? '',
-        'Timeout'       => $ini['General']['Timeout']       ?? '180',
-        'Duplex'        => $ini['General']['Duplex']        ?? '0',
-        'RXFrequency'   => $ini['Info']['RXFrequency']      ?? '0',
-        'TXFrequency'   => $ini['Info']['TXFrequency']      ?? '0',
-        // DMR Network
-        'DmrEnable'     => $ini['DMR Network']['Enable']       ?? '1',
-        'DmrType'       => $ini['DMR Network']['Type']         ?? 'Direct',
-        'DmrLocalAddr'  => $ini['DMR Network']['LocalAddress'] ?? '127.0.0.1',
-        'DmrLocalPort'  => $ini['DMR Network']['LocalPort']    ?? '62031',
-        'DmrRemoteAddr' => $ini['DMR Network']['RemoteAddress']?? '127.0.0.1',
-        'DmrRemotePort' => $ini['DMR Network']['RemotePort']   ?? '62032',
-        'DmrPassword'   => $ini['DMR Network']['Password']     ?? '',
-        'DmrJitter'     => $ini['DMR Network']['Jitter']       ?? '360',
-        'UARTPort'      => $ini['Modem']['UARTPort']            ?? '',
-    ]);
-    exit;
-}
-if ($action === 'mmdvmdmr2ysf-config-save') {
-    $path = '/home/pi/MMDVMHost/MMDVMDMR2YSF.ini';
-    if (!file_exists($path)) { header('Content-Type: application/json'); echo json_encode(['ok'=>false,'msg'=>'Fichero no encontrado']); exit; }
-    $content = file_get_contents($path);
-    $map = [
-        'General'     => ['Callsign','Id','Timeout','Duplex'],
-        'Info'        => ['RXFrequency','TXFrequency'],
-        'DMR Network' => ['Enable'=>'DmrEnable','Type'=>'DmrType','LocalAddress'=>'DmrLocalAddr',
-                          'LocalPort'=>'DmrLocalPort','RemoteAddress'=>'DmrRemoteAddr',
-                          'RemotePort'=>'DmrRemotePort','Password'=>'DmrPassword','Jitter'=>'DmrJitter'],
-        'Modem'       => ['UARTPort'=>'UARTPort'],
-    ];
-    // Reemplazar valores en el contenido
-    $currentSection = '';
-    $lines = explode("\n", $content);
-    foreach ($lines as &$line) {
-        $trimmed = trim($line);
-        if (preg_match('/^\[(.+)\]$/', $trimmed, $m)) { $currentSection = trim($m[1]); continue; }
-        if (preg_match('/^([^=;#]+)=(.*)$/', $trimmed, $m)) {
-            $key = trim($m[1]);
-            if (!isset($map[$currentSection])) continue;
-            $sectionMap = $map[$currentSection];
-            // Buscar si este key tiene un POST field
-            $postKey = is_array($sectionMap) && isset($sectionMap[$key]) ? $sectionMap[$key]
-                     : (in_array($key, $sectionMap) ? $key : null);
-            if ($postKey && isset($_POST[$postKey])) {
-                $line = $key . '=' . trim($_POST[$postKey]);
-            }
-        }
-    }
-    unset($line);
-    $newContent = implode("\n", $lines);
-    $result = @file_put_contents($path, $newContent);
-    if ($result === false) {
-        $tmp = tempnam('/tmp', 'mmdvm_cfg_');
-        file_put_contents($tmp, $newContent);
-        shell_exec("sudo /bin/cp " . escapeshellarg($tmp) . " " . escapeshellarg($path) . " 2>&1");
-        @unlink($tmp);
-        $result = true;
-    }
-    header('Content-Type: application/json');
-    echo json_encode(['ok'=>true,'msg'=>'Guardado correctamente']);
-    exit;
 }
 if ($action === 'ysf-start')  { saveState('ysf','on'); shell_exec('sudo systemctl enable ysfgateway 2>/dev/null'); shell_exec('sudo systemctl start ysfgateway 2>/dev/null'); sleep(1); header('Content-Type: application/json'); echo json_encode(['ok'=>true]); exit; }
 if ($action === 'ysf-stop')   { saveState('ysf','off'); shell_exec('sudo systemctl stop ysfgateway 2>/dev/null'); shell_exec('sudo systemctl disable ysfgateway 2>/dev/null'); header('Content-Type: application/json'); echo json_encode(['ok'=>true]); exit; }
@@ -413,115 +325,6 @@ function lookupCall($callsign) {
         if($row!==''){$parts=explode("\t",$row);return['dmrid'=>trim($parts[0]??''),'name'=>trim($parts[2]??'')];}
     }
     return ['dmrid'=>'','name'=>''];
-}
-
-// ── DMR2YSF ───────────────────────────────────────────────────────────────────
-if ($action === 'dmr2ysf-status') {
-    $s1 = trim(shell_exec('systemctl is-active mmdvmdmr2ysf 2>/dev/null'));
-    $s2 = trim(shell_exec('systemctl is-active ysfgw-dmr2ysf 2>/dev/null'));
-    $s3 = trim(shell_exec('systemctl is-active dmr2ysf 2>/dev/null'));
-    $active = ($s1 === 'active' || $s2 === 'active' || $s3 === 'active') ? 'active' : 'inactive';
-    header('Content-Type: application/json');
-    echo json_encode(['dmr2ysf' => $active, 's1' => $s1, 's2' => $s2, 's3' => $s3]);
-    exit;
-}
-if ($action === 'dmr2ysf-start') {
-    saveState('dmr2ysf','on');
-    // 1. MMDVMHost DMR2YSF instance
-    shell_exec('sudo systemctl enable mmdvmdmr2ysf 2>/dev/null');
-    shell_exec('sudo systemctl start mmdvmdmr2ysf 2>/dev/null');
-    sleep(2);
-    // 2. YSFGateway para DMR2YSF
-    shell_exec('sudo systemctl enable ysfgw-dmr2ysf 2>/dev/null');
-    shell_exec('sudo systemctl start ysfgw-dmr2ysf 2>/dev/null');
-    sleep(1);
-    // 3. DMR2YSF MMDVM_CM
-    shell_exec('sudo systemctl enable dmr2ysf 2>/dev/null');
-    shell_exec('sudo systemctl start dmr2ysf 2>/dev/null');
-    header('Content-Type: application/json');
-    echo json_encode(['ok' => true]);
-    exit;
-}
-if ($action === 'dmr2ysf-stop') {
-    saveState('dmr2ysf','off');
-    // Parar en orden inverso
-    shell_exec('sudo systemctl stop dmr2ysf 2>/dev/null');
-    sleep(1);
-    shell_exec('sudo systemctl stop ysfgw-dmr2ysf 2>/dev/null');
-    shell_exec('sudo systemctl stop mmdvmdmr2ysf 2>/dev/null');
-    shell_exec('sudo systemctl disable dmr2ysf mmdvmdmr2ysf ysfgw-dmr2ysf 2>/dev/null');
-    header('Content-Type: application/json');
-    echo json_encode(['ok' => true]);
-    exit;
-}
-if ($action === 'dmr2ysf-logs') {
-    $lines = intval($_GET['lines'] ?? 15);
-    $log = shell_exec("sudo journalctl -u dmr2ysf -n {$lines} --no-pager --output=short 2>/dev/null");
-    if (empty(trim($log))) {
-        $logFiles = glob('/home/pi/MMDVM_CM/DMR2YSF/DMR2YSF-*.log');
-        if ($logFiles) { $latest = end($logFiles); $log = shell_exec("tail -n {$lines} " . escapeshellarg($latest) . " 2>/dev/null"); }
-    }
-    header('Content-Type: application/json');
-    echo json_encode(['dmr2ysf' => htmlspecialchars($log ?? '')]);
-    exit;
-}
-if ($action === 'ysfgw-dmr2ysf-logs') {
-    $lines = intval($_GET['lines'] ?? 15);
-    $log = shell_exec("sudo journalctl -u ysfgw-dmr2ysf -n {$lines} --no-pager --output=short 2>/dev/null");
-    header('Content-Type: application/json');
-    echo json_encode(['ysfgwdmr2ysf' => htmlspecialchars($log ?? '')]);
-    exit;
-}
-if ($action === 'dmr2ysf-transmission') {
-    $stateFile = '/tmp/dmr2ysf_tx_state.json';
-    $lhFile    = '/tmp/dmr2ysf_lastheard.json';
-    $logFiles  = glob('/home/pi/MMDVM_CM/DMR2YSF/DMR2YSF-*.log');
-    $log = '';
-    if ($logFiles) { $latest = end($logFiles); $log = shell_exec("tail -n 200 " . escapeshellarg($latest) . " 2>/dev/null") ?? ''; }
-    if (empty(trim($log))) $log = shell_exec("sudo journalctl -u dmr2ysf -n 200 --no-pager --output=short 2>/dev/null") ?? '';
-    $lines = array_reverse(explode("\n", $log));
-
-    $state = ['active'=>false,'callsign'=>'','name'=>'','tg'=>'','source'=>''];
-    if (file_exists($stateFile)) {
-        $saved = json_decode(file_get_contents($stateFile), true);
-        if (is_array($saved)) $state = $saved;
-    }
-    foreach ($lines as $line) {
-        if (preg_match('/(end of|lost|watchdog|timeout)/i', $line)) {
-            $state['active'] = false; file_put_contents($stateFile, json_encode($state)); break;
-        }
-        if (preg_match('/received.*from\s+([A-Z0-9]+).*TG[:\s]+(\d+)/i', $line, $m)) {
-            $cs = strtoupper(trim($m[1])); $inf = lookupCall($cs);
-            $state = ['active'=>true,'callsign'=>$cs,'name'=>$inf['name'],'tg'=>$m[2],'source'=>'DMR'];
-            file_put_contents($stateFile, json_encode($state)); break;
-        }
-        if (preg_match('/received.*from\s+([A-Z0-9]+)/i', $line, $m)) {
-            $cs = strtoupper(trim($m[1])); $inf = lookupCall($cs);
-            $state = ['active'=>true,'callsign'=>$cs,'name'=>$inf['name'],'tg'=>'','source'=>'DMR'];
-            file_put_contents($stateFile, json_encode($state)); break;
-        }
-    }
-
-    $lastHeard = []; $seen = [];
-    foreach ($lines as $line) {
-        $cs=''; $time=''; $tgr='';
-        if (preg_match('/(\d{2}:\d{2}:\d{2}).*received.*from\s+([A-Z0-9]+).*TG[:\s]+(\d+)/i', $line, $m))
-            { $time=$m[1]; $cs=strtoupper(trim($m[2])); $tgr=$m[3]; }
-        elseif (preg_match('/(\d{2}:\d{2}:\d{2}).*received.*from\s+([A-Z0-9]+)/i', $line, $m))
-            { $time=$m[1]; $cs=strtoupper(trim($m[2])); }
-        if ($cs && !in_array($cs, $seen)) {
-            $inf = lookupCall($cs);
-            $lastHeard[] = ['callsign'=>$cs,'name'=>$inf['name'],'tg'=>$tgr,'source'=>'DMR','time'=>$time];
-            $seen[] = $cs; if (count($lastHeard) >= 5) break;
-        }
-    }
-    if (!empty($lastHeard)) file_put_contents($lhFile, json_encode($lastHeard));
-    elseif (file_exists($lhFile)) $lastHeard = json_decode(file_get_contents($lhFile), true) ?: [];
-
-    $state['lastHeard'] = $lastHeard;
-    header('Content-Type: application/json');
-    echo json_encode($state);
-    exit;
 }
 
 // ── DMR ──────────────────────────────────────────────────────────────────────
@@ -1054,26 +857,6 @@ button.btn-header { font-family: var(--font-mono); }
 .flag-emoji-img { height: 20px; width: auto; vertical-align: middle; margin-right: 4px; border-radius: 2px; }
 .nx-callsign .flag-emoji { font-size: 3.2rem; }
 .nx-callsign .flag-emoji-img { height: 42px; }
-/* ── DMR2YSF ── */
-.nextion-dmr2ysf { background: #060e0c; border: 2px solid #00ffcc44; border-radius: 6px; box-shadow: 0 0 0 1px #003028, inset 0 0 40px rgba(0,255,204,.04), 0 0 30px rgba(0,255,204,.1); position: relative; overflow: hidden; height: 240px; display: flex; align-items: center; justify-content: center; }
-.nextion-dmr2ysf::before,.nextion-dmr2ysf::after { content: '◈'; position: absolute; font-size: .6rem; color: #00ffcc33; }
-.nextion-dmr2ysf::before { top: .5rem; left: .7rem; }
-.nextion-dmr2ysf::after { bottom: .5rem; right: .7rem; }
-.nx-topbar.dmr2ysf-bar { background: #0a1a16; border-bottom: 1px solid #00ffcc33; color: #007060; }
-.nx-topbar.dmr2ysf-bar .nx-mode { color: #00ffcc; opacity: .8; }
-.nx-botbar.dmr2ysf-bar { background: #060e0c; border-top: 1px solid #00ffcc33; color: #007060; }
-.nx-infobar-dmr2ysf { background: rgba(0,0,0,.4); border-bottom: 1px solid #003028; }
-.nx-callsign.dmr2ysf { color: #00ffcc; text-shadow: 0 0 20px rgba(0,255,204,.6); }
-.nx-name.dmr2ysf { color: #80ffe8; }
-.nx-txbar.active-dmr2ysf { background: linear-gradient(90deg,transparent,#00ffcc,transparent); background-size: 200% 100%; animation: scan 1.4s linear infinite; }
-.lh-panel-dmr2ysf { background: var(--surface); border: 3px solid #00ffcc33; border-radius: 6px; display: flex; flex-direction: column; }
-.lh-header-dmr2ysf { background: #0a1a16; border-bottom: 1px solid #00ffcc33; padding: .4rem 1rem; display: grid; grid-template-columns: 1.2fr 1.8fr .8fr 1fr .6fr; gap: .3rem; font-family: var(--font-mono); font-size: .6rem; color: #007060; letter-spacing: .1em; text-transform: uppercase; }
-.lh-row-dmr2ysf { display: grid; grid-template-columns: 1.2fr 1.8fr .8fr 1fr .6fr; gap: .3rem; padding: .45rem 1rem; border-bottom: 1px solid rgba(0,255,204,.1); align-items: center; transition: background .2s; }
-.lh-row-dmr2ysf:last-child { border-bottom: none; }
-.lh-row-dmr2ysf:hover { background: rgba(0,255,204,.04); }
-.lh-row-dmr2ysf.lh-active { background: rgba(0,255,204,.08); }
-.lh-tx-dot-dmr2ysf { width: 6px; height: 6px; border-radius: 50%; background: #00ffcc; box-shadow: 0 0 6px #00ffcc; animation: pulse 1s infinite; flex-shrink: 0; }
-.lh-call-dmr2ysf { font-family: var(--font-mono); font-size: .82rem; color: #00ffcc; letter-spacing: .05em; font-weight: bold; }
 </style>
 </head>
 <body>
@@ -1144,10 +927,6 @@ button.btn-header { font-family: var(--font-mono); }
 <div class="section-divider"></div>
 <div class="status-item"><div class="dot" id="dot-nxdnmmd"></div><span style="color:#ffd700">MMDVMHost NXDN</span></div>
 <div class="status-item"><div class="dot" id="dot-nxdngw"></div><span style="color:#ffd700">NXDNGateway</span></div>
-<div class="section-divider"></div>
-<div class="status-item"><div class="dot" id="dot-dmr2ysf-mmd"></div><span style="color:#00ffcc">MMDVMDmr2ysf</span></div>
-<div class="status-item"><div class="dot" id="dot-dmr2ysf-ysf"></div><span style="color:#00ffcc">YSFgw-Dmr2ysf</span></div>
-<div class="status-item"><div class="dot" id="dot-dmr2ysf"></div><span style="color:#00ffcc">DMR2YSF</span></div>
 </div>
 <div class="controls-section">
   <div class="service-card">
@@ -1221,28 +1000,8 @@ button.btn-header { font-family: var(--font-mono); }
       <a href="edit_ini.php?file=nxdngateway" class="ini-btn view" style="flex:1;justify-content:center;color:#ffc400;border-color:rgba(255,196,0,.3);">📄 editar fichero NXDNGateway.ini</a>
     </div>
   </div>
-  <div class="service-card" style="border-color:rgba(0,255,204,.25);">
-    <div class="service-card-label" style="color:#00ffcc;">▸ DMR2YSF · Cross-Mode Bridge</div>
-    <div class="toggle-row">
-      <span class="toggle-label" id="dmr2ysfToggleLabel">DMR2YSF</span>
-      <label class="sw" id="swDMR2YSF">
-        <input type="checkbox" id="chkDMR2YSF" onchange="toggleDMR2YSF(this)">
-        <span class="sw-track" style="border-color:#ff4560;"></span><span class="sw-knob" style="background:#ff4560;"></span><span class="sw-busy-dot"></span>
-      </label>
-      <span class="toggle-status" id="dmr2ysfToggleStatus">OFF</span>
-    </div>
-    <div class="auto-badge" id="dmr2ysfRefreshBadge" style="display:none;color:#00ffcc;"><div class="dot-sm" style="background:#00ffcc;"></div> DMR2YSF activo</div>
-    <div class="service-card-btns" style="margin-top:.6rem;">
-      <a href="dmr2ysf_config.php" class="ini-btn edit" style="flex:1;justify-content:center;color:#00ffcc;border-color:rgba(0,255,204,.3);">⚙ DMR2YSF CONFIG</a>
-      <button onclick="openDmr2ysfConfigModal()" class="ini-btn edit" style="flex:1;justify-content:center;color:#00ffcc;border-color:rgba(0,255,204,.3);">⚙ MMDVMDMR2YSF CONFIG</button>
-    </div>
-    <div class="service-card-btns" style="margin-top:.4rem;">
-      <a href="edit_ini.php?file=dmr2ysf" class="ini-btn view" style="flex:1;justify-content:center;color:#00ffcc;border-color:rgba(0,255,204,.3);">📄 editar DMR2YSF.ini</a>
-      <button onclick="feditOpen('/home/pi/MMDVMHost/MMDVMDMR2YSF.ini')" class="ini-btn edit" style="flex:1;justify-content:center;color:#00ffcc;border-color:rgba(0,255,204,.3);">📄 editar MMDVMDMR2YSF.ini</button>
-    </div>
-  </div>
 </div>
-<div class="display-row" style="margin-top:1rem;">
+<div class="display-row">
   <div id="dmrDisplayPanel">
     <div class="panel-label">▸ DMR Display</div>
     <div class="nextion">
@@ -1324,101 +1083,19 @@ button.btn-header { font-family: var(--font-mono); }
     </div>
   </div>
 </div>
-<div class="display-row" style="margin-top:1rem;">
-  <div id="dmr2ysfDisplayPanel" style="display:none;">
-    <div class="panel-label" style="color:#00ffcc;">▸ DMR2YSF Display</div>
-    <div class="nextion-dmr2ysf">
-      <div class="nx-topbar dmr2ysf-bar"><span class="nx-mode">DMR2YSF · BRIDGE</span><span style="color:#007060;display:none" id="dmr2ysfStationLabel"></span><span style="color:#00ffcc;opacity:.85;min-width:5rem;text-align:right;font-size:.6rem;" id="dmr2ysfTGLabel">—</span></div>
-      <div class="nx-infobar nx-infobar-dmr2ysf">
-        <span class="nx-info-item"><span class="nx-info-lbl">DMR ID</span><span class="nx-info-val" style="color:#00ffcc" id="dmr2ysfDmrId">—</span></span>
-        <span class="nx-info-item"><span class="nx-info-lbl">GW</span><span class="nx-info-val" style="color:#80ffe8" id="dmr2ysfGw">—</span></span>
-        <span class="nx-info-item"><span class="nx-info-lbl">TG Defecto</span><span class="nx-info-val" style="color:#00ffcc" id="dmr2ysfDefTG">—</span></span>
-      </div>
-      <div class="nx-vu" id="dmr2ysfVuLeft"></div><div class="nx-vu right" id="dmr2ysfVuRight"></div>
-      <div class="nx-center" id="dmr2ysfNxCenter"><div class="nx-clock" id="dmr2ysfNxClock" style="color:#00ffcc;">00:00:00</div><div class="nx-date" id="dmr2ysfNxDate" style="color:#007060;">—</div></div>
-      <div class="nx-txbar" id="dmr2ysfTxBar"></div>
-      <div class="nx-botbar dmr2ysf-bar"><span style="color:#007060;font-family:var(--font-mono);font-size:.65rem;">DMR2YSF · CROSS-MODE</span><span style="color:#00ffcc;font-family:var(--font-mono);font-size:.65rem;" id="dmr2ysfYsfGw">YSF: —</span><span class="nx-source" id="dmr2ysfSource"></span></div>
-    </div>
-  </div>
-  <div id="dmr2ysfLastHeardPanel" style="display:none;">
-    <div class="panel-label" style="color:#00ffcc;">▸ Últimos escuchados DMR2YSF</div>
-    <div class="lh-panel-dmr2ysf">
-      <div class="lh-header-dmr2ysf"><span>Indicativo</span><span>Nombre</span><span>TG</span><span>Hora</span><span>Src</span></div>
-      <div class="lh-body" id="dmr2ysfLhBody"><div class="lh-empty">Sin actividad DMR2YSF</div></div>
-    </div>
-  </div>
-</div>
-<div class="log-grid" id="dmrLogPanels">
+<div class="log-grid" style="margin-top:2rem;">
+<div id="dmrLogPanels" style="display:contents;">
 <div class="log-panel"><div class="log-panel-header"><span class="svc-name">▸ MMDVMHost</span><button class="btn-clear" onclick="clearLog('logMmd')">limpiar</button></div><div class="log-output" id="logMmd">Esperando servicios…</div></div>
 <div class="log-panel"><div class="log-panel-header"><span class="svc-name gw">▸ DMRGateway</span><button class="btn-clear" onclick="clearLog('logGw')">limpiar</button></div><div class="log-output" id="logGw">Esperando servicios…</div></div>
 </div>
-<div class="log-grid" id="ysfLogPanels">
+<div id="ysfLogPanels" style="display:contents;">
 <div class="log-panel"><div class="log-panel-header"><span class="svc-name" style="color:#26c6da">▸ MMDVMHost YSF</span><button class="btn-clear" onclick="clearLog('logMmdvmYsf')">limpiar</button></div><div class="log-output" id="logMmdvmYsf">Esperando MMDVMHost YSF…</div></div>
 <div class="log-panel"><div class="log-panel-header"><span class="svc-name ysf">▸ YSFGateway</span><button class="btn-clear" onclick="clearLog('logYsf')">limpiar</button></div><div class="log-output" id="logYsf">Esperando YSFGateway…</div></div>
 </div>
-<div class="log-grid" id="dstarLogPanels" style="display:none;">
-<div id="dstarPanelMmd" class="log-panel"><div class="log-panel-header"><span class="svc-name" style="color:#80f0ff;">▸ MMDVMHost DStar</span><button class="btn-clear" onclick="clearLog('logDstarMmd')">limpiar</button></div><div class="log-output" id="logDstarMmd">Esperando MMDVMHost DStar…</div></div>
-<div id="dstarPanelGw" class="log-panel"><div class="log-panel-header"><span class="svc-name" style="color:#00e5ff;">▸ DStarGateway</span><button class="btn-clear" onclick="clearLog('logDstarGw')">limpiar</button></div><div class="log-output" id="logDstarGw">Esperando DStarGateway…</div></div>
-</div>
-<div class="log-grid" id="nxdnLogPanels" style="display:none;">
-<div id="nxdnPanelMmd" class="log-panel"><div class="log-panel-header"><span class="svc-name" style="color:#ffd700;">▸ MMDVMHost NXDN</span><button class="btn-clear" onclick="clearLog('logNxdnMmd')">limpiar</button></div><div class="log-output" id="logNxdnMmd">Esperando MMDVMHost NXDN…</div></div>
-<div id="nxdnPanelGw" class="log-panel"><div class="log-panel-header"><span class="svc-name" style="color:#ffc400;">▸ NXDNGateway</span><button class="btn-clear" onclick="clearLog('logNxdnGw')">limpiar</button></div><div class="log-output" id="logNxdnGw">Esperando NXDNGateway…</div></div>
-</div>
-<div class="log-grid" id="dmr2ysfLogPanels" style="display:none;">
-<div id="dmr2ysfPanel" class="log-panel"><div class="log-panel-header"><span class="svc-name" style="color:#00ffcc;">▸ DMR2YSF</span><button class="btn-clear" onclick="clearLog('logDmr2ysf')">limpiar</button></div><div class="log-output" id="logDmr2ysf">Esperando DMR2YSF…</div></div>
-<div id="ysfgwDmr2ysfPanel" class="log-panel"><div class="log-panel-header"><span class="svc-name" style="color:#00ffcc;">▸ YSFGateway DMR2YSF</span><button class="btn-clear" onclick="clearLog('logYsfGwDmr2ysf')">limpiar</button></div><div class="log-output" id="logYsfGwDmr2ysf">Esperando YSFGateway DMR2YSF…</div></div>
-</div>
-<!-- Modal Config MMDVMDMR2YSF -->
-<div id="dmr2ysfCfgModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:9700;align-items:center;justify-content:center;" onclick="if(event.target===this)closeDmr2ysfConfigModal()">
-<div style="background:var(--surface);border:1px solid #00ffcc44;border-radius:8px;padding:1.5rem;width:700px;max-width:96vw;max-height:90vh;overflow-y:auto;display:flex;flex-direction:column;gap:.8rem;">
-  <div style="font-family:var(--font-mono);font-size:.8rem;color:#00ffcc;letter-spacing:.12em;text-transform:uppercase;border-bottom:1px solid #00ffcc33;padding-bottom:.6rem;">⚙ MMDVMDMR2YSF.ini — Configuración</div>
-
-  <div style="font-family:var(--font-mono);font-size:.65rem;color:#007060;letter-spacing:.1em;text-transform:uppercase;margin-top:.4rem;">[General]</div>
-  <div style="display:grid;grid-template-columns:1fr 1fr;gap:.7rem;">
-    <div><label style="font-family:var(--font-mono);font-size:.65rem;color:var(--text-dim);display:block;margin-bottom:.25rem;">Callsign</label><input id="d2cfg_Callsign" style="width:100%;background:#060c10;border:1px solid #00ffcc33;border-radius:3px;color:#00ffcc;font-family:var(--font-mono);font-size:.82rem;padding:.35rem .6rem;outline:none;" onfocus="this.style.borderColor='#00ffcc'" onblur="this.style.borderColor='#00ffcc33'"></div>
-    <div><label style="font-family:var(--font-mono);font-size:.65rem;color:var(--text-dim);display:block;margin-bottom:.25rem;">DMR ID</label><input id="d2cfg_Id" style="width:100%;background:#060c10;border:1px solid #00ffcc33;border-radius:3px;color:#00ffcc;font-family:var(--font-mono);font-size:.82rem;padding:.35rem .6rem;outline:none;" onfocus="this.style.borderColor='#00ffcc'" onblur="this.style.borderColor='#00ffcc33'"></div>
-    <div><label style="font-family:var(--font-mono);font-size:.65rem;color:var(--text-dim);display:block;margin-bottom:.25rem;">Timeout (s)</label><input id="d2cfg_Timeout" style="width:100%;background:#060c10;border:1px solid #00ffcc33;border-radius:3px;color:#00ffcc;font-family:var(--font-mono);font-size:.82rem;padding:.35rem .6rem;outline:none;" onfocus="this.style.borderColor='#00ffcc'" onblur="this.style.borderColor='#00ffcc33'"></div>
-    <div><label style="font-family:var(--font-mono);font-size:.65rem;color:var(--text-dim);display:block;margin-bottom:.25rem;">Duplex (0/1)</label><input id="d2cfg_Duplex" style="width:100%;background:#060c10;border:1px solid #00ffcc33;border-radius:3px;color:#00ffcc;font-family:var(--font-mono);font-size:.82rem;padding:.35rem .6rem;outline:none;" onfocus="this.style.borderColor='#00ffcc'" onblur="this.style.borderColor='#00ffcc33'"></div>
-  </div>
-
-  <div style="font-family:var(--font-mono);font-size:.65rem;color:#007060;letter-spacing:.1em;text-transform:uppercase;margin-top:.4rem;">[Modem]</div>
-  <div style="display:grid;grid-template-columns:1fr;gap:.7rem;">
-    <div><label style="font-family:var(--font-mono);font-size:.65rem;color:var(--text-dim);display:block;margin-bottom:.25rem;">UART Port</label>
-    <select id="d2cfg_UARTPort" style="width:100%;background:#060c10;border:1px solid #00ffcc33;border-radius:3px;color:#00ffcc;font-family:var(--font-mono);font-size:.82rem;padding:.35rem .6rem;outline:none;cursor:pointer;" onfocus="this.style.borderColor='#00ffcc'" onblur="this.style.borderColor='#00ffcc33'">
-      <option value="/dev/ttyAMA0">/dev/ttyAMA0</option>
-      <option value="/dev/ttyACM0">/dev/ttyACM0</option>
-      <option value="/dev/ttyACM1">/dev/ttyACM1</option>
-      <option value="/dev/ttyACM2">/dev/ttyACM2</option>
-      <option value="/dev/ttyUSB0">/dev/ttyUSB0</option>
-      <option value="/dev/ttyUSB1">/dev/ttyUSB1</option>
-      <option value="/dev/ttyUSB2">/dev/ttyUSB2</option>
-    </select></div>
-  </div>
-
-  <div style="font-family:var(--font-mono);font-size:.65rem;color:#007060;letter-spacing:.1em;text-transform:uppercase;margin-top:.4rem;">[Info]</div>
-  <div style="display:grid;grid-template-columns:1fr 1fr;gap:.7rem;">
-    <div><label style="font-family:var(--font-mono);font-size:.65rem;color:var(--text-dim);display:block;margin-bottom:.25rem;">RX Frequency (Hz)</label><input id="d2cfg_RXFrequency" style="width:100%;background:#060c10;border:1px solid #00ffcc33;border-radius:3px;color:#00ffcc;font-family:var(--font-mono);font-size:.82rem;padding:.35rem .6rem;outline:none;" onfocus="this.style.borderColor='#00ffcc'" onblur="this.style.borderColor='#00ffcc33'"></div>
-    <div><label style="font-family:var(--font-mono);font-size:.65rem;color:var(--text-dim);display:block;margin-bottom:.25rem;">TX Frequency (Hz)</label><input id="d2cfg_TXFrequency" style="width:100%;background:#060c10;border:1px solid #00ffcc33;border-radius:3px;color:#00ffcc;font-family:var(--font-mono);font-size:.82rem;padding:.35rem .6rem;outline:none;" onfocus="this.style.borderColor='#00ffcc'" onblur="this.style.borderColor='#00ffcc33'"></div>
-  </div>
-
-  <div style="font-family:var(--font-mono);font-size:.65rem;color:#007060;letter-spacing:.1em;text-transform:uppercase;margin-top:.4rem;">[DMR Network]</div>
-  <div style="display:grid;grid-template-columns:1fr 1fr;gap:.7rem;">
-    <div><label style="font-family:var(--font-mono);font-size:.65rem;color:var(--text-dim);display:block;margin-bottom:.25rem;">Enable (0/1)</label><input id="d2cfg_DmrEnable" style="width:100%;background:#060c10;border:1px solid #00ffcc33;border-radius:3px;color:#00ffcc;font-family:var(--font-mono);font-size:.82rem;padding:.35rem .6rem;outline:none;" onfocus="this.style.borderColor='#00ffcc'" onblur="this.style.borderColor='#00ffcc33'"></div>
-    <div><label style="font-family:var(--font-mono);font-size:.65rem;color:var(--text-dim);display:block;margin-bottom:.25rem;">Type (Direct/Gateway)</label><input id="d2cfg_DmrType" style="width:100%;background:#060c10;border:1px solid #00ffcc33;border-radius:3px;color:#00ffcc;font-family:var(--font-mono);font-size:.82rem;padding:.35rem .6rem;outline:none;" onfocus="this.style.borderColor='#00ffcc'" onblur="this.style.borderColor='#00ffcc33'"></div>
-    <div><label style="font-family:var(--font-mono);font-size:.65rem;color:var(--text-dim);display:block;margin-bottom:.25rem;">Local Address</label><input id="d2cfg_DmrLocalAddr" style="width:100%;background:#060c10;border:1px solid #00ffcc33;border-radius:3px;color:#00ffcc;font-family:var(--font-mono);font-size:.82rem;padding:.35rem .6rem;outline:none;" onfocus="this.style.borderColor='#00ffcc'" onblur="this.style.borderColor='#00ffcc33'"></div>
-    <div><label style="font-family:var(--font-mono);font-size:.65rem;color:var(--text-dim);display:block;margin-bottom:.25rem;">Local Port</label><input id="d2cfg_DmrLocalPort" style="width:100%;background:#060c10;border:1px solid #00ffcc33;border-radius:3px;color:#00ffcc;font-family:var(--font-mono);font-size:.82rem;padding:.35rem .6rem;outline:none;" onfocus="this.style.borderColor='#00ffcc'" onblur="this.style.borderColor='#00ffcc33'"></div>
-    <div><label style="font-family:var(--font-mono);font-size:.65rem;color:var(--text-dim);display:block;margin-bottom:.25rem;">Remote Address</label><input id="d2cfg_DmrRemoteAddr" style="width:100%;background:#060c10;border:1px solid #00ffcc33;border-radius:3px;color:#00ffcc;font-family:var(--font-mono);font-size:.82rem;padding:.35rem .6rem;outline:none;" onfocus="this.style.borderColor='#00ffcc'" onblur="this.style.borderColor='#00ffcc33'"></div>
-    <div><label style="font-family:var(--font-mono);font-size:.65rem;color:var(--text-dim);display:block;margin-bottom:.25rem;">Remote Port</label><input id="d2cfg_DmrRemotePort" style="width:100%;background:#060c10;border:1px solid #00ffcc33;border-radius:3px;color:#00ffcc;font-family:var(--font-mono);font-size:.82rem;padding:.35rem .6rem;outline:none;" onfocus="this.style.borderColor='#00ffcc'" onblur="this.style.borderColor='#00ffcc33'"></div>
-    <div><label style="font-family:var(--font-mono);font-size:.65rem;color:var(--text-dim);display:block;margin-bottom:.25rem;">Password</label><input id="d2cfg_DmrPassword" type="text" style="width:100%;background:#060c10;border:1px solid #00ffcc33;border-radius:3px;color:#00ffcc;font-family:var(--font-mono);font-size:.82rem;padding:.35rem .6rem;outline:none;" onfocus="this.style.borderColor='#00ffcc'" onblur="this.style.borderColor='#00ffcc33'"></div>
-    <div><label style="font-family:var(--font-mono);font-size:.65rem;color:var(--text-dim);display:block;margin-bottom:.25rem;">Jitter (ms)</label><input id="d2cfg_DmrJitter" style="width:100%;background:#060c10;border:1px solid #00ffcc33;border-radius:3px;color:#00ffcc;font-family:var(--font-mono);font-size:.82rem;padding:.35rem .6rem;outline:none;" onfocus="this.style.borderColor='#00ffcc'" onblur="this.style.borderColor='#00ffcc33'"></div>
-  </div>
-
-  <div id="d2cfgMsg" style="font-family:var(--font-mono);font-size:.75rem;display:none;padding:.4rem .8rem;border-radius:4px;border:1px solid;margin-top:.4rem;"></div>
-  <div style="display:flex;gap:.8rem;margin-top:.4rem;">
-    <button onclick="saveDmr2ysfConfigModal()" style="flex:1;background:#00ffcc22;color:#00ffcc;border:1px solid #00ffcc55;border-radius:6px;font-family:var(--font-mono);font-size:.8rem;letter-spacing:.08em;text-transform:uppercase;padding:.6rem;cursor:pointer;transition:background .2s;" onmouseover="this.style.background='#00ffcc33'" onmouseout="this.style.background='#00ffcc22'">💾 Guardar</button>
-    <button onclick="closeDmr2ysfConfigModal()" style="flex:1;background:transparent;color:var(--text-dim);border:1px solid var(--border);border-radius:6px;font-family:var(--font-mono);font-size:.8rem;letter-spacing:.08em;text-transform:uppercase;padding:.6rem;cursor:pointer;transition:all .2s;" onmouseover="this.style.borderColor='#00ffcc';this.style.color='#00ffcc'" onmouseout="this.style.borderColor='';this.style.color=''">✖ Cerrar</button>
-  </div>
-</div>
+<div id="dstarPanelMmd" class="log-panel" style="display:none;"><div class="log-panel-header"><span class="svc-name" style="color:#80f0ff;">▸ MMDVMHost DStar</span><button class="btn-clear" onclick="clearLog('logDstarMmd')">limpiar</button></div><div class="log-output" id="logDstarMmd">Esperando MMDVMHost DStar…</div></div>
+<div id="dstarPanelGw" class="log-panel" style="display:none;"><div class="log-panel-header"><span class="svc-name" style="color:#00e5ff;">▸ DStarGateway</span><button class="btn-clear" onclick="clearLog('logDstarGw')">limpiar</button></div><div class="log-output" id="logDstarGw">Esperando DStarGateway…</div></div>
+<div id="nxdnPanelMmd" class="log-panel" style="display:none;"><div class="log-panel-header"><span class="svc-name" style="color:#ffd700;">▸ MMDVMHost NXDN</span><button class="btn-clear" onclick="clearLog('logNxdnMmd')">limpiar</button></div><div class="log-output" id="logNxdnMmd">Esperando MMDVMHost NXDN…</div></div>
+<div id="nxdnPanelGw" class="log-panel" style="display:none;"><div class="log-panel-header"><span class="svc-name" style="color:#ffc400;">▸ NXDNGateway</span><button class="btn-clear" onclick="clearLog('logNxdnGw')">limpiar</button></div><div class="log-output" id="logNxdnGw">Esperando NXDNGateway…</div></div>
 </div>
 
 </main>
@@ -1506,12 +1183,7 @@ let running=false,ysfRunning=false,mmdvmYsfRunning=false,dstarRunning=false,curr
 let dmrLastActiveTs=0,ysfLastActiveTs=0;
 const DMR_IDLE_TIMEOUT=12000,YSF_IDLE_TIMEOUT=12000;
 
-async function fetchStationInfo(){try{const r=await fetch('?action=station-info');const d=await r.json();document.getElementById('scCallsign').textContent='📡 '+d.callsign;const nxPort=document.getElementById('nxPort');if(nxPort)nxPort.textContent=d.port||'—';const nxFrx=document.getElementById('nxFrx');if(nxFrx)nxFrx.textContent=d.freqRX||'—';const nxFtx=document.getElementById('nxFtx');if(nxFtx)nxFtx.textContent=d.freq||'—';const nxIp=document.getElementById('nxIp');if(nxIp)nxIp.textContent=d.ip||'—';const yNxPort=document.getElementById('ysfNxPort');if(yNxPort)yNxPort.textContent=d.ysfPort||'—';const yNxFrx=document.getElementById('ysfNxFrx');if(yNxFrx)yNxFrx.textContent=d.ysfFreqRX||'—';const yNxFtx=document.getElementById('ysfNxFtx');if(yNxFtx)yNxFtx.textContent=d.ysfFreqTX||'—';const yNxIp=document.getElementById('ysfNxIp');if(yNxIp)yNxIp.textContent=d.ysfIp||'—';const label=d.callsign+' · ADER';const nx=document.getElementById('nxStationLabel');if(nx)nx.textContent=label;const yx=document.getElementById('ysfStationLabel');if(yx)yx.textContent=label;const dx=document.getElementById('dstarStationLabel');if(dx)dx.textContent=label;const nxdnLbl=document.getElementById('nxdnStationLabel');if(nxdnLbl)nxdnLbl.textContent=label;const dNxPort=document.getElementById('dstarNxPort');if(dNxPort)dNxPort.textContent=d.dstarPort||'—';const dNxFrx=document.getElementById('dstarNxFrx');if(dNxFrx)dNxFrx.textContent=d.dstarFreqRX||'—';const dNxFtx=document.getElementById('dstarNxFtx');if(dNxFtx)dNxFtx.textContent=d.dstarFreqTX||'—';const dNxIp=document.getElementById('dstarNxIp');if(dNxIp)dNxIp.textContent=d.dstarIp||'—';const nNxPort=document.getElementById('nxdnNxPort');if(nNxPort)nNxPort.textContent=d.nxdnPort||'—';const nNxFrx=document.getElementById('nxdnNxFrx');if(nNxFrx)nNxFrx.textContent=d.nxdnFreqRX||'—';const nNxFtx=document.getElementById('nxdnNxFtx');if(nNxFtx)nNxFtx.textContent=d.nxdnFreqTX||'—';const nNxIp=document.getElementById('nxdnNxIp');if(nNxIp)nNxIp.textContent=d.nxdnIp||'—';
-        const d2DmrId=document.getElementById('dmr2ysfDmrId');if(d2DmrId)d2DmrId.textContent=d.dmr2ysfDmrId||'—';
-        const d2Gw=document.getElementById('dmr2ysfGw');if(d2Gw)d2Gw.textContent=d.dmr2ysfGw||'—';
-        const d2DefTG=document.getElementById('dmr2ysfDefTG');if(d2DefTG)d2DefTG.textContent=d.dmr2ysfDefTG||'—';
-        const d2YsfGw=document.getElementById('dmr2ysfYsfGw');if(d2YsfGw)d2YsfGw.textContent='YSF: '+(d.dmr2ysfYsfGw||'—');
-        const d2Lbl=document.getElementById('dmr2ysfStationLabel');if(d2Lbl)d2Lbl.textContent=d.callsign+' · ADER';}catch(e){console.warn('station-info error:',e);}}
+async function fetchStationInfo(){try{const r=await fetch('?action=station-info');const d=await r.json();document.getElementById('scCallsign').textContent='📡 '+d.callsign;const nxPort=document.getElementById('nxPort');if(nxPort)nxPort.textContent=d.port||'—';const nxFrx=document.getElementById('nxFrx');if(nxFrx)nxFrx.textContent=d.freqRX||'—';const nxFtx=document.getElementById('nxFtx');if(nxFtx)nxFtx.textContent=d.freq||'—';const nxIp=document.getElementById('nxIp');if(nxIp)nxIp.textContent=d.ip||'—';const yNxPort=document.getElementById('ysfNxPort');if(yNxPort)yNxPort.textContent=d.ysfPort||'—';const yNxFrx=document.getElementById('ysfNxFrx');if(yNxFrx)yNxFrx.textContent=d.ysfFreqRX||'—';const yNxFtx=document.getElementById('ysfNxFtx');if(yNxFtx)yNxFtx.textContent=d.ysfFreqTX||'—';const yNxIp=document.getElementById('ysfNxIp');if(yNxIp)yNxIp.textContent=d.ysfIp||'—';const label=d.callsign+' · ADER';const nx=document.getElementById('nxStationLabel');if(nx)nx.textContent=label;const yx=document.getElementById('ysfStationLabel');if(yx)yx.textContent=label;const dx=document.getElementById('dstarStationLabel');if(dx)dx.textContent=label;const nxdnLbl=document.getElementById('nxdnStationLabel');if(nxdnLbl)nxdnLbl.textContent=label;const dNxPort=document.getElementById('dstarNxPort');if(dNxPort)dNxPort.textContent=d.dstarPort||'—';const dNxFrx=document.getElementById('dstarNxFrx');if(dNxFrx)dNxFrx.textContent=d.dstarFreqRX||'—';const dNxFtx=document.getElementById('dstarNxFtx');if(dNxFtx)dNxFtx.textContent=d.dstarFreqTX||'—';const dNxIp=document.getElementById('dstarNxIp');if(dNxIp)dNxIp.textContent=d.dstarIp||'—';const nNxPort=document.getElementById('nxdnNxPort');if(nNxPort)nNxPort.textContent=d.nxdnPort||'—';const nNxFrx=document.getElementById('nxdnNxFrx');if(nNxFrx)nNxFrx.textContent=d.nxdnFreqRX||'—';const nNxFtx=document.getElementById('nxdnNxFtx');if(nNxFtx)nNxFtx.textContent=d.nxdnFreqTX||'—';const nNxIp=document.getElementById('nxdnNxIp');if(nNxIp)nNxIp.textContent=d.nxdnIp||'—';}catch(e){console.warn('station-info error:',e);}}
 
 const _winOS = /Windows/i.test(navigator.userAgent);
 const _TBASE = 'https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/72x72/';
@@ -1565,8 +1237,8 @@ setInterval(updateClock,1000);updateClock();
 
 function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
 
-function setDMRToggle(on){const chk=document.getElementById('chkDMR'),lbl=document.getElementById('dmrToggleLabel'),sta=document.getElementById('dmrToggleStatus');chk.checked=on;lbl.className='toggle-label'+(on?' on-dmr':'');sta.className='toggle-status'+(on?' on':'');sta.textContent=on?'ON':'OFF';document.getElementById('autoRefreshBadge').style.display=on?'flex':'none';document.getElementById('dmrLogPanels').style.display=on?'':'none';document.getElementById('dmrLastHeardPanel').style.display=on?'':'none';document.getElementById('dmrDisplayPanel').style.display=on?'':'none';}
-function setYSFToggle(on){const chk=document.getElementById('chkYSF'),lbl=document.getElementById('ysfToggleLabel'),sta=document.getElementById('ysfToggleStatus');chk.checked=on;lbl.className='toggle-label'+(on?' on-ysf':'');sta.className='toggle-status'+(on?' on':'');sta.textContent=on?'ON':'OFF';document.getElementById('ysfRefreshBadge').style.display=on?'flex':'none';document.getElementById('ysfLogPanels').style.display=on?'':'none';document.getElementById('ysfLastHeardPanel').style.display=on?'':'none';document.getElementById('ysfDisplayPanel').style.display=on?'':'none';}
+function setDMRToggle(on){const chk=document.getElementById('chkDMR'),lbl=document.getElementById('dmrToggleLabel'),sta=document.getElementById('dmrToggleStatus');chk.checked=on;lbl.className='toggle-label'+(on?' on-dmr':'');sta.className='toggle-status'+(on?' on':'');sta.textContent=on?'ON':'OFF';document.getElementById('autoRefreshBadge').style.display=on?'flex':'none';document.getElementById('dmrLogPanels').style.display=on?'contents':'none';document.getElementById('dmrLastHeardPanel').style.display=on?'':'none';document.getElementById('dmrDisplayPanel').style.display=on?'':'none';}
+function setYSFToggle(on){const chk=document.getElementById('chkYSF'),lbl=document.getElementById('ysfToggleLabel'),sta=document.getElementById('ysfToggleStatus');chk.checked=on;lbl.className='toggle-label'+(on?' on-ysf':'');sta.className='toggle-status'+(on?' on':'');sta.textContent=on?'ON':'OFF';document.getElementById('ysfRefreshBadge').style.display=on?'flex':'none';document.getElementById('ysfLogPanels').style.display=on?'contents':'none';document.getElementById('ysfLastHeardPanel').style.display=on?'':'none';document.getElementById('ysfDisplayPanel').style.display=on?'':'none';}
 
 function showIdle(){currentlyActive=false;animateVU(false,'dmr');document.getElementById('nxTxBar').classList.remove('active');document.getElementById('nxTG').textContent='—';document.getElementById('nxSlot').textContent='—';document.getElementById('nxDmrid').textContent='—';const src=document.getElementById('nxSource');src.textContent='';src.className='nx-source';document.getElementById('nxCenter').innerHTML='<div class="nx-clock" id="nxClock">00:00:00</div><div class="nx-date" id="nxDate">—</div>';updateClock();}
 function showActive(d){currentlyActive=true;animateVU(true,'dmr');document.getElementById('nxTxBar').classList.add('active');document.getElementById('nxTG').textContent=d.tg?'TG '+d.tg:'—';document.getElementById('nxSlot').textContent=d.slot||'—';document.getElementById('nxDmrid').textContent=d.dmrid||'—';const src=document.getElementById('nxSource');if(d.source==='RF'){src.textContent='RF';src.className='nx-source rf';}else if(d.source==='NETWORK'){src.textContent='NET';src.className='nx-source net';}else{src.textContent='';src.className='nx-source';}const flag=getFlagByCall(d.callsign);document.getElementById('nxCenter').innerHTML=`<div class="nx-callsign">${flag} ${esc(d.callsign)}</div>`+(d.name?`<div class="nx-name">${esc(d.name)}</div>`:'');}
@@ -1586,7 +1258,7 @@ async function checkYSFStatus(){try{const r=await fetch('?action=ysf-status');co
 async function checkMMDVMYSFStatus(){try{const r=await fetch('?action=mmdvmysf-status');const d=await r.json();mmdvmYsfRunning=d.mmdvmysf==='active';setDot('dot-mmdvmysf',mmdvmYsfRunning?'active':'off');setYSFToggle(ysfRunning||mmdvmYsfRunning);}catch(e){}}
 function setDot(id,state){document.getElementById(id).className='dot'+(state==='active'?' active':state==='error'?' error':'');}
 
-function setDSTARToggle(on){const chk=document.getElementById('chkDSTAR'),lbl=document.getElementById('dstarToggleLabel'),sta=document.getElementById('dstarToggleStatus');chk.checked=on;lbl.style.color=on?'#00e5ff':'';sta.className='toggle-status'+(on?' on':'');sta.textContent=on?'ON':'OFF';document.getElementById('dstarRefreshBadge').style.display=on?'flex':'none';document.getElementById('dstarLogPanels').style.display=on?'':'none';document.getElementById('dstarDisplayPanel').style.display=on?'':'none';document.getElementById('dstarLastHeardPanel').style.display=on?'':'none';}
+function setDSTARToggle(on){const chk=document.getElementById('chkDSTAR'),lbl=document.getElementById('dstarToggleLabel'),sta=document.getElementById('dstarToggleStatus');chk.checked=on;lbl.style.color=on?'#00e5ff':'';sta.className='toggle-status'+(on?' on':'');sta.textContent=on?'ON':'OFF';document.getElementById('dstarRefreshBadge').style.display=on?'flex':'none';document.getElementById('dstarPanelMmd').style.display=on?'':'none';document.getElementById('dstarPanelGw').style.display=on?'':'none';document.getElementById('dstarDisplayPanel').style.display=on?'':'none';document.getElementById('dstarLastHeardPanel').style.display=on?'':'none';}
 
 let dstarVuTimer=null,dstarCurrentlyActive=false,dstarTxTimer2=null;
 function buildDStarVU(){['dstarVuLeft','dstarVuRight'].forEach(id=>{const el=document.getElementById(id);for(let i=0;i<18;i++){const d=document.createElement('div');d.className='nx-vu-bar';d.id=`${id}-${i}`;el.appendChild(d);}});}
@@ -1614,7 +1286,8 @@ function setNXDNToggle(on){
     chk.checked=on;lbl.style.color=on?'#ffd700':'';
     sta.className='toggle-status'+(on?' on':'');sta.textContent=on?'ON':'OFF';
     document.getElementById('nxdnRefreshBadge').style.display=on?'flex':'none';
-    document.getElementById('nxdnLogPanels').style.display=on?'':'none';
+    document.getElementById('nxdnPanelMmd').style.display=on?'':'none';
+    document.getElementById('nxdnPanelGw').style.display=on?'':'none';
     document.getElementById('nxdnDisplayPanel').style.display=on?'':'none';
     document.getElementById('nxdnLastHeardPanel').style.display=on?'':'none';
 }
@@ -1788,67 +1461,6 @@ document.getElementById('xtInp').addEventListener('keydown',async function(e){
 });
 })();
 
-// ── DMR2YSF JS ────────────────────────────────────────────────────────────────
-let dmr2ysfRunning=false,dmr2ysfTimer=null,dmr2ysfTxTimer=null,dmr2ysfCurrentlyActive=false,dmr2ysfLastActiveTs=0,dmr2ysfVuTimerAnim=null;
-const DMR2YSF_IDLE_TIMEOUT=12000;
-
-function buildDmr2ysfVU(){['dmr2ysfVuLeft','dmr2ysfVuRight'].forEach(id=>{const el=document.getElementById(id);for(let i=0;i<18;i++){const d=document.createElement('div');d.className='nx-vu-bar';d.id=`${id}-${i}`;el.appendChild(d);}});}
-buildDmr2ysfVU();
-
-function animateDmr2ysfVU(on){clearInterval(dmr2ysfVuTimerAnim);['dmr2ysfVuLeft','dmr2ysfVuRight'].forEach(id=>{for(let i=0;i<18;i++)document.getElementById(`${id}-${i}`).className='nx-vu-bar';});if(!on)return;dmr2ysfVuTimerAnim=setInterval(()=>{['dmr2ysfVuLeft','dmr2ysfVuRight'].forEach(id=>{const lvl=Math.floor(Math.random()*16)+1;for(let i=0;i<18;i++){let cls='nx-vu-bar';if(i<lvl)cls+=i<10?' lit-g':i<14?' lit-a':' lit-r';document.getElementById(`${id}-${i}`).className=cls;}});},80);}
-
-function updateDmr2ysfClock(){if(!dmr2ysfCurrentlyActive){const now=new Date();const clk=document.getElementById('dmr2ysfNxClock');if(clk){clk.textContent=now.toLocaleTimeString('es-ES');document.getElementById('dmr2ysfNxDate').textContent=now.toLocaleDateString('es-ES',{weekday:'short',day:'2-digit',month:'short',year:'numeric'}).toUpperCase();}}}
-setInterval(updateDmr2ysfClock,1000);updateDmr2ysfClock();
-
-function setDMR2YSFToggle(on){
-    const chk=document.getElementById('chkDMR2YSF'),lbl=document.getElementById('dmr2ysfToggleLabel'),sta=document.getElementById('dmr2ysfToggleStatus');
-    chk.checked=on;lbl.style.color=on?'#00ffcc':'';
-    sta.className='toggle-status'+(on?' on':'');sta.textContent=on?'ON':'OFF';
-    document.getElementById('dmr2ysfRefreshBadge').style.display=on?'flex':'none';
-    document.getElementById('dmr2ysfPanel').style.display=on?'':'none';
-    document.getElementById('dmr2ysfLogPanels').style.display=on?'':'none';
-    document.getElementById('dmr2ysfDisplayPanel').style.display=on?'':'none';
-    document.getElementById('dmr2ysfLastHeardPanel').style.display=on?'':'none';
-    // Actualizar estilo del switch
-    const track=document.querySelector('#swDMR2YSF .sw-track');
-    const knob=document.querySelector('#swDMR2YSF .sw-knob');
-    if(track)track.style.borderColor=on?'#00ff4c':'#ff4560';
-    if(knob){knob.style.background=on?'#00ff4c':'#ff4560';knob.style.transform=on?'translateX(28px)':'translateX(0)';}
-}
-
-function showDmr2ysfIdle(){dmr2ysfCurrentlyActive=false;animateDmr2ysfVU(false);document.getElementById('dmr2ysfTxBar').className='nx-txbar';document.getElementById('dmr2ysfTGLabel').textContent='—';const src=document.getElementById('dmr2ysfSource');src.textContent='';src.className='nx-source';document.getElementById('dmr2ysfNxCenter').innerHTML='<div class="nx-clock" id="dmr2ysfNxClock" style="color:#00ffcc;">00:00:00</div><div class="nx-date" id="dmr2ysfNxDate" style="color:#007060;">—</div>';updateDmr2ysfClock();}
-function showDmr2ysfActive(d){dmr2ysfCurrentlyActive=true;animateDmr2ysfVU(true);document.getElementById('dmr2ysfTxBar').className='nx-txbar active-dmr2ysf';document.getElementById('dmr2ysfTGLabel').textContent=d.tg?'TG '+d.tg:'—';const src=document.getElementById('dmr2ysfSource');src.textContent='DMR';src.className='nx-source rf';const flag=getFlagByCall(d.callsign);document.getElementById('dmr2ysfNxCenter').innerHTML=`<div class="nx-callsign dmr2ysf">${flag} ${esc(d.callsign)}</div>`+(d.name?`<div class="nx-name dmr2ysf">${esc(d.name)}</div>`:'');}
-
-function renderDmr2ysfLastHeard(list,activeCall){const body=document.getElementById('dmr2ysfLhBody');if(!list||list.length===0){body.innerHTML='<div class="lh-empty">Sin actividad DMR2YSF</div>';return;}body.innerHTML=list.map(r=>{const isActive=activeCall&&r.callsign===activeCall;const dot=isActive?'<span class="lh-tx-dot-dmr2ysf"></span>':'';const flag=getFlagByCall(r.callsign);return`<div class="lh-row-dmr2ysf${isActive?' lh-active':''}"><div class="lh-call-wrap">${dot}<span class="lh-call-dmr2ysf">${flag} ${esc(r.callsign)}</span></div><span class="lh-name">${esc(r.name||'—')}</span><span class="lh-tg" style="color:#00ffcc">${esc(r.tg||'—')}</span><span class="lh-time">${esc(r.time||'—')}</span><span class="lh-src rf">DMR</span></div>`;}).join('');}
-
-async function fetchDmr2ysfTransmission(){try{const r=await fetch('?action=dmr2ysf-transmission');const d=await r.json();if(d.active){dmr2ysfLastActiveTs=Date.now();showDmr2ysfActive(d);}else{if(dmr2ysfCurrentlyActive&&(Date.now()-dmr2ysfLastActiveTs)>DMR2YSF_IDLE_TIMEOUT)showDmr2ysfIdle();}renderDmr2ysfLastHeard(d.lastHeard||[],d.active?d.callsign:null);}catch(e){if(dmr2ysfCurrentlyActive&&(Date.now()-dmr2ysfLastActiveTs)>DMR2YSF_IDLE_TIMEOUT)showDmr2ysfIdle();}}
-
-async function fetchDmr2ysfLogs(){try{const r=await fetch('?action=dmr2ysf-logs&lines=15');const d=await r.json();const el=document.getElementById('logDmr2ysf');const atBot=el.scrollHeight-el.clientHeight<=el.scrollTop+10;el.innerHTML=colorize(d.dmr2ysf);if(atBot)el.scrollTop=el.scrollHeight;}catch(e){}
-try{const r2=await fetch('?action=ysfgw-dmr2ysf-logs&lines=15');const d2=await r2.json();const el2=document.getElementById('logYsfGwDmr2ysf');const atBot2=el2.scrollHeight-el2.clientHeight<=el2.scrollTop+10;el2.innerHTML=colorize(d2.ysfgwdmr2ysf);if(atBot2)el2.scrollTop=el2.scrollHeight;}catch(e){}}
-
-async function checkDmr2ysfStatus(){try{const r=await fetch('?action=dmr2ysf-status');const d=await r.json();const active=d.dmr2ysf==='active';setDot('dot-dmr2ysf-mmd',d.s1==='active'?'active':'off');setDot('dot-dmr2ysf-ysf',d.s2==='active'?'active':'off');setDot('dot-dmr2ysf',d.s3==='active'?'active':'off');dmr2ysfRunning=active;setDMR2YSFToggle(active);if(active){startDmr2ysfLogs();startDmr2ysfTxPoll();}}catch(e){}}
-
-async function toggleDMR2YSF(chk){const wasOn=!chk.checked;const sw=document.getElementById('swDMR2YSF');chk.checked=wasOn;sw.classList.add('busy');
-try{
-    await fetch(wasOn?'?action=dmr2ysf-stop':'?action=dmr2ysf-start');
-    let ok=false;
-    for(let i=0;i<15;i++){
-        await new Promise(r=>setTimeout(r,1000));
-        const r=await fetch('?action=dmr2ysf-status');
-        const d=await r.json();
-        const isOn=d.dmr2ysf==='active';
-        if(wasOn&&!isOn){ok=true;setDot('dot-dmr2ysf-mmd','off');setDot('dot-dmr2ysf-ysf','off');setDot('dot-dmr2ysf','off');dmr2ysfRunning=false;setDMR2YSFToggle(false);stopDmr2ysfLogs();stopDmr2ysfTxPoll();showDmr2ysfIdle();clearLog('logDmr2ysf');clearLog('logYsfGwDmr2ysf');break;}
-        if(!wasOn&&isOn){ok=true;setDot('dot-dmr2ysf','active');dmr2ysfRunning=true;setDMR2YSFToggle(true);startDmr2ysfLogs();startDmr2ysfTxPoll();break;}
-    }
-    if(!ok)await checkDmr2ysfStatus();
-}catch(e){console.warn('toggleDMR2YSF error:',e);}
-finally{sw.classList.remove('busy');}}
-
-function startDmr2ysfLogs(){fetchDmr2ysfLogs();dmr2ysfTimer=setInterval(fetchDmr2ysfLogs,5000);}
-function stopDmr2ysfLogs(){clearInterval(dmr2ysfTimer);dmr2ysfTimer=null;}
-function startDmr2ysfTxPoll(){fetchDmr2ysfTransmission();dmr2ysfTxTimer=setInterval(fetchDmr2ysfTransmission,4000);}
-function stopDmr2ysfTxPoll(){clearInterval(dmr2ysfTxTimer);dmr2ysfTxTimer=null;}
-
 // ── Bloque init ───────────────────────────────────────────────────────────────
 (async()=>{
     await fetchStationInfo();
@@ -1858,71 +1470,18 @@ function stopDmr2ysfTxPoll(){clearInterval(dmr2ysfTxTimer);dmr2ysfTxTimer=null;}
     await checkMMDVMYSFStatus();
     await checkDStarStatus();
     await checkNXDNStatus();
-    await checkDmr2ysfStatus();
     setInterval(checkStatus,10000);
     setInterval(checkYSFStatus,8000);
     setInterval(checkMMDVMYSFStatus,8000);
     setInterval(checkDStarStatus,10000);
     setInterval(checkNXDNStatus,10000);
-    setInterval(checkDmr2ysfStatus,10000);
     if(!running){showIdle();fetchTransmission();}
     showYSFIdle();
     showNXDNIdle();
-    showDmr2ysfIdle();
     startYSFLogs();
     startMMDVMYSFLogs();
     startYSFTransmissionPoll();
 })();
-// ── Modal Config MMDVMDMR2YSF ─────────────────────────────────────────────────
-const d2cfgFields=['Callsign','Id','Timeout','Duplex','RXFrequency','TXFrequency','DmrEnable','DmrType','DmrLocalAddr','DmrLocalPort','DmrRemoteAddr','DmrRemotePort','DmrPassword','DmrJitter','UARTPort'];
-async function openDmr2ysfConfigModal(){
-    const modal=document.getElementById('dmr2ysfCfgModal');
-    const msg=document.getElementById('d2cfgMsg');
-    msg.style.display='none';
-    modal.style.display='flex';
-    d2cfgFields.forEach(f=>{const el=document.getElementById('d2cfg_'+f);if(el)el.value='';});
-    try{
-        const r=await fetch('?action=mmdvmdmr2ysf-config-read');
-        const d=await r.json();
-        d2cfgFields.forEach(f=>{
-            const el=document.getElementById('d2cfg_'+f);
-            if(!el||d[f]===undefined)return;
-            if(el.tagName==='SELECT'){
-                // Seleccionar la opción correcta; si no existe añadirla
-                let found=false;
-                for(const opt of el.options){if(opt.value===d[f]){opt.selected=true;found=true;break;}}
-                if(!found){const opt=document.createElement('option');opt.value=d[f];opt.textContent=d[f];el.appendChild(opt);opt.selected=true;}
-            } else {
-                el.value=d[f];
-            }
-        });
-    }catch(e){
-        msg.style.cssText='font-family:var(--font-mono);font-size:.75rem;display:block;padding:.4rem .8rem;border-radius:4px;border:1px solid var(--red);color:var(--red);background:rgba(255,69,96,.06);margin-top:.4rem;';
-        msg.textContent='✖ Error al leer el fichero';
-    }
-}
-function closeDmr2ysfConfigModal(){document.getElementById('dmr2ysfCfgModal').style.display='none';}
-async function saveDmr2ysfConfigModal(){
-    const msg=document.getElementById('d2cfgMsg');
-    msg.style.cssText='font-family:var(--font-mono);font-size:.75rem;display:block;padding:.4rem .8rem;border-radius:4px;border:1px solid var(--amber);color:var(--amber);background:rgba(255,179,0,.06);margin-top:.4rem;';
-    msg.textContent='⏳ Guardando…';
-    const body=d2cfgFields.map(f=>{const el=document.getElementById('d2cfg_'+f);return el?encodeURIComponent(f)+'='+encodeURIComponent(el.value):'';}).filter(Boolean).join('&');
-    try{
-        const r=await fetch('?action=mmdvmdmr2ysf-config-save',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body});
-        const d=await r.json();
-        if(d.ok){
-            msg.style.cssText='font-family:var(--font-mono);font-size:.75rem;display:block;padding:.4rem .8rem;border-radius:4px;border:1px solid #00ffcc;color:#00ffcc;background:rgba(0,255,204,.06);margin-top:.4rem;';
-            msg.textContent='✔ Guardado correctamente';
-            setTimeout(()=>{msg.style.display='none';},3000);
-        }else{
-            msg.style.cssText='font-family:var(--font-mono);font-size:.75rem;display:block;padding:.4rem .8rem;border-radius:4px;border:1px solid var(--red);color:var(--red);background:rgba(255,69,96,.06);margin-top:.4rem;';
-            msg.textContent='✖ '+(d.msg||'Error al guardar');
-        }
-    }catch(e){
-        msg.style.cssText='font-family:var(--font-mono);font-size:.75rem;display:block;padding:.4rem .8rem;border-radius:4px;border:1px solid var(--red);color:var(--red);background:rgba(255,69,96,.06);margin-top:.4rem;';
-        msg.textContent='✖ Error de red: '+e.message;
-    }
-}
 </script>
 </body>
 </html>
