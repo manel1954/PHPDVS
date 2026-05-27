@@ -258,6 +258,7 @@ if ($action === 'mmdvmdmr2ysf-config-read') {
         'DmrRemotePort' => $ini['DMR Network']['RemotePort']   ?? '62032',
         'DmrPassword'   => $ini['DMR Network']['Password']     ?? '',
         'DmrJitter'     => $ini['DMR Network']['Jitter']       ?? '360',
+        'UARTPort'      => $ini['Modem']['UARTPort']            ?? '',
     ]);
     exit;
 }
@@ -271,6 +272,7 @@ if ($action === 'mmdvmdmr2ysf-config-save') {
         'DMR Network' => ['Enable'=>'DmrEnable','Type'=>'DmrType','LocalAddress'=>'DmrLocalAddr',
                           'LocalPort'=>'DmrLocalPort','RemoteAddress'=>'DmrRemoteAddr',
                           'RemotePort'=>'DmrRemotePort','Password'=>'DmrPassword','Jitter'=>'DmrJitter'],
+        'Modem'       => ['UARTPort'=>'UARTPort'],
     ];
     // Reemplazar valores en el contenido
     $currentSection = '';
@@ -1379,6 +1381,20 @@ button.btn-header { font-family: var(--font-mono); }
     <div><label style="font-family:var(--font-mono);font-size:.65rem;color:var(--text-dim);display:block;margin-bottom:.25rem;">Duplex (0/1)</label><input id="d2cfg_Duplex" style="width:100%;background:#060c10;border:1px solid #00ffcc33;border-radius:3px;color:#00ffcc;font-family:var(--font-mono);font-size:.82rem;padding:.35rem .6rem;outline:none;" onfocus="this.style.borderColor='#00ffcc'" onblur="this.style.borderColor='#00ffcc33'"></div>
   </div>
 
+  <div style="font-family:var(--font-mono);font-size:.65rem;color:#007060;letter-spacing:.1em;text-transform:uppercase;margin-top:.4rem;">[Modem]</div>
+  <div style="display:grid;grid-template-columns:1fr;gap:.7rem;">
+    <div><label style="font-family:var(--font-mono);font-size:.65rem;color:var(--text-dim);display:block;margin-bottom:.25rem;">UART Port</label>
+    <select id="d2cfg_UARTPort" style="width:100%;background:#060c10;border:1px solid #00ffcc33;border-radius:3px;color:#00ffcc;font-family:var(--font-mono);font-size:.82rem;padding:.35rem .6rem;outline:none;cursor:pointer;" onfocus="this.style.borderColor='#00ffcc'" onblur="this.style.borderColor='#00ffcc33'">
+      <option value="/dev/ttyAMA0">/dev/ttyAMA0</option>
+      <option value="/dev/ttyACM0">/dev/ttyACM0</option>
+      <option value="/dev/ttyACM1">/dev/ttyACM1</option>
+      <option value="/dev/ttyACM2">/dev/ttyACM2</option>
+      <option value="/dev/ttyUSB0">/dev/ttyUSB0</option>
+      <option value="/dev/ttyUSB1">/dev/ttyUSB1</option>
+      <option value="/dev/ttyUSB2">/dev/ttyUSB2</option>
+    </select></div>
+  </div>
+
   <div style="font-family:var(--font-mono);font-size:.65rem;color:#007060;letter-spacing:.1em;text-transform:uppercase;margin-top:.4rem;">[Info]</div>
   <div style="display:grid;grid-template-columns:1fr 1fr;gap:.7rem;">
     <div><label style="font-family:var(--font-mono);font-size:.65rem;color:var(--text-dim);display:block;margin-bottom:.25rem;">RX Frequency (Hz)</label><input id="d2cfg_RXFrequency" style="width:100%;background:#060c10;border:1px solid #00ffcc33;border-radius:3px;color:#00ffcc;font-family:var(--font-mono);font-size:.82rem;padding:.35rem .6rem;outline:none;" onfocus="this.style.borderColor='#00ffcc'" onblur="this.style.borderColor='#00ffcc33'"></div>
@@ -1858,19 +1874,30 @@ function stopDmr2ysfTxPoll(){clearInterval(dmr2ysfTxTimer);dmr2ysfTxTimer=null;}
     startYSFTransmissionPoll();
 })();
 // ── Modal Config MMDVMDMR2YSF ─────────────────────────────────────────────────
-const d2cfgFields=['Callsign','Id','Timeout','Duplex','RXFrequency','TXFrequency','DmrEnable','DmrType','DmrLocalAddr','DmrLocalPort','DmrRemoteAddr','DmrRemotePort','DmrPassword','DmrJitter'];
+const d2cfgFields=['Callsign','Id','Timeout','Duplex','RXFrequency','TXFrequency','DmrEnable','DmrType','DmrLocalAddr','DmrLocalPort','DmrRemoteAddr','DmrRemotePort','DmrPassword','DmrJitter','UARTPort'];
 async function openDmr2ysfConfigModal(){
     const modal=document.getElementById('dmr2ysfCfgModal');
     const msg=document.getElementById('d2cfgMsg');
     msg.style.display='none';
     modal.style.display='flex';
-    d2cfgFields.forEach(f=>{const el=document.getElementById('d2cfg_'+f);if(el)el.value='…';});
+    d2cfgFields.forEach(f=>{const el=document.getElementById('d2cfg_'+f);if(el)el.value='';});
     try{
         const r=await fetch('?action=mmdvmdmr2ysf-config-read');
         const d=await r.json();
-        d2cfgFields.forEach(f=>{const el=document.getElementById('d2cfg_'+f);if(el&&d[f]!==undefined)el.value=d[f];});
+        d2cfgFields.forEach(f=>{
+            const el=document.getElementById('d2cfg_'+f);
+            if(!el||d[f]===undefined)return;
+            if(el.tagName==='SELECT'){
+                // Seleccionar la opción correcta; si no existe añadirla
+                let found=false;
+                for(const opt of el.options){if(opt.value===d[f]){opt.selected=true;found=true;break;}}
+                if(!found){const opt=document.createElement('option');opt.value=d[f];opt.textContent=d[f];el.appendChild(opt);opt.selected=true;}
+            } else {
+                el.value=d[f];
+            }
+        });
     }catch(e){
-        msg.className='';msg.style.cssText='font-family:var(--font-mono);font-size:.75rem;display:block;padding:.4rem .8rem;border-radius:4px;border:1px solid var(--red);color:var(--red);background:rgba(255,69,96,.06);margin-top:.4rem;';
+        msg.style.cssText='font-family:var(--font-mono);font-size:.75rem;display:block;padding:.4rem .8rem;border-radius:4px;border:1px solid var(--red);color:var(--red);background:rgba(255,69,96,.06);margin-top:.4rem;';
         msg.textContent='✖ Error al leer el fichero';
     }
 }
