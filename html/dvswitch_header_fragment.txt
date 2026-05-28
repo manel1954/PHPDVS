@@ -1,0 +1,44 @@
+<div style="text-align:center;margin-bottom:8px;">
+  <a href="/mmdvm.php" style="background:#1a7ac5;color:#fff;padding:6px 14px;text-decoration:none;font-family:monospace;font-size:12px;border-radius:4px;">🏠 Panel PHPPLUS</a>
+  <a href="/dvswitch.php" style="background:#0a4a2a;color:#00ff88;padding:6px 14px;text-decoration:none;font-family:monospace;font-size:12px;border-radius:4px;margin-left:6px;">⚡ DVSwitch Control</a>
+  <button id="btnDvsToggle" onclick="dvsToggle(this)"
+    style="background:#1a2535;color:#ff4560;padding:6px 14px;font-family:monospace;font-size:12px;border-radius:4px;margin-left:6px;border:1px solid #ff4560;cursor:pointer;transition:all .2s;">
+    ⏻ DVSwitch: <span id="dvsState">···</span>
+  </button>
+</div>
+
+<script type="text/javascript">
+function dvsLoadStatus() {
+  fetch('/dvswitch_toggle.php?action=status&t=' + Date.now())
+    .then(r => r.json())
+    .then(d => dvsUpdateUI(d.active))
+    .catch(() => {});
+}
+function dvsUpdateUI(active) {
+  var btn   = document.getElementById('btnDvsToggle');
+  var state = document.getElementById('dvsState');
+  if (!btn) return;
+  if (active) {
+    btn.style.color       = '#00ff88';
+    btn.style.borderColor = '#00ff88';
+    btn.style.background  = '#0a1a10';
+    state.textContent     = 'ON';
+  } else {
+    btn.style.color       = '#ff4560';
+    btn.style.borderColor = '#ff4560';
+    btn.style.background  = '#1a0510';
+    state.textContent     = 'OFF';
+  }
+}
+function dvsToggle(btn) {
+  var state = document.getElementById('dvsState');
+  state.textContent = '···';
+  btn.disabled = true;
+  fetch('/dvswitch_toggle.php?action=toggle&t=' + Date.now())
+    .then(r => r.json())
+    .then(d => { dvsUpdateUI(d.active); btn.disabled = false; })
+    .catch(() => { btn.disabled = false; });
+}
+dvsLoadStatus();
+setInterval(dvsLoadStatus, 5000);
+</script>
