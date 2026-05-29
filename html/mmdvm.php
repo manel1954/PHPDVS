@@ -153,22 +153,6 @@ if ($action === 'station-info') {
     $nxdnIpRaw  = trim($nxdnIni['General']['Address'] ?? '');
     $nxdnIp     = ($nxdnIpRaw !== '' && $nxdnIpRaw !== '0.0.0.0') ? $nxdnIpRaw : $ip;
 
-    // DMR2YSF
-    $dmr2ysfIniPath = '/home/pi/MMDVM_CM/DMR2YSF/DMR2YSF.ini';
-    $dmr2ysfIni = parseMMDVMIni($dmr2ysfIniPath);
-    $dmr2ysfDmrId  = $dmr2ysfIni['DMR Network']['Id']             ?? '—';
-    $dmr2ysfGw     = $dmr2ysfIni['YSF Network']['GatewayAddress'] ?? '—';
-    $dmr2ysfDefTG  = $dmr2ysfIni['DMR Network']['DefaultDstTG']   ?? '—';
-    $dmr2ysfYsfGw  = ($dmr2ysfIni['YSF Network']['GatewayAddress'] ?? '127.0.0.1') . ':' . ($dmr2ysfIni['YSF Network']['GatewayPort'] ?? '4200');
-
-    header('Content-Type: application/json');
-    echo json_encode([
-        'callsign'=>strtoupper(trim($callsign)),'dmrid'=>trim($dmrid),'freq'=>$freq,'freqRX'=>$freqRX,
-        'port'=>$port?:'—','ip'=>$ip,'locator'=>$locator,'location'=>trim($location),'desc'=>trim($desc),'lat'=>$lat,'lon'=>$lon,
-        'ysfPort'=>$ysfPort?:'—','ysfFreqRX'=>$ysfFreqRX,'ysfFreqTX'=>$ysfFreqTX,'ysfIp'=>$ysfIp?:'—',
-        'dstarPort'=>$dstarPort?:'—','dstarFreqRX'=>$dstarFreqRX,'dstarFreqTX'=>$dstarFreqTX,'dstarIp'=>$dstarIp?:'—',
-        'nxdnPort'=>$nxdnPort?:'—','nxdnFreqRX'=>$nxdnFreqRX,'nxdnFreqTX'=>$nxdnFreqTX,'nxdnIp'=>$nxdnIp?:'—',
-        'dmr2ysfDmrId'=>$dmr2ysfDmrId,'dmr2ysfGw'=>$dmr2ysfGw,'dmr2ysfDefTG'=>$dmr2ysfDefTG,'dmr2ysfYsfGw'=>$dmr2ysfYsfGw,
     ]);
     exit;
 }
@@ -235,76 +219,6 @@ if ($action === 'ysf-status') {
     $pid = trim(@file_get_contents('/tmp/ysfgateway.pid'));
     $active = ($pid && is_numeric($pid) && file_exists('/proc/'.$pid)) ? 'active' : 'inactive';
     header('Content-Type: application/json'); echo json_encode(['ysf'=>$active]); exit;
-}
-if ($action === 'mmdvmdmr2ysf-config-read') {
-    $path = '/home/pi/MMDVMHost/MMDVMDMR2YSF.ini';
-    $ini  = parseMMDVMIni($path);
-    header('Content-Type: application/json');
-    echo json_encode([
-        'ok'   => file_exists($path),
-        // General
-        'Callsign'      => $ini['General']['Callsign']      ?? '',
-        'Id'            => $ini['General']['Id']            ?? '',
-        'Timeout'       => $ini['General']['Timeout']       ?? '180',
-        'Duplex'        => $ini['General']['Duplex']        ?? '0',
-        'RXFrequency'   => $ini['Info']['RXFrequency']      ?? '0',
-        'TXFrequency'   => $ini['Info']['TXFrequency']      ?? '0',
-        // DMR Network
-        'DmrEnable'     => $ini['DMR Network']['Enable']       ?? '1',
-        'DmrType'       => $ini['DMR Network']['Type']         ?? 'Direct',
-        'DmrLocalAddr'  => $ini['DMR Network']['LocalAddress'] ?? '127.0.0.1',
-        'DmrLocalPort'  => $ini['DMR Network']['LocalPort']    ?? '62031',
-        'DmrRemoteAddr' => $ini['DMR Network']['RemoteAddress']?? '127.0.0.1',
-        'DmrRemotePort' => $ini['DMR Network']['RemotePort']   ?? '62032',
-        'DmrPassword'   => $ini['DMR Network']['Password']     ?? '',
-        'DmrJitter'     => $ini['DMR Network']['Jitter']       ?? '360',
-        'UARTPort'      => $ini['Modem']['UARTPort']            ?? '',
-    ]);
-    exit;
-}
-if ($action === 'mmdvmdmr2ysf-config-save') {
-    $path = '/home/pi/MMDVMHost/MMDVMDMR2YSF.ini';
-    if (!file_exists($path)) { header('Content-Type: application/json'); echo json_encode(['ok'=>false,'msg'=>'Fichero no encontrado']); exit; }
-    $content = file_get_contents($path);
-    $map = [
-        'General'     => ['Callsign','Id','Timeout','Duplex'],
-        'Info'        => ['RXFrequency','TXFrequency'],
-        'DMR Network' => ['Enable'=>'DmrEnable','Type'=>'DmrType','LocalAddress'=>'DmrLocalAddr',
-                          'LocalPort'=>'DmrLocalPort','RemoteAddress'=>'DmrRemoteAddr',
-                          'RemotePort'=>'DmrRemotePort','Password'=>'DmrPassword','Jitter'=>'DmrJitter'],
-        'Modem'       => ['UARTPort'=>'UARTPort'],
-    ];
-    // Reemplazar valores en el contenido
-    $currentSection = '';
-    $lines = explode("\n", $content);
-    foreach ($lines as &$line) {
-        $trimmed = trim($line);
-        if (preg_match('/^\[(.+)\]$/', $trimmed, $m)) { $currentSection = trim($m[1]); continue; }
-        if (preg_match('/^([^=;#]+)=(.*)$/', $trimmed, $m)) {
-            $key = trim($m[1]);
-            if (!isset($map[$currentSection])) continue;
-            $sectionMap = $map[$currentSection];
-            // Buscar si este key tiene un POST field
-            $postKey = is_array($sectionMap) && isset($sectionMap[$key]) ? $sectionMap[$key]
-                     : (in_array($key, $sectionMap) ? $key : null);
-            if ($postKey && isset($_POST[$postKey])) {
-                $line = $key . '=' . trim($_POST[$postKey]);
-            }
-        }
-    }
-    unset($line);
-    $newContent = implode("\n", $lines);
-    $result = @file_put_contents($path, $newContent);
-    if ($result === false) {
-        $tmp = tempnam('/tmp', 'mmdvm_cfg_');
-        file_put_contents($tmp, $newContent);
-        shell_exec("sudo /bin/cp " . escapeshellarg($tmp) . " " . escapeshellarg($path) . " 2>&1");
-        @unlink($tmp);
-        $result = true;
-    }
-    header('Content-Type: application/json');
-    echo json_encode(['ok'=>true,'msg'=>'Guardado correctamente']);
-    exit;
 }
 if ($action === 'ysf-start')  { saveState('ysf','on'); shell_exec('sudo systemctl enable ysfgateway 2>/dev/null'); shell_exec('sudo systemctl start ysfgateway 2>/dev/null'); sleep(1); header('Content-Type: application/json'); echo json_encode(['ok'=>true]); exit; }
 if ($action === 'ysf-stop')   { saveState('ysf','off'); shell_exec('sudo systemctl stop ysfgateway 2>/dev/null'); shell_exec('sudo systemctl disable ysfgateway 2>/dev/null'); header('Content-Type: application/json'); echo json_encode(['ok'=>true]); exit; }
@@ -413,206 +327,6 @@ function lookupCall($callsign) {
         if($row!==''){$parts=explode("\t",$row);return['dmrid'=>trim($parts[0]??''),'name'=>trim($parts[2]??'')];}
     }
     return ['dmrid'=>'','name'=>''];
-}
-
-// ── DMR2YSF ───────────────────────────────────────────────────────────────────
-if ($action === 'tgysf-hosts') {
-    $hostsFile = '/home/pi/YSFClients/YSFGateway/YSFHosts.json';
-    $list = [];
-    if (file_exists($hostsFile)) {
-        $json = json_decode(file_get_contents($hostsFile), true);
-        if (isset($json['reflectors']) && is_array($json['reflectors'])) {
-            foreach ($json['reflectors'] as $ref) {
-                $id      = intval($ref['designator'] ?? 0);
-                $name    = trim($ref['name']    ?? '');
-                $desc    = trim($ref['sponsor'] ?? '');
-                $country = strtoupper(trim($ref['country'] ?? ''));
-                if ($id <= 0) continue;
-                $list[] = ['id'=>$id,'name'=>$name,'desc'=>$desc,'country'=>$country];
-            }
-        }
-    }
-    usort($list, function($a,$b){
-        $aES = $a['country']==='ES'?0:1;
-        $bES = $b['country']==='ES'?0:1;
-        if ($aES !== $bES) return $aES - $bES;
-        return strcmp($a['name'], $b['name']);
-    });
-    header('Content-Type: application/json');
-    echo json_encode(['ok'=>true,'hosts'=>$list]);
-    exit;
-}
-
-$TGYSF_FILE   = '/home/pi/MMDVM_CM/DMR2YSF/TG-YSFList.txt';
-$TGYSF_NAMES  = '/home/pi/MMDVM_CM/DMR2YSF/TG-YSFNames.json';
-
-if ($action === 'tgysf-read') {
-    $entries = [];
-    $names = file_exists($TGYSF_NAMES) ? (json_decode(file_get_contents($TGYSF_NAMES), true) ?: []) : [];
-    // Cargar mapa id→nombre desde YSFHosts.json
-    $hostNames = [];
-    $hostsFile = '/home/pi/YSFClients/YSFGateway/YSFHosts.json';
-    if (file_exists($hostsFile)) {
-        $hjson = json_decode(file_get_contents($hostsFile), true);
-        if (isset($hjson['reflectors'])) {
-            foreach ($hjson['reflectors'] as $ref) {
-                $hid  = intval($ref['designator'] ?? 0);
-                $hnm  = trim($ref['name'] ?? '');
-                if ($hid > 0 && $hnm !== '') $hostNames[(string)$hid] = $hnm;
-            }
-        }
-    }
-    if (file_exists($TGYSF_FILE)) {
-        foreach (file($TGYSF_FILE, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES) as $line) {
-            $line = trim($line);
-            if ($line === '' || $line[0] === '#') continue;
-            $parts = explode(';', $line, 2);
-            if (count($parts) === 2 && is_numeric(trim($parts[0]))) {
-                $tg  = trim($parts[0]);
-                $ysf = trim($parts[1]);
-                // Prioridad: nombre guardado → nombre del hosts → vacío
-                $nm  = $names[$tg] ?? $hostNames[$ysf] ?? '';
-                $entries[] = ['tg' => $tg, 'ysf' => $ysf, 'name' => $nm];
-            }
-        }
-    }
-    header('Content-Type: application/json');
-    echo json_encode(['ok' => true, 'entries' => $entries]);
-    exit;
-}
-if ($action === 'tgysf-save') {
-    $raw = json_decode(file_get_contents('php://input'), true);
-    $entries = $raw['entries'] ?? [];
-    // Guardar TG-YSFList.txt (formato original sin nombres)
-    $lines = [
-        "# DMR TG - YSF ID mapping",
-        "# DMR TG ID;YSF reflector ID",
-        "#",
-    ];
-    $names = [];
-    foreach ($entries as $e) {
-        $tg  = intval($e['tg']   ?? 0);
-        $ysf = intval($e['ysf']  ?? 0);
-        $nm  = trim($e['name']   ?? '');
-        if ($tg > 0 && $ysf > 0) {
-            $lines[] = $tg . ';' . $ysf;
-            if ($nm !== '') $names[(string)$tg] = $nm;
-        }
-    }
-    $b1 = file_put_contents($TGYSF_FILE,  implode("\n", $lines) . "\n");
-    $b2 = file_put_contents($TGYSF_NAMES, json_encode($names, JSON_PRETTY_PRINT));
-    $ok = ($b1 !== false && $b2 !== false);
-    header('Content-Type: application/json');
-    echo json_encode(['ok' => $ok, 'msg' => $ok ? 'Guardado correctamente' : 'Error al escribir']);
-    exit;
-}
-
-if ($action === 'dmr2ysf-status') {
-    $s1 = trim(shell_exec('systemctl is-active mmdvmdmr2ysf 2>/dev/null'));
-    $s2 = trim(shell_exec('systemctl is-active ysfgw-dmr2ysf 2>/dev/null'));
-    $s3 = trim(shell_exec('systemctl is-active dmr2ysf 2>/dev/null'));
-    $active = ($s1 === 'active' || $s2 === 'active' || $s3 === 'active') ? 'active' : 'inactive';
-    header('Content-Type: application/json');
-    echo json_encode(['dmr2ysf' => $active, 's1' => $s1, 's2' => $s2, 's3' => $s3]);
-    exit;
-}
-if ($action === 'dmr2ysf-start') {
-    saveState('dmr2ysf','on');
-    // 1. MMDVMHost DMR2YSF instance
-    shell_exec('sudo systemctl enable mmdvmdmr2ysf 2>/dev/null');
-    shell_exec('sudo systemctl start mmdvmdmr2ysf 2>/dev/null');
-    sleep(2);
-    // 2. YSFGateway para DMR2YSF
-    shell_exec('sudo systemctl enable ysfgw-dmr2ysf 2>/dev/null');
-    shell_exec('sudo systemctl start ysfgw-dmr2ysf 2>/dev/null');
-    sleep(1);
-    // 3. DMR2YSF MMDVM_CM
-    shell_exec('sudo systemctl enable dmr2ysf 2>/dev/null');
-    shell_exec('sudo systemctl start dmr2ysf 2>/dev/null');
-    header('Content-Type: application/json');
-    echo json_encode(['ok' => true]);
-    exit;
-}
-if ($action === 'dmr2ysf-stop') {
-    saveState('dmr2ysf','off');
-    // Parar en orden inverso
-    shell_exec('sudo systemctl stop dmr2ysf 2>/dev/null');
-    sleep(1);
-    shell_exec('sudo systemctl stop ysfgw-dmr2ysf 2>/dev/null');
-    shell_exec('sudo systemctl stop mmdvmdmr2ysf 2>/dev/null');
-    shell_exec('sudo systemctl disable dmr2ysf mmdvmdmr2ysf ysfgw-dmr2ysf 2>/dev/null');
-    header('Content-Type: application/json');
-    echo json_encode(['ok' => true]);
-    exit;
-}
-if ($action === 'dmr2ysf-logs') {
-    $lines = intval($_GET['lines'] ?? 15);
-    $log = shell_exec("sudo journalctl -u dmr2ysf -n {$lines} --no-pager --output=short 2>/dev/null");
-    if (empty(trim($log))) {
-        $logFiles = glob('/home/pi/MMDVM_CM/DMR2YSF/DMR2YSF-*.log');
-        if ($logFiles) { $latest = end($logFiles); $log = shell_exec("tail -n {$lines} " . escapeshellarg($latest) . " 2>/dev/null"); }
-    }
-    header('Content-Type: application/json');
-    echo json_encode(['dmr2ysf' => htmlspecialchars($log ?? '')]);
-    exit;
-}
-if ($action === 'ysfgw-dmr2ysf-logs') {
-    $lines = intval($_GET['lines'] ?? 15);
-    $log = shell_exec("sudo journalctl -u ysfgw-dmr2ysf -n {$lines} --no-pager --output=short 2>/dev/null");
-    header('Content-Type: application/json');
-    echo json_encode(['ysfgwdmr2ysf' => htmlspecialchars($log ?? '')]);
-    exit;
-}
-if ($action === 'dmr2ysf-transmission') {
-    $stateFile = '/tmp/dmr2ysf_tx_state.json';
-    $lhFile    = '/tmp/dmr2ysf_lastheard.json';
-    $logFiles  = glob('/home/pi/MMDVM_CM/DMR2YSF/DMR2YSF-*.log');
-    $log = '';
-    if ($logFiles) { $latest = end($logFiles); $log = shell_exec("tail -n 200 " . escapeshellarg($latest) . " 2>/dev/null") ?? ''; }
-    if (empty(trim($log))) $log = shell_exec("sudo journalctl -u dmr2ysf -n 200 --no-pager --output=short 2>/dev/null") ?? '';
-    $lines = array_reverse(explode("\n", $log));
-
-    $state = ['active'=>false,'callsign'=>'','name'=>'','tg'=>'','source'=>''];
-    if (file_exists($stateFile)) {
-        $saved = json_decode(file_get_contents($stateFile), true);
-        if (is_array($saved)) $state = $saved;
-    }
-    foreach ($lines as $line) {
-        if (preg_match('/(end of|lost|watchdog|timeout)/i', $line)) {
-            $state['active'] = false; file_put_contents($stateFile, json_encode($state)); break;
-        }
-        if (preg_match('/received.*from\s+([A-Z0-9]+).*TG[:\s]+(\d+)/i', $line, $m)) {
-            $cs = strtoupper(trim($m[1])); $inf = lookupCall($cs);
-            $state = ['active'=>true,'callsign'=>$cs,'name'=>$inf['name'],'tg'=>$m[2],'source'=>'DMR'];
-            file_put_contents($stateFile, json_encode($state)); break;
-        }
-        if (preg_match('/received.*from\s+([A-Z0-9]+)/i', $line, $m)) {
-            $cs = strtoupper(trim($m[1])); $inf = lookupCall($cs);
-            $state = ['active'=>true,'callsign'=>$cs,'name'=>$inf['name'],'tg'=>'','source'=>'DMR'];
-            file_put_contents($stateFile, json_encode($state)); break;
-        }
-    }
-
-    $lastHeard = []; $seen = [];
-    foreach ($lines as $line) {
-        $cs=''; $time=''; $tgr='';
-        if (preg_match('/(\d{2}:\d{2}:\d{2}).*received.*from\s+([A-Z0-9]+).*TG[:\s]+(\d+)/i', $line, $m))
-            { $time=$m[1]; $cs=strtoupper(trim($m[2])); $tgr=$m[3]; }
-        elseif (preg_match('/(\d{2}:\d{2}:\d{2}).*received.*from\s+([A-Z0-9]+)/i', $line, $m))
-            { $time=$m[1]; $cs=strtoupper(trim($m[2])); }
-        if ($cs && !in_array($cs, $seen)) {
-            $inf = lookupCall($cs);
-            $lastHeard[] = ['callsign'=>$cs,'name'=>$inf['name'],'tg'=>$tgr,'source'=>'DMR','time'=>$time];
-            $seen[] = $cs; if (count($lastHeard) >= 5) break;
-        }
-    }
-    if (!empty($lastHeard)) file_put_contents($lhFile, json_encode($lastHeard));
-    elseif (file_exists($lhFile)) $lastHeard = json_decode(file_get_contents($lhFile), true) ?: [];
-
-    $state['lastHeard'] = $lastHeard;
-    header('Content-Type: application/json');
-    echo json_encode($state);
-    exit;
 }
 
 // ── DMR ──────────────────────────────────────────────────────────────────────
@@ -1145,26 +859,6 @@ button.btn-header { font-family: var(--font-mono); }
 .flag-emoji-img { height: 20px; width: auto; vertical-align: middle; margin-right: 4px; border-radius: 2px; }
 .nx-callsign .flag-emoji { font-size: 3.2rem; }
 .nx-callsign .flag-emoji-img { height: 42px; }
-/* ── DMR2YSF ── */
-.nextion-dmr2ysf { background: #060e0c; border: 2px solid #00ffcc44; border-radius: 6px; box-shadow: 0 0 0 1px #003028, inset 0 0 40px rgba(0,255,204,.04), 0 0 30px rgba(0,255,204,.1); position: relative; overflow: hidden; height: 240px; display: flex; align-items: center; justify-content: center; }
-.nextion-dmr2ysf::before,.nextion-dmr2ysf::after { content: '◈'; position: absolute; font-size: .6rem; color: #00ffcc33; }
-.nextion-dmr2ysf::before { top: .5rem; left: .7rem; }
-.nextion-dmr2ysf::after { bottom: .5rem; right: .7rem; }
-.nx-topbar.dmr2ysf-bar { background: #0a1a16; border-bottom: 1px solid #00ffcc33; color: #007060; }
-.nx-topbar.dmr2ysf-bar .nx-mode { color: #00ffcc; opacity: .8; }
-.nx-botbar.dmr2ysf-bar { background: #060e0c; border-top: 1px solid #00ffcc33; color: #007060; }
-.nx-infobar-dmr2ysf { background: rgba(0,0,0,.4); border-bottom: 1px solid #003028; }
-.nx-callsign.dmr2ysf { color: #00ffcc; text-shadow: 0 0 20px rgba(0,255,204,.6); }
-.nx-name.dmr2ysf { color: #80ffe8; }
-.nx-txbar.active-dmr2ysf { background: linear-gradient(90deg,transparent,#00ffcc,transparent); background-size: 200% 100%; animation: scan 1.4s linear infinite; }
-.lh-panel-dmr2ysf { background: var(--surface); border: 3px solid #00ffcc33; border-radius: 6px; display: flex; flex-direction: column; }
-.lh-header-dmr2ysf { background: #0a1a16; border-bottom: 1px solid #00ffcc33; padding: .4rem 1rem; display: grid; grid-template-columns: 1.2fr 1.8fr .8fr 1fr .6fr; gap: .3rem; font-family: var(--font-mono); font-size: .6rem; color: #007060; letter-spacing: .1em; text-transform: uppercase; }
-.lh-row-dmr2ysf { display: grid; grid-template-columns: 1.2fr 1.8fr .8fr 1fr .6fr; gap: .3rem; padding: .45rem 1rem; border-bottom: 1px solid rgba(0,255,204,.1); align-items: center; transition: background .2s; }
-.lh-row-dmr2ysf:last-child { border-bottom: none; }
-.lh-row-dmr2ysf:hover { background: rgba(0,255,204,.04); }
-.lh-row-dmr2ysf.lh-active { background: rgba(0,255,204,.08); }
-.lh-tx-dot-dmr2ysf { width: 6px; height: 6px; border-radius: 50%; background: #00ffcc; box-shadow: 0 0 6px #00ffcc; animation: pulse 1s infinite; flex-shrink: 0; }
-.lh-call-dmr2ysf { font-family: var(--font-mono); font-size: .82rem; color: #00ffcc; letter-spacing: .05em; font-weight: bold; }
 </style>
 </head>
 <body>
@@ -1193,6 +887,7 @@ button.btn-header { font-family: var(--font-mono); }
 </div>
 <button class="btn btn-secondary btn-sm" onclick="xtTtydOpen()">🖥️ Terminal</button>
 <a href="extra.php" class="btn btn-warning btn-sm">⚙️ Menu Extra</a>
+<a href="mmdvmdmr2ysf.php" class="btn btn-sm" style="background:#0d2535;color:#00ffcc;border:1px solid rgba(0,255,204,.4);">🔀 DMR2YSF</a>
 <button id="btnReboot" class="btn btn-danger btn-sm" onclick="rebootPi()">⏻ Reiniciar Pi</button>
 </div>
 </header>
@@ -1235,10 +930,6 @@ button.btn-header { font-family: var(--font-mono); }
 <div class="section-divider"></div>
 <div class="status-item"><div class="dot" id="dot-nxdnmmd"></div><span style="color:#ffd700">MMDVMHost NXDN</span></div>
 <div class="status-item"><div class="dot" id="dot-nxdngw"></div><span style="color:#ffd700">NXDNGateway</span></div>
-<div class="section-divider"></div>
-<div class="status-item"><div class="dot" id="dot-dmr2ysf-mmd"></div><span style="color:#00ffcc">MMDVMDmr2ysf</span></div>
-<div class="status-item"><div class="dot" id="dot-dmr2ysf-ysf"></div><span style="color:#00ffcc">YSFgw-Dmr2ysf</span></div>
-<div class="status-item"><div class="dot" id="dot-dmr2ysf"></div><span style="color:#00ffcc">DMR2YSF</span></div>
 </div>
 <div class="controls-section">
   <div class="service-card">
@@ -1310,29 +1001,6 @@ button.btn-header { font-family: var(--font-mono); }
     <div class="service-card-btns" style="margin-top:.4rem;">
       <a href="edit_ini.php?file=mmdvmnxdn" class="ini-btn view" style="flex:1;justify-content:center;color:#00e5ff;border-color:rgba(255,215,0,.3);">📄 editar fichero MMDVMNXDN.ini</a>
       <a href="edit_ini.php?file=nxdngateway" class="ini-btn view" style="flex:1;justify-content:center;color:#ffc400;border-color:rgba(255,196,0,.3);">📄 editar fichero NXDNGateway.ini</a>
-    </div>
-  </div>
-  <div class="service-card" style="border-color:rgba(0,255,204,.25);">
-    <div class="service-card-label" style="color:#00ffcc;">▸ DMR2YSF · Cross-Mode Bridge</div>
-    <div class="toggle-row">
-      <span class="toggle-label" id="dmr2ysfToggleLabel">DMR2YSF</span>
-      <label class="sw" id="swDMR2YSF">
-        <input type="checkbox" id="chkDMR2YSF" onchange="toggleDMR2YSF(this)">
-        <span class="sw-track" style="border-color:#ff4560;"></span><span class="sw-knob" style="background:#ff4560;"></span><span class="sw-busy-dot"></span>
-      </label>
-      <span class="toggle-status" id="dmr2ysfToggleStatus">OFF</span>
-    </div>
-    <div class="auto-badge" id="dmr2ysfRefreshBadge" style="display:none;color:#00ffcc;"><div class="dot-sm" style="background:#00ffcc;"></div> DMR2YSF activo</div>
-    <div class="service-card-btns" style="margin-top:.6rem;">
-      <a href="dmr2ysf_config.php" class="ini-btn edit" style="flex:1;justify-content:center;color:#00ffcc;border-color:rgba(0,255,204,.3);">⚙ DMR2YSF CONFIG</a>
-      <button onclick="openDmr2ysfConfigModal()" class="ini-btn edit" style="flex:1;justify-content:center;color:#00ffcc;border-color:rgba(0,255,204,.3);">⚙ MMDVMDMR2YSF CONFIG</button>
-    </div>
-    <div class="service-card-btns" style="margin-top:.4rem;">
-      <a href="edit_ini.php?file=dmr2ysf" class="ini-btn view" style="flex:1;justify-content:center;color:#00ffcc;border-color:rgba(0,255,204,.3);">📄 editar DMR2YSF.ini</a>
-      <button onclick="feditOpen('/home/pi/MMDVMHost/MMDVMDMR2YSF.ini')" class="ini-btn edit" style="flex:1;justify-content:center;color:#00ffcc;border-color:rgba(0,255,204,.3);">📄 editar MMDVMDMR2YSF.ini</button>
-    </div>
-    <div class="service-card-btns" style="margin-top:.4rem;">
-      <button onclick="openTgYsfModal()" class="ini-btn edit" style="flex:1;justify-content:center;color:#00ffcc;border-color:rgba(0,255,204,.3);background:rgba(0,255,204,.06);">📋 TG-YSF List</button>
     </div>
   </div>
 </div>
@@ -1418,30 +1086,6 @@ button.btn-header { font-family: var(--font-mono); }
     </div>
   </div>
 </div>
-<div class="display-row" style="margin-top:1rem;">
-  <div id="dmr2ysfDisplayPanel" style="display:none;">
-    <div class="panel-label" style="color:#00ffcc;">▸ DMR2YSF Display</div>
-    <div class="nextion-dmr2ysf">
-      <div class="nx-topbar dmr2ysf-bar"><span class="nx-mode">DMR2YSF · BRIDGE</span><span style="color:#007060;display:none" id="dmr2ysfStationLabel"></span><span style="color:#00ffcc;opacity:.85;min-width:5rem;text-align:right;font-size:.6rem;" id="dmr2ysfTGLabel">—</span></div>
-      <div class="nx-infobar nx-infobar-dmr2ysf">
-        <span class="nx-info-item"><span class="nx-info-lbl">DMR ID</span><span class="nx-info-val" style="color:#00ffcc" id="dmr2ysfDmrId">—</span></span>
-        <span class="nx-info-item"><span class="nx-info-lbl">GW</span><span class="nx-info-val" style="color:#80ffe8" id="dmr2ysfGw">—</span></span>
-        <span class="nx-info-item"><span class="nx-info-lbl">TG Defecto</span><span class="nx-info-val" style="color:#00ffcc" id="dmr2ysfDefTG">—</span></span>
-      </div>
-      <div class="nx-vu" id="dmr2ysfVuLeft"></div><div class="nx-vu right" id="dmr2ysfVuRight"></div>
-      <div class="nx-center" id="dmr2ysfNxCenter"><div class="nx-clock" id="dmr2ysfNxClock" style="color:#00ffcc;">00:00:00</div><div class="nx-date" id="dmr2ysfNxDate" style="color:#007060;">—</div></div>
-      <div class="nx-txbar" id="dmr2ysfTxBar"></div>
-      <div class="nx-botbar dmr2ysf-bar"><span style="color:#007060;font-family:var(--font-mono);font-size:.65rem;">DMR2YSF · CROSS-MODE</span><span style="color:#00ffcc;font-family:var(--font-mono);font-size:.65rem;" id="dmr2ysfYsfGw">YSF: —</span><span class="nx-source" id="dmr2ysfSource"></span></div>
-    </div>
-  </div>
-  <div id="dmr2ysfLastHeardPanel" style="display:none;">
-    <div class="panel-label" style="color:#00ffcc;">▸ Últimos escuchados DMR2YSF</div>
-    <div class="lh-panel-dmr2ysf">
-      <div class="lh-header-dmr2ysf"><span>Indicativo</span><span>Nombre</span><span>TG</span><span>Hora</span><span>Src</span></div>
-      <div class="lh-body" id="dmr2ysfLhBody"><div class="lh-empty">Sin actividad DMR2YSF</div></div>
-    </div>
-  </div>
-</div>
 <div class="log-grid" id="dmrLogPanels">
 <div class="log-panel"><div class="log-panel-header"><span class="svc-name">▸ MMDVMHost</span><button class="btn-clear" onclick="clearLog('logMmd')">limpiar</button></div><div class="log-output" id="logMmd">Esperando servicios…</div></div>
 <div class="log-panel"><div class="log-panel-header"><span class="svc-name gw">▸ DMRGateway</span><button class="btn-clear" onclick="clearLog('logGw')">limpiar</button></div><div class="log-output" id="logGw">Esperando servicios…</div></div>
@@ -1458,63 +1102,7 @@ button.btn-header { font-family: var(--font-mono); }
 <div id="nxdnPanelMmd" class="log-panel"><div class="log-panel-header"><span class="svc-name" style="color:#ffd700;">▸ MMDVMHost NXDN</span><button class="btn-clear" onclick="clearLog('logNxdnMmd')">limpiar</button></div><div class="log-output" id="logNxdnMmd">Esperando MMDVMHost NXDN…</div></div>
 <div id="nxdnPanelGw" class="log-panel"><div class="log-panel-header"><span class="svc-name" style="color:#ffc400;">▸ NXDNGateway</span><button class="btn-clear" onclick="clearLog('logNxdnGw')">limpiar</button></div><div class="log-output" id="logNxdnGw">Esperando NXDNGateway…</div></div>
 </div>
-<div class="log-grid" id="dmr2ysfLogPanels" style="display:none;">
-<div id="dmr2ysfPanel" class="log-panel"><div class="log-panel-header"><span class="svc-name" style="color:#00ffcc;">▸ DMR2YSF</span><button class="btn-clear" onclick="clearLog('logDmr2ysf')">limpiar</button></div><div class="log-output" id="logDmr2ysf">Esperando DMR2YSF…</div></div>
-<div id="ysfgwDmr2ysfPanel" class="log-panel"><div class="log-panel-header"><span class="svc-name" style="color:#00ffcc;">▸ YSFGateway DMR2YSF</span><button class="btn-clear" onclick="clearLog('logYsfGwDmr2ysf')">limpiar</button></div><div class="log-output" id="logYsfGwDmr2ysf">Esperando YSFGateway DMR2YSF…</div></div>
 </div>
-<!-- Modal Config MMDVMDMR2YSF -->
-<div id="dmr2ysfCfgModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:9700;align-items:center;justify-content:center;" onclick="if(event.target===this)closeDmr2ysfConfigModal()">
-<div style="background:var(--surface);border:1px solid #00ffcc44;border-radius:8px;padding:1.5rem;width:700px;max-width:96vw;max-height:90vh;overflow-y:auto;display:flex;flex-direction:column;gap:.8rem;">
-  <div style="font-family:var(--font-mono);font-size:.8rem;color:#00ffcc;letter-spacing:.12em;text-transform:uppercase;border-bottom:1px solid #00ffcc33;padding-bottom:.6rem;">⚙ MMDVMDMR2YSF.ini — Configuración</div>
-
-  <div style="font-family:var(--font-mono);font-size:.65rem;color:#007060;letter-spacing:.1em;text-transform:uppercase;margin-top:.4rem;">[General]</div>
-  <div style="display:grid;grid-template-columns:1fr 1fr;gap:.7rem;">
-    <div><label style="font-family:var(--font-mono);font-size:.65rem;color:var(--text-dim);display:block;margin-bottom:.25rem;">Callsign</label><input id="d2cfg_Callsign" style="width:100%;background:#060c10;border:1px solid #00ffcc33;border-radius:3px;color:#00ffcc;font-family:var(--font-mono);font-size:.82rem;padding:.35rem .6rem;outline:none;" onfocus="this.style.borderColor='#00ffcc'" onblur="this.style.borderColor='#00ffcc33'"></div>
-    <div><label style="font-family:var(--font-mono);font-size:.65rem;color:var(--text-dim);display:block;margin-bottom:.25rem;">DMR ID</label><input id="d2cfg_Id" style="width:100%;background:#060c10;border:1px solid #00ffcc33;border-radius:3px;color:#00ffcc;font-family:var(--font-mono);font-size:.82rem;padding:.35rem .6rem;outline:none;" onfocus="this.style.borderColor='#00ffcc'" onblur="this.style.borderColor='#00ffcc33'"></div>
-    <div><label style="font-family:var(--font-mono);font-size:.65rem;color:var(--text-dim);display:block;margin-bottom:.25rem;">Timeout (s)</label><input id="d2cfg_Timeout" style="width:100%;background:#060c10;border:1px solid #00ffcc33;border-radius:3px;color:#00ffcc;font-family:var(--font-mono);font-size:.82rem;padding:.35rem .6rem;outline:none;" onfocus="this.style.borderColor='#00ffcc'" onblur="this.style.borderColor='#00ffcc33'"></div>
-    <div><label style="font-family:var(--font-mono);font-size:.65rem;color:var(--text-dim);display:block;margin-bottom:.25rem;">Duplex (0/1)</label><input id="d2cfg_Duplex" style="width:100%;background:#060c10;border:1px solid #00ffcc33;border-radius:3px;color:#00ffcc;font-family:var(--font-mono);font-size:.82rem;padding:.35rem .6rem;outline:none;" onfocus="this.style.borderColor='#00ffcc'" onblur="this.style.borderColor='#00ffcc33'"></div>
-  </div>
-
-  <div style="font-family:var(--font-mono);font-size:.65rem;color:#007060;letter-spacing:.1em;text-transform:uppercase;margin-top:.4rem;">[Modem]</div>
-  <div style="display:grid;grid-template-columns:1fr;gap:.7rem;">
-    <div><label style="font-family:var(--font-mono);font-size:.65rem;color:var(--text-dim);display:block;margin-bottom:.25rem;">UART Port</label>
-    <select id="d2cfg_UARTPort" style="width:100%;background:#060c10;border:1px solid #00ffcc33;border-radius:3px;color:#00ffcc;font-family:var(--font-mono);font-size:.82rem;padding:.35rem .6rem;outline:none;cursor:pointer;" onfocus="this.style.borderColor='#00ffcc'" onblur="this.style.borderColor='#00ffcc33'">
-      <option value="/dev/ttyAMA0">/dev/ttyAMA0</option>
-      <option value="/dev/ttyACM0">/dev/ttyACM0</option>
-      <option value="/dev/ttyACM1">/dev/ttyACM1</option>
-      <option value="/dev/ttyACM2">/dev/ttyACM2</option>
-      <option value="/dev/ttyUSB0">/dev/ttyUSB0</option>
-      <option value="/dev/ttyUSB1">/dev/ttyUSB1</option>
-      <option value="/dev/ttyUSB2">/dev/ttyUSB2</option>
-    </select></div>
-  </div>
-
-  <div style="font-family:var(--font-mono);font-size:.65rem;color:#007060;letter-spacing:.1em;text-transform:uppercase;margin-top:.4rem;">[Info]</div>
-  <div style="display:grid;grid-template-columns:1fr 1fr;gap:.7rem;">
-    <div><label style="font-family:var(--font-mono);font-size:.65rem;color:var(--text-dim);display:block;margin-bottom:.25rem;">RX Frequency (Hz)</label><input id="d2cfg_RXFrequency" style="width:100%;background:#060c10;border:1px solid #00ffcc33;border-radius:3px;color:#00ffcc;font-family:var(--font-mono);font-size:.82rem;padding:.35rem .6rem;outline:none;" onfocus="this.style.borderColor='#00ffcc'" onblur="this.style.borderColor='#00ffcc33'"></div>
-    <div><label style="font-family:var(--font-mono);font-size:.65rem;color:var(--text-dim);display:block;margin-bottom:.25rem;">TX Frequency (Hz)</label><input id="d2cfg_TXFrequency" style="width:100%;background:#060c10;border:1px solid #00ffcc33;border-radius:3px;color:#00ffcc;font-family:var(--font-mono);font-size:.82rem;padding:.35rem .6rem;outline:none;" onfocus="this.style.borderColor='#00ffcc'" onblur="this.style.borderColor='#00ffcc33'"></div>
-  </div>
-
-  <div style="font-family:var(--font-mono);font-size:.65rem;color:#007060;letter-spacing:.1em;text-transform:uppercase;margin-top:.4rem;">[DMR Network]</div>
-  <div style="display:grid;grid-template-columns:1fr 1fr;gap:.7rem;">
-    <div><label style="font-family:var(--font-mono);font-size:.65rem;color:var(--text-dim);display:block;margin-bottom:.25rem;">Enable (0/1)</label><input id="d2cfg_DmrEnable" style="width:100%;background:#060c10;border:1px solid #00ffcc33;border-radius:3px;color:#00ffcc;font-family:var(--font-mono);font-size:.82rem;padding:.35rem .6rem;outline:none;" onfocus="this.style.borderColor='#00ffcc'" onblur="this.style.borderColor='#00ffcc33'"></div>
-    <div><label style="font-family:var(--font-mono);font-size:.65rem;color:var(--text-dim);display:block;margin-bottom:.25rem;">Type (Direct/Gateway)</label><input id="d2cfg_DmrType" style="width:100%;background:#060c10;border:1px solid #00ffcc33;border-radius:3px;color:#00ffcc;font-family:var(--font-mono);font-size:.82rem;padding:.35rem .6rem;outline:none;" onfocus="this.style.borderColor='#00ffcc'" onblur="this.style.borderColor='#00ffcc33'"></div>
-    <div><label style="font-family:var(--font-mono);font-size:.65rem;color:var(--text-dim);display:block;margin-bottom:.25rem;">Local Address</label><input id="d2cfg_DmrLocalAddr" style="width:100%;background:#060c10;border:1px solid #00ffcc33;border-radius:3px;color:#00ffcc;font-family:var(--font-mono);font-size:.82rem;padding:.35rem .6rem;outline:none;" onfocus="this.style.borderColor='#00ffcc'" onblur="this.style.borderColor='#00ffcc33'"></div>
-    <div><label style="font-family:var(--font-mono);font-size:.65rem;color:var(--text-dim);display:block;margin-bottom:.25rem;">Local Port</label><input id="d2cfg_DmrLocalPort" style="width:100%;background:#060c10;border:1px solid #00ffcc33;border-radius:3px;color:#00ffcc;font-family:var(--font-mono);font-size:.82rem;padding:.35rem .6rem;outline:none;" onfocus="this.style.borderColor='#00ffcc'" onblur="this.style.borderColor='#00ffcc33'"></div>
-    <div><label style="font-family:var(--font-mono);font-size:.65rem;color:var(--text-dim);display:block;margin-bottom:.25rem;">Remote Address</label><input id="d2cfg_DmrRemoteAddr" style="width:100%;background:#060c10;border:1px solid #00ffcc33;border-radius:3px;color:#00ffcc;font-family:var(--font-mono);font-size:.82rem;padding:.35rem .6rem;outline:none;" onfocus="this.style.borderColor='#00ffcc'" onblur="this.style.borderColor='#00ffcc33'"></div>
-    <div><label style="font-family:var(--font-mono);font-size:.65rem;color:var(--text-dim);display:block;margin-bottom:.25rem;">Remote Port</label><input id="d2cfg_DmrRemotePort" style="width:100%;background:#060c10;border:1px solid #00ffcc33;border-radius:3px;color:#00ffcc;font-family:var(--font-mono);font-size:.82rem;padding:.35rem .6rem;outline:none;" onfocus="this.style.borderColor='#00ffcc'" onblur="this.style.borderColor='#00ffcc33'"></div>
-    <div><label style="font-family:var(--font-mono);font-size:.65rem;color:var(--text-dim);display:block;margin-bottom:.25rem;">Password</label><input id="d2cfg_DmrPassword" type="text" style="width:100%;background:#060c10;border:1px solid #00ffcc33;border-radius:3px;color:#00ffcc;font-family:var(--font-mono);font-size:.82rem;padding:.35rem .6rem;outline:none;" onfocus="this.style.borderColor='#00ffcc'" onblur="this.style.borderColor='#00ffcc33'"></div>
-    <div><label style="font-family:var(--font-mono);font-size:.65rem;color:var(--text-dim);display:block;margin-bottom:.25rem;">Jitter (ms)</label><input id="d2cfg_DmrJitter" style="width:100%;background:#060c10;border:1px solid #00ffcc33;border-radius:3px;color:#00ffcc;font-family:var(--font-mono);font-size:.82rem;padding:.35rem .6rem;outline:none;" onfocus="this.style.borderColor='#00ffcc'" onblur="this.style.borderColor='#00ffcc33'"></div>
-  </div>
-
-  <div id="d2cfgMsg" style="font-family:var(--font-mono);font-size:.75rem;display:none;padding:.4rem .8rem;border-radius:4px;border:1px solid;margin-top:.4rem;"></div>
-  <div style="display:flex;gap:.8rem;margin-top:.4rem;">
-    <button onclick="saveDmr2ysfConfigModal()" style="flex:1;background:#00ffcc22;color:#00ffcc;border:1px solid #00ffcc55;border-radius:6px;font-family:var(--font-mono);font-size:.8rem;letter-spacing:.08em;text-transform:uppercase;padding:.6rem;cursor:pointer;transition:background .2s;" onmouseover="this.style.background='#00ffcc33'" onmouseout="this.style.background='#00ffcc22'">💾 Guardar</button>
-    <button onclick="closeDmr2ysfConfigModal()" style="flex:1;background:transparent;color:var(--text-dim);border:1px solid var(--border);border-radius:6px;font-family:var(--font-mono);font-size:.8rem;letter-spacing:.08em;text-transform:uppercase;padding:.6rem;cursor:pointer;transition:all .2s;" onmouseover="this.style.borderColor='#00ffcc';this.style.color='#00ffcc'" onmouseout="this.style.borderColor='';this.style.color=''">✖ Cerrar</button>
-  </div>
-</div>
-</div>
-
 </main>
 
 <!-- Modal Editor Ficheros -->
@@ -1601,11 +1189,7 @@ let dmrLastActiveTs=0,ysfLastActiveTs=0;
 const DMR_IDLE_TIMEOUT=12000,YSF_IDLE_TIMEOUT=12000;
 
 async function fetchStationInfo(){try{const r=await fetch('?action=station-info');const d=await r.json();document.getElementById('scCallsign').textContent='📡 '+d.callsign;const nxPort=document.getElementById('nxPort');if(nxPort)nxPort.textContent=d.port||'—';const nxFrx=document.getElementById('nxFrx');if(nxFrx)nxFrx.textContent=d.freqRX||'—';const nxFtx=document.getElementById('nxFtx');if(nxFtx)nxFtx.textContent=d.freq||'—';const nxIp=document.getElementById('nxIp');if(nxIp)nxIp.textContent=d.ip||'—';const yNxPort=document.getElementById('ysfNxPort');if(yNxPort)yNxPort.textContent=d.ysfPort||'—';const yNxFrx=document.getElementById('ysfNxFrx');if(yNxFrx)yNxFrx.textContent=d.ysfFreqRX||'—';const yNxFtx=document.getElementById('ysfNxFtx');if(yNxFtx)yNxFtx.textContent=d.ysfFreqTX||'—';const yNxIp=document.getElementById('ysfNxIp');if(yNxIp)yNxIp.textContent=d.ysfIp||'—';const label=d.callsign+' · ADER';const nx=document.getElementById('nxStationLabel');if(nx)nx.textContent=label;const yx=document.getElementById('ysfStationLabel');if(yx)yx.textContent=label;const dx=document.getElementById('dstarStationLabel');if(dx)dx.textContent=label;const nxdnLbl=document.getElementById('nxdnStationLabel');if(nxdnLbl)nxdnLbl.textContent=label;const dNxPort=document.getElementById('dstarNxPort');if(dNxPort)dNxPort.textContent=d.dstarPort||'—';const dNxFrx=document.getElementById('dstarNxFrx');if(dNxFrx)dNxFrx.textContent=d.dstarFreqRX||'—';const dNxFtx=document.getElementById('dstarNxFtx');if(dNxFtx)dNxFtx.textContent=d.dstarFreqTX||'—';const dNxIp=document.getElementById('dstarNxIp');if(dNxIp)dNxIp.textContent=d.dstarIp||'—';const nNxPort=document.getElementById('nxdnNxPort');if(nNxPort)nNxPort.textContent=d.nxdnPort||'—';const nNxFrx=document.getElementById('nxdnNxFrx');if(nNxFrx)nNxFrx.textContent=d.nxdnFreqRX||'—';const nNxFtx=document.getElementById('nxdnNxFtx');if(nNxFtx)nNxFtx.textContent=d.nxdnFreqTX||'—';const nNxIp=document.getElementById('nxdnNxIp');if(nNxIp)nNxIp.textContent=d.nxdnIp||'—';
-        const d2DmrId=document.getElementById('dmr2ysfDmrId');if(d2DmrId)d2DmrId.textContent=d.dmr2ysfDmrId||'—';
-        const d2Gw=document.getElementById('dmr2ysfGw');if(d2Gw)d2Gw.textContent=d.dmr2ysfGw||'—';
-        const d2DefTG=document.getElementById('dmr2ysfDefTG');if(d2DefTG)d2DefTG.textContent=d.dmr2ysfDefTG||'—';
-        const d2YsfGw=document.getElementById('dmr2ysfYsfGw');if(d2YsfGw)d2YsfGw.textContent='YSF: '+(d.dmr2ysfYsfGw||'—');
-        const d2Lbl=document.getElementById('dmr2ysfStationLabel');if(d2Lbl)d2Lbl.textContent=d.callsign+' · ADER';}catch(e){console.warn('station-info error:',e);}}
+}catch(e){console.warn('station-info error:',e);}}
 
 const _winOS = /Windows/i.test(navigator.userAgent);
 const _TBASE = 'https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/72x72/';
@@ -1882,66 +1466,6 @@ document.getElementById('xtInp').addEventListener('keydown',async function(e){
 });
 })();
 
-// ── DMR2YSF JS ────────────────────────────────────────────────────────────────
-let dmr2ysfRunning=false,dmr2ysfTimer=null,dmr2ysfTxTimer=null,dmr2ysfCurrentlyActive=false,dmr2ysfLastActiveTs=0,dmr2ysfVuTimerAnim=null;
-const DMR2YSF_IDLE_TIMEOUT=12000;
-
-function buildDmr2ysfVU(){['dmr2ysfVuLeft','dmr2ysfVuRight'].forEach(id=>{const el=document.getElementById(id);for(let i=0;i<18;i++){const d=document.createElement('div');d.className='nx-vu-bar';d.id=`${id}-${i}`;el.appendChild(d);}});}
-buildDmr2ysfVU();
-
-function animateDmr2ysfVU(on){clearInterval(dmr2ysfVuTimerAnim);['dmr2ysfVuLeft','dmr2ysfVuRight'].forEach(id=>{for(let i=0;i<18;i++)document.getElementById(`${id}-${i}`).className='nx-vu-bar';});if(!on)return;dmr2ysfVuTimerAnim=setInterval(()=>{['dmr2ysfVuLeft','dmr2ysfVuRight'].forEach(id=>{const lvl=Math.floor(Math.random()*16)+1;for(let i=0;i<18;i++){let cls='nx-vu-bar';if(i<lvl)cls+=i<10?' lit-g':i<14?' lit-a':' lit-r';document.getElementById(`${id}-${i}`).className=cls;}});},80);}
-
-function updateDmr2ysfClock(){if(!dmr2ysfCurrentlyActive){const now=new Date();const clk=document.getElementById('dmr2ysfNxClock');if(clk){clk.textContent=now.toLocaleTimeString('es-ES');document.getElementById('dmr2ysfNxDate').textContent=now.toLocaleDateString('es-ES',{weekday:'short',day:'2-digit',month:'short',year:'numeric'}).toUpperCase();}}}
-setInterval(updateDmr2ysfClock,1000);updateDmr2ysfClock();
-
-function setDMR2YSFToggle(on){
-    const chk=document.getElementById('chkDMR2YSF'),lbl=document.getElementById('dmr2ysfToggleLabel'),sta=document.getElementById('dmr2ysfToggleStatus');
-    chk.checked=on;lbl.style.color=on?'#00ffcc':'';
-    sta.className='toggle-status'+(on?' on':'');sta.textContent=on?'ON':'OFF';
-    document.getElementById('dmr2ysfRefreshBadge').style.display=on?'flex':'none';
-    document.getElementById('dmr2ysfPanel').style.display=on?'':'none';
-    document.getElementById('dmr2ysfLogPanels').style.display=on?'':'none';
-    document.getElementById('dmr2ysfDisplayPanel').style.display=on?'':'none';
-    document.getElementById('dmr2ysfLastHeardPanel').style.display=on?'':'none';
-    // Actualizar estilo del switch
-    const track=document.querySelector('#swDMR2YSF .sw-track');
-    const knob=document.querySelector('#swDMR2YSF .sw-knob');
-    if(track)track.style.borderColor=on?'#00ff4c':'#ff4560';
-    if(knob){knob.style.background=on?'#00ff4c':'#ff4560';knob.style.transform=on?'translateX(28px)':'translateX(0)';}
-}
-
-function showDmr2ysfIdle(){dmr2ysfCurrentlyActive=false;animateDmr2ysfVU(false);document.getElementById('dmr2ysfTxBar').className='nx-txbar';document.getElementById('dmr2ysfTGLabel').textContent='—';const src=document.getElementById('dmr2ysfSource');src.textContent='';src.className='nx-source';document.getElementById('dmr2ysfNxCenter').innerHTML='<div class="nx-clock" id="dmr2ysfNxClock" style="color:#00ffcc;">00:00:00</div><div class="nx-date" id="dmr2ysfNxDate" style="color:#007060;">—</div>';updateDmr2ysfClock();}
-function showDmr2ysfActive(d){dmr2ysfCurrentlyActive=true;animateDmr2ysfVU(true);document.getElementById('dmr2ysfTxBar').className='nx-txbar active-dmr2ysf';document.getElementById('dmr2ysfTGLabel').textContent=d.tg?'TG '+d.tg:'—';const src=document.getElementById('dmr2ysfSource');src.textContent='DMR';src.className='nx-source rf';const flag=getFlagByCall(d.callsign);document.getElementById('dmr2ysfNxCenter').innerHTML=`<div class="nx-callsign dmr2ysf">${flag} ${esc(d.callsign)}</div>`+(d.name?`<div class="nx-name dmr2ysf">${esc(d.name)}</div>`:'');}
-
-function renderDmr2ysfLastHeard(list,activeCall){const body=document.getElementById('dmr2ysfLhBody');if(!list||list.length===0){body.innerHTML='<div class="lh-empty">Sin actividad DMR2YSF</div>';return;}body.innerHTML=list.map(r=>{const isActive=activeCall&&r.callsign===activeCall;const dot=isActive?'<span class="lh-tx-dot-dmr2ysf"></span>':'';const flag=getFlagByCall(r.callsign);return`<div class="lh-row-dmr2ysf${isActive?' lh-active':''}"><div class="lh-call-wrap">${dot}<span class="lh-call-dmr2ysf">${flag} ${esc(r.callsign)}</span></div><span class="lh-name">${esc(r.name||'—')}</span><span class="lh-tg" style="color:#00ffcc">${esc(r.tg||'—')}</span><span class="lh-time">${esc(r.time||'—')}</span><span class="lh-src rf">DMR</span></div>`;}).join('');}
-
-async function fetchDmr2ysfTransmission(){try{const r=await fetch('?action=dmr2ysf-transmission');const d=await r.json();if(d.active){dmr2ysfLastActiveTs=Date.now();showDmr2ysfActive(d);}else{if(dmr2ysfCurrentlyActive&&(Date.now()-dmr2ysfLastActiveTs)>DMR2YSF_IDLE_TIMEOUT)showDmr2ysfIdle();}renderDmr2ysfLastHeard(d.lastHeard||[],d.active?d.callsign:null);}catch(e){if(dmr2ysfCurrentlyActive&&(Date.now()-dmr2ysfLastActiveTs)>DMR2YSF_IDLE_TIMEOUT)showDmr2ysfIdle();}}
-
-async function fetchDmr2ysfLogs(){try{const r=await fetch('?action=dmr2ysf-logs&lines=15');const d=await r.json();const el=document.getElementById('logDmr2ysf');const atBot=el.scrollHeight-el.clientHeight<=el.scrollTop+10;el.innerHTML=colorize(d.dmr2ysf);if(atBot)el.scrollTop=el.scrollHeight;}catch(e){}
-try{const r2=await fetch('?action=ysfgw-dmr2ysf-logs&lines=15');const d2=await r2.json();const el2=document.getElementById('logYsfGwDmr2ysf');const atBot2=el2.scrollHeight-el2.clientHeight<=el2.scrollTop+10;el2.innerHTML=colorize(d2.ysfgwdmr2ysf);if(atBot2)el2.scrollTop=el2.scrollHeight;}catch(e){}}
-
-async function checkDmr2ysfStatus(){try{const r=await fetch('?action=dmr2ysf-status');const d=await r.json();const active=d.dmr2ysf==='active';setDot('dot-dmr2ysf-mmd',d.s1==='active'?'active':'off');setDot('dot-dmr2ysf-ysf',d.s2==='active'?'active':'off');setDot('dot-dmr2ysf',d.s3==='active'?'active':'off');dmr2ysfRunning=active;setDMR2YSFToggle(active);if(active){startDmr2ysfLogs();startDmr2ysfTxPoll();}}catch(e){}}
-
-async function toggleDMR2YSF(chk){const wasOn=!chk.checked;const sw=document.getElementById('swDMR2YSF');chk.checked=wasOn;sw.classList.add('busy');
-try{
-    await fetch(wasOn?'?action=dmr2ysf-stop':'?action=dmr2ysf-start');
-    let ok=false;
-    for(let i=0;i<15;i++){
-        await new Promise(r=>setTimeout(r,1000));
-        const r=await fetch('?action=dmr2ysf-status');
-        const d=await r.json();
-        const isOn=d.dmr2ysf==='active';
-        if(wasOn&&!isOn){ok=true;setDot('dot-dmr2ysf-mmd','off');setDot('dot-dmr2ysf-ysf','off');setDot('dot-dmr2ysf','off');dmr2ysfRunning=false;setDMR2YSFToggle(false);stopDmr2ysfLogs();stopDmr2ysfTxPoll();showDmr2ysfIdle();clearLog('logDmr2ysf');clearLog('logYsfGwDmr2ysf');break;}
-        if(!wasOn&&isOn){ok=true;setDot('dot-dmr2ysf','active');dmr2ysfRunning=true;setDMR2YSFToggle(true);startDmr2ysfLogs();startDmr2ysfTxPoll();break;}
-    }
-    if(!ok)await checkDmr2ysfStatus();
-}catch(e){console.warn('toggleDMR2YSF error:',e);}
-finally{sw.classList.remove('busy');}}
-
-function startDmr2ysfLogs(){fetchDmr2ysfLogs();dmr2ysfTimer=setInterval(fetchDmr2ysfLogs,5000);}
-function stopDmr2ysfLogs(){clearInterval(dmr2ysfTimer);dmr2ysfTimer=null;}
-function startDmr2ysfTxPoll(){fetchDmr2ysfTransmission();dmr2ysfTxTimer=setInterval(fetchDmr2ysfTransmission,4000);}
-function stopDmr2ysfTxPoll(){clearInterval(dmr2ysfTxTimer);dmr2ysfTxTimer=null;}
 
 // ── Bloque init ───────────────────────────────────────────────────────────────
 (async()=>{
@@ -1952,415 +1476,18 @@ function stopDmr2ysfTxPoll(){clearInterval(dmr2ysfTxTimer);dmr2ysfTxTimer=null;}
     await checkMMDVMYSFStatus();
     await checkDStarStatus();
     await checkNXDNStatus();
-    await checkDmr2ysfStatus();
     setInterval(checkStatus,10000);
     setInterval(checkYSFStatus,8000);
     setInterval(checkMMDVMYSFStatus,8000);
     setInterval(checkDStarStatus,10000);
     setInterval(checkNXDNStatus,10000);
-    setInterval(checkDmr2ysfStatus,10000);
     if(!running){showIdle();fetchTransmission();}
     showYSFIdle();
     showNXDNIdle();
-    showDmr2ysfIdle();
     startYSFLogs();
     startMMDVMYSFLogs();
     startYSFTransmissionPoll();
 })();
-// ── Modal Config MMDVMDMR2YSF ─────────────────────────────────────────────────
-const d2cfgFields=['Callsign','Id','Timeout','Duplex','RXFrequency','TXFrequency','DmrEnable','DmrType','DmrLocalAddr','DmrLocalPort','DmrRemoteAddr','DmrRemotePort','DmrPassword','DmrJitter','UARTPort'];
-async function openDmr2ysfConfigModal(){
-    const modal=document.getElementById('dmr2ysfCfgModal');
-    const msg=document.getElementById('d2cfgMsg');
-    msg.style.display='none';
-    modal.style.display='flex';
-    d2cfgFields.forEach(f=>{const el=document.getElementById('d2cfg_'+f);if(el)el.value='';});
-    try{
-        const r=await fetch('?action=mmdvmdmr2ysf-config-read');
-        const d=await r.json();
-        d2cfgFields.forEach(f=>{
-            const el=document.getElementById('d2cfg_'+f);
-            if(!el||d[f]===undefined)return;
-            if(el.tagName==='SELECT'){
-                // Seleccionar la opción correcta; si no existe añadirla
-                let found=false;
-                for(const opt of el.options){if(opt.value===d[f]){opt.selected=true;found=true;break;}}
-                if(!found){const opt=document.createElement('option');opt.value=d[f];opt.textContent=d[f];el.appendChild(opt);opt.selected=true;}
-            } else {
-                el.value=d[f];
-            }
-        });
-    }catch(e){
-        msg.style.cssText='font-family:var(--font-mono);font-size:.75rem;display:block;padding:.4rem .8rem;border-radius:4px;border:1px solid var(--red);color:var(--red);background:rgba(255,69,96,.06);margin-top:.4rem;';
-        msg.textContent='✖ Error al leer el fichero';
-    }
-}
-function closeDmr2ysfConfigModal(){document.getElementById('dmr2ysfCfgModal').style.display='none';}
-async function saveDmr2ysfConfigModal(){
-    const msg=document.getElementById('d2cfgMsg');
-    msg.style.cssText='font-family:var(--font-mono);font-size:.75rem;display:block;padding:.4rem .8rem;border-radius:4px;border:1px solid var(--amber);color:var(--amber);background:rgba(255,179,0,.06);margin-top:.4rem;';
-    msg.textContent='⏳ Guardando…';
-    const body=d2cfgFields.map(f=>{const el=document.getElementById('d2cfg_'+f);return el?encodeURIComponent(f)+'='+encodeURIComponent(el.value):'';}).filter(Boolean).join('&');
-    try{
-        const r=await fetch('?action=mmdvmdmr2ysf-config-save',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body});
-        const d=await r.json();
-        if(d.ok){
-            msg.style.cssText='font-family:var(--font-mono);font-size:.75rem;display:block;padding:.4rem .8rem;border-radius:4px;border:1px solid #00ffcc;color:#00ffcc;background:rgba(0,255,204,.06);margin-top:.4rem;';
-            msg.textContent='✔ Guardado correctamente';
-            setTimeout(()=>{msg.style.display='none';},3000);
-        }else{
-            msg.style.cssText='font-family:var(--font-mono);font-size:.75rem;display:block;padding:.4rem .8rem;border-radius:4px;border:1px solid var(--red);color:var(--red);background:rgba(255,69,96,.06);margin-top:.4rem;';
-            msg.textContent='✖ '+(d.msg||'Error al guardar');
-        }
-    }catch(e){
-        msg.style.cssText='font-family:var(--font-mono);font-size:.75rem;display:block;padding:.4rem .8rem;border-radius:4px;border:1px solid var(--red);color:var(--red);background:rgba(255,69,96,.06);margin-top:.4rem;';
-        msg.textContent='✖ Error de red: '+e.message;
-    }
-}
 </script>
-<!-- Modal TG-YSF List -->
-<div id="tgYsfModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.8);z-index:9900;align-items:center;justify-content:center;" onclick="if(event.target===this)closeTgYsfModal()">
-<div style="background:var(--surface);border:1px solid #00ffcc44;border-radius:8px;padding:1.5rem;width:720px;max-width:96vw;display:flex;flex-direction:column;gap:.8rem;">
-  <div style="font-family:var(--font-mono);font-size:.8rem;color:#00ffcc;letter-spacing:.12em;text-transform:uppercase;">📋 TG-YSF List · Mapeo TalkGroup → Reflector YSF</div>
-  <div style="font-family:var(--font-mono);font-size:.65rem;color:var(--text-dim);">/home/pi/MMDVM_CM/DMR2YSF/TG-YSFList.txt</div>
-
-  <!-- Tabla de entradas -->
-  <div style="background:#060c10;border:1px solid #00ffcc22;border-radius:4px;overflow:hidden;">
-    <div style="display:grid;grid-template-columns:90px 110px 1fr 36px;padding:.4rem .8rem;background:#0a1a16;font-family:var(--font-mono);font-size:.65rem;color:#007060;letter-spacing:.1em;text-transform:uppercase;gap:.5rem;">
-      <span>TG DMR</span><span>YSF ID</span><span>Nombre</span><span></span>
-    </div>
-    <div id="tgYsfRows" style="max-height:220px;overflow-y:auto;"></div>
-  </div>
-
-  <!-- Añadir nueva entrada -->
-  <div style="display:grid;grid-template-columns:90px 110px 1fr auto;gap:.5rem;align-items:end;">
-    <div>
-      <div style="font-family:var(--font-mono);font-size:.62rem;color:var(--text-dim);margin-bottom:.25rem;text-transform:uppercase;">TG DMR</div>
-      <input type="text" id="tgYsfNewTG" placeholder="21465"
-        style="width:100%;background:var(--surface);border:1px solid #00ffcc44;border-radius:4px;color:#00ffcc;font-family:var(--font-mono);font-size:.82rem;padding:.42rem .5rem;outline:none;">
-    </div>
-    <div>
-      <div style="font-family:var(--font-mono);font-size:.62rem;color:var(--text-dim);margin-bottom:.25rem;text-transform:uppercase;">YSF ID</div>
-      <input type="text" id="tgYsfNewYSF" placeholder="32027"
-        style="width:100%;background:var(--surface);border:1px solid #00ffcc44;border-radius:4px;color:#00ffcc;font-family:var(--font-mono);font-size:.82rem;padding:.42rem .5rem;outline:none;">
-    </div>
-    <div>
-      <div style="font-family:var(--font-mono);font-size:.62rem;color:var(--text-dim);margin-bottom:.25rem;text-transform:uppercase;">Nombre</div>
-      <input type="text" id="tgYsfNewName" placeholder="ej: ES-ADER"
-        style="width:100%;background:var(--surface);border:1px solid #00ffcc44;border-radius:4px;color:#80ffe8;font-family:var(--font-mono);font-size:.82rem;padding:.42rem .5rem;outline:none;">
-    </div>
-    <div style="display:flex;flex-direction:column;gap:.25rem;">
-      <button onclick="tgYsfAdd()"
-        style="background:#00cc99;color:#000;border:none;border-radius:4px;font-family:var(--font-mono);font-size:.78rem;padding:.42rem .8rem;cursor:pointer;white-space:nowrap;">
-        ➕ Añadir
-      </button>
-      <button onclick="tgYsfToggleHosts()"
-        style="background:#0d2535;color:#00ffcc;border:1px solid #00ffcc44;border-radius:4px;font-family:var(--font-mono);font-size:.78rem;padding:.42rem .8rem;cursor:pointer;white-space:nowrap;">
-        📡 Buscar Sala para Añadir
-      </button>
-    </div>
-  </div>
-
-  <!-- Panel buscador de reflectores YSF -->
-  <div id="tgYsfHostPanel" style="display:none;background:#060c10;border:1px solid #00ffcc33;border-radius:4px;padding:.8rem;">
-    <div style="display:flex;gap:.5rem;margin-bottom:.6rem;align-items:center;">
-      <input type="text" id="tgYsfSearch" placeholder="🔍 Buscar reflector por nombre, descripción o país…" oninput="tgYsfFilterHosts(this.value)"
-        style="flex:1;background:var(--surface);border:1px solid #00ffcc44;border-radius:4px;color:#00ffcc;font-family:var(--font-mono);font-size:.78rem;padding:.38rem .6rem;outline:none;">
-      <button onclick="tgYsfToggleHosts()" style="background:transparent;border:1px solid #ff456044;color:#ff4560;border-radius:4px;font-family:var(--font-mono);font-size:.7rem;padding:.35rem .6rem;cursor:pointer;">✖</button>
-    </div>
-    <div id="tgYsfHostList" style="max-height:200px;overflow-y:auto;font-family:var(--font-mono);font-size:.72rem;">
-      <div style="color:var(--text-dim);text-align:center;padding:.5rem;">Cargando…</div>
-    </div>
-    <div style="font-family:var(--font-mono);font-size:.6rem;color:var(--text-dim);margin-top:.4rem;">
-      ↑ Haz clic en un reflector para rellenar el YSF ID automáticamente
-    </div>
-  </div>
-
-  <div id="tgYsfMsg" style="display:none;font-family:var(--font-mono);font-size:.75rem;padding:.4rem .8rem;border-radius:4px;border:1px solid;"></div>
-
-  <div style="display:flex;gap:.8rem;margin-top:.2rem;">
-    <button onclick="tgYsfSave()" style="flex:1;background:#00cc99;color:#000;border:none;border-radius:6px;font-family:var(--font-mono);font-size:.8rem;letter-spacing:.08em;text-transform:uppercase;padding:.6rem;cursor:pointer;">💾 Guardar</button>
-    <button onclick="closeTgYsfModal()" style="flex:1;background:transparent;color:var(--text-dim);border:1px solid var(--border);border-radius:6px;font-family:var(--font-mono);font-size:.8rem;text-transform:uppercase;padding:.6rem;cursor:pointer;">✖ Cerrar</button>
-  </div>
-</div>
-</div>
-
-<script>
-let _tgYsfEntries = [];
-let _tgYsfHosts   = [];
-let _tgYsfHostsLoaded = false;
-
-function openTgYsfModal() {
-    document.getElementById('tgYsfModal').style.display = 'flex';
-    document.getElementById('tgYsfMsg').style.display = 'none';
-    document.getElementById('tgYsfHostPanel').style.display = 'none';
-    tgYsfLoad();
-}
-function closeTgYsfModal() {
-    document.getElementById('tgYsfModal').style.display = 'none';
-}
-
-async function tgYsfLoad() {
-    try {
-        const r = await fetch('?action=tgysf-read');
-        const d = await r.json();
-        _tgYsfEntries = d.entries || [];
-        tgYsfRender();
-    } catch(e) { console.warn('tgYsfLoad error', e); }
-}
-
-function tgYsfRender() {
-    const container = document.getElementById('tgYsfRows');
-    if (_tgYsfEntries.length === 0) {
-        container.innerHTML = '<div style="padding:1rem;font-family:var(--font-mono);font-size:.72rem;color:var(--text-dim);text-align:center;">Sin entradas</div>';
-        return;
-    }
-    container.innerHTML = _tgYsfEntries.map((e, i) => `
-        <div style="display:grid;grid-template-columns:90px 110px 1fr 36px;padding:.38rem .8rem;border-bottom:1px solid #00ffcc11;align-items:center;gap:.5rem;">
-            <span style="font-family:var(--font-mono);font-size:.82rem;color:#00ffcc;">${esc(e.tg)}</span>
-            <span style="font-family:var(--font-mono);font-size:.82rem;color:#80ffe8;">${esc(e.ysf)}</span>
-            <input type="text" value="${esc(e.name||'')}" placeholder="—"
-              onchange="_tgYsfEntries[${i}].name=this.value"
-              style="background:transparent;border:none;border-bottom:1px solid #00ffcc22;color:#a8b9cc;font-family:var(--font-mono);font-size:.78rem;padding:.15rem .2rem;outline:none;width:100%;">
-            <button onclick="tgYsfRemove(${i})" style="background:transparent;border:1px solid #ff456044;border-radius:3px;color:#ff4560;font-size:.7rem;cursor:pointer;padding:.15rem .3rem;">✖</button>
-        </div>
-    `).join('');
-}
-
-function tgYsfAdd() {
-    const tg   = document.getElementById('tgYsfNewTG').value.trim();
-    const ysf  = document.getElementById('tgYsfNewYSF').value.trim();
-    const name = document.getElementById('tgYsfNewName').value.trim();
-    if (!tg || !ysf || isNaN(tg) || isNaN(ysf)) {
-        tgYsfShowMsg('Introduce valores numéricos válidos para TG e ID', false); return;
-    }
-    if (_tgYsfEntries.some(e => e.tg === tg)) {
-        tgYsfShowMsg('El TG ' + tg + ' ya existe', false); return;
-    }
-    _tgYsfEntries.push({tg, ysf, name});
-    document.getElementById('tgYsfNewTG').value   = '';
-    document.getElementById('tgYsfNewYSF').value  = '';
-    document.getElementById('tgYsfNewName').value = '';
-    tgYsfRender();
-}
-
-function tgYsfRemove(i) {
-    _tgYsfEntries.splice(i, 1);
-    tgYsfRender();
-}
-
-async function tgYsfSave() {
-    try {
-        const r = await fetch('?action=tgysf-save', {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({entries: _tgYsfEntries})
-        });
-        const d = await r.json();
-        tgYsfShowMsg(d.msg, d.ok);
-    } catch(e) { tgYsfShowMsg('Error de red', false); }
-}
-
-// ── Buscador de reflectores YSF ───────────────────────────────────────────────
-async function tgYsfToggleHosts() {
-    const panel = document.getElementById('tgYsfHostPanel');
-    const visible = panel.style.display !== 'none';
-    panel.style.display = visible ? 'none' : 'block';
-    if (!visible && !_tgYsfHostsLoaded) await tgYsfLoadHosts();
-}
-
-async function tgYsfLoadHosts() {
-    document.getElementById('tgYsfHostList').innerHTML =
-        '<div style="color:var(--text-dim);text-align:center;padding:.5rem;">Cargando reflectores…</div>';
-    try {
-        const r = await fetch('?action=tgysf-hosts');
-        const d = await r.json();
-        _tgYsfHosts = d.hosts || [];
-        _tgYsfHostsLoaded = true;
-        tgYsfRenderHosts(_tgYsfHosts);
-    } catch(e) {
-        document.getElementById('tgYsfHostList').innerHTML =
-            '<div style="color:var(--red);text-align:center;padding:.5rem;">Error cargando YSFHosts.json</div>';
-    }
-}
-
-function tgYsfFilterHosts(q) {
-    const term = q.trim().toLowerCase();
-    const filtered = term === ''
-        ? _tgYsfHosts
-        : _tgYsfHosts.filter(h =>
-            String(h.id).includes(term) ||
-            h.name.toLowerCase().includes(term) ||
-            h.desc.toLowerCase().includes(term) ||
-            h.country.toLowerCase().includes(term)
-          );
-    tgYsfRenderHosts(filtered);
-}
-
-function tgYsfRenderHosts(list) {
-    const el = document.getElementById('tgYsfHostList');
-    if (!list.length) {
-        el.innerHTML = '<div style="color:var(--text-dim);text-align:center;padding:.5rem;">Sin resultados</div>';
-        return;
-    }
-    el.innerHTML = list.map(h => {
-        const flag = h.country === 'ES' ? '🇪🇸 ' : h.country ? h.country + ' ' : '';
-        const nm   = h.name || '—';
-        const desc = h.desc ? ' · ' + h.desc : '';
-        const nmEsc = nm.replace(/\\/g,'\\\\').replace(/'/g,"\\'");
-        return `<div onclick="tgYsfSelectHost(${h.id},'${nmEsc}')"
-            style="padding:.35rem .6rem;cursor:pointer;border-bottom:1px solid #00ffcc11;transition:background .15s;display:flex;gap:.8rem;align-items:center;"
-            onmouseover="this.style.background='rgba(0,255,204,.08)'"
-            onmouseout="this.style.background='transparent'">
-            <span style="color:#00ffcc;min-width:52px;">${h.id}</span>
-            <span style="color:#80ffe8;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${flag}${esc(nm)}${esc(desc)}</span>
-            <span style="color:var(--text-dim);font-size:.6rem;">${h.country}</span>
-        </div>`;
-    }).join('');
-}
-
-function tgYsfSelectHost(id, name) {
-    document.getElementById('tgYsfNewYSF').value  = id;
-    document.getElementById('tgYsfNewName').value = name;
-    document.getElementById('tgYsfHostPanel').style.display = 'none';
-    document.getElementById('tgYsfSearch').value = '';
-    document.getElementById('tgYsfNewTG').focus();
-}
-
-function tgYsfShowMsg(msg, ok) {
-    const el = document.getElementById('tgYsfMsg');
-    el.textContent = (ok ? '✔ ' : '✖ ') + msg;
-    el.style.display = 'block';
-    el.style.color = ok ? 'var(--green)' : 'var(--red)';
-    el.style.borderColor = ok ? 'var(--green)' : 'var(--red)';
-    el.style.background = ok ? 'rgba(0,255,159,.06)' : 'rgba(255,69,96,.06)';
-    if (ok) setTimeout(() => el.style.display = 'none', 3000);
-}
-</script>
-
-<div id="tgYsfModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.8);z-index:9900;align-items:center;justify-content:center;" onclick="if(event.target===this)closeTgYsfModal()">
-<div style="background:var(--surface);border:1px solid #00ffcc44;border-radius:8px;padding:1.5rem;width:680px;max-width:95vw;display:flex;flex-direction:column;gap:.8rem;">
-  <div style="font-family:var(--font-mono);font-size:.8rem;color:#00ffcc;letter-spacing:.12em;text-transform:uppercase;">📋 TG-YSF List · Mapeo TalkGroup → Reflector YSF</div>
-  <div style="font-family:var(--font-mono);font-size:.65rem;color:var(--text-dim);">/home/pi/MMDVM_CM/DMR2YSF/TG-YSFList.txt</div>
-
-  <!-- Tabla de entradas -->
-  <div style="background:#060c10;border:1px solid #00ffcc22;border-radius:4px;overflow:hidden;">
-    <div style="display:grid;grid-template-columns:100px 120px 1fr 36px;padding:.4rem .8rem;background:#0a1a16;font-family:var(--font-mono);font-size:.65rem;color:#007060;letter-spacing:.1em;text-transform:uppercase;gap:.5rem;">
-      <span>TG DMR</span><span>YSF ID</span><span>Nombre</span><span></span>
-    </div>
-    <div id="tgYsfRows" style="max-height:280px;overflow-y:auto;"></div>
-  </div>
-
-  <!-- Añadir nueva entrada -->
-  <div style="display:grid;grid-template-columns:100px 120px 1fr auto;gap:.5rem;align-items:end;">
-    <div>
-      <div style="font-family:var(--font-mono);font-size:.62rem;color:var(--text-dim);margin-bottom:.25rem;text-transform:uppercase;">TG DMR</div>
-      <input type="number" id="tgYsfNewTG" placeholder="21465" min="1"
-        style="width:100%;background:var(--surface);border:1px solid #00ffcc44;border-radius:4px;color:#00ffcc;font-family:var(--font-mono);font-size:.82rem;padding:.42rem .5rem;outline:none;">
-    </div>
-    <div>
-      <div style="font-family:var(--font-mono);font-size:.62rem;color:var(--text-dim);margin-bottom:.25rem;text-transform:uppercase;">YSF ID</div>
-      <input type="number" id="tgYsfNewYSF" placeholder="32027" min="1"
-        style="width:100%;background:var(--surface);border:1px solid #00ffcc44;border-radius:4px;color:#00ffcc;font-family:var(--font-mono);font-size:.82rem;padding:.42rem .5rem;outline:none;">
-    </div>
-    <div>
-      <div style="font-family:var(--font-mono);font-size:.62rem;color:var(--text-dim);margin-bottom:.25rem;text-transform:uppercase;">Nombre</div>
-      <input type="text" id="tgYsfNewName" placeholder="ej: ES-ADER"
-        style="width:100%;background:var(--surface);border:1px solid #00ffcc44;border-radius:4px;color:#80ffe8;font-family:var(--font-mono);font-size:.82rem;padding:.42rem .5rem;outline:none;">
-    </div>
-    <button onclick="tgYsfAdd()"
-      style="background:#00cc99;color:#000;border:none;border-radius:4px;font-family:var(--font-mono);font-size:.8rem;padding:.42rem .9rem;cursor:pointer;white-space:nowrap;height:fit-content;">
-      ➕ Añadir
-    </button>
-  </div>
-
-  <div id="tgYsfMsg" style="display:none;font-family:var(--font-mono);font-size:.75rem;padding:.4rem .8rem;border-radius:4px;border:1px solid;"></div>
-
-  <div style="display:flex;gap:.8rem;margin-top:.2rem;">
-    <button onclick="tgYsfSave()" style="flex:1;background:#00cc99;color:#000;border:none;border-radius:6px;font-family:var(--font-mono);font-size:.8rem;letter-spacing:.08em;text-transform:uppercase;padding:.6rem;cursor:pointer;">💾 Guardar</button>
-    <button onclick="closeTgYsfModal()" style="flex:1;background:transparent;color:var(--text-dim);border:1px solid var(--border);border-radius:6px;font-family:var(--font-mono);font-size:.8rem;text-transform:uppercase;padding:.6rem;cursor:pointer;">✖ Cerrar</button>
-  </div>
-</div>
-</div>
-
-<script>
-let _tgYsfEntries = [];
-
-function openTgYsfModal() {
-    document.getElementById('tgYsfModal').style.display = 'flex';
-    document.getElementById('tgYsfMsg').style.display = 'none';
-    tgYsfLoad();
-}
-function closeTgYsfModal() {
-    document.getElementById('tgYsfModal').style.display = 'none';
-}
-async function tgYsfLoad() {
-    try {
-        const r = await fetch('?action=tgysf-read');
-        const d = await r.json();
-        _tgYsfEntries = d.entries || [];
-        tgYsfRender();
-    } catch(e) { console.warn('tgYsfLoad error', e); }
-}
-function tgYsfRender() {
-    const container = document.getElementById('tgYsfRows');
-    if (_tgYsfEntries.length === 0) {
-        container.innerHTML = '<div style="padding:1rem;font-family:var(--font-mono);font-size:.72rem;color:var(--text-dim);text-align:center;">Sin entradas</div>';
-        return;
-    }
-    container.innerHTML = _tgYsfEntries.map((e, i) => `
-        <div style="display:grid;grid-template-columns:100px 120px 1fr 36px;padding:.38rem .8rem;border-bottom:1px solid #00ffcc11;align-items:center;gap:.5rem;">
-            <span style="font-family:var(--font-mono);font-size:.82rem;color:#00ffcc;">${esc(e.tg)}</span>
-            <span style="font-family:var(--font-mono);font-size:.82rem;color:#80ffe8;">${esc(e.ysf)}</span>
-            <input type="text" value="${esc(e.name||'')}" placeholder="—"
-              onchange="_tgYsfEntries[${i}].name=this.value"
-              style="background:transparent;border:none;border-bottom:1px solid #00ffcc22;color:#a8b9cc;font-family:var(--font-mono);font-size:.78rem;padding:.15rem .2rem;outline:none;width:100%;">
-            <button onclick="tgYsfRemove(${i})" style="background:transparent;border:1px solid #ff456044;border-radius:3px;color:#ff4560;font-size:.7rem;cursor:pointer;padding:.15rem .3rem;">✖</button>
-        </div>
-    `).join('');
-}
-function tgYsfAdd() {
-    const tg   = document.getElementById('tgYsfNewTG').value.trim();
-    const ysf  = document.getElementById('tgYsfNewYSF').value.trim();
-    const name = document.getElementById('tgYsfNewName').value.trim();
-    if (!tg || !ysf || isNaN(tg) || isNaN(ysf)) {
-        tgYsfShowMsg('Introduce valores numéricos válidos para TG e ID', false); return;
-    }
-    if (_tgYsfEntries.some(e => e.tg === tg)) {
-        tgYsfShowMsg('El TG ' + tg + ' ya existe', false); return;
-    }
-    _tgYsfEntries.push({tg, ysf, name});
-    document.getElementById('tgYsfNewTG').value   = '';
-    document.getElementById('tgYsfNewYSF').value  = '';
-    document.getElementById('tgYsfNewName').value = '';
-    tgYsfRender();
-}
-function tgYsfRemove(i) {
-    _tgYsfEntries.splice(i, 1);
-    tgYsfRender();
-}
-async function tgYsfSave() {
-    try {
-        const r = await fetch('?action=tgysf-save', {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({entries: _tgYsfEntries})
-        });
-        const d = await r.json();
-        tgYsfShowMsg(d.msg, d.ok);
-    } catch(e) { tgYsfShowMsg('Error de red', false); }
-}
-function tgYsfShowMsg(msg, ok) {
-    const el = document.getElementById('tgYsfMsg');
-    el.textContent = (ok ? '✔ ' : '✖ ') + msg;
-    el.style.display = 'block';
-    el.style.color = ok ? 'var(--green)' : 'var(--red)';
-    el.style.borderColor = ok ? 'var(--green)' : 'var(--red)';
-    el.style.background = ok ? 'rgba(0,255,159,.06)' : 'rgba(255,69,96,.06)';
-    if (ok) setTimeout(() => el.style.display = 'none', 3000);
-}
-</script>
-
-
 </body>
 </html>
