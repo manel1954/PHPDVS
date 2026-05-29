@@ -416,6 +416,43 @@ function lookupCall($callsign) {
 }
 
 // ── DMR2YSF ───────────────────────────────────────────────────────────────────
+// ── TG-YSFList editor ─────────────────────────────────────────────────────────
+$TGYSF_FILE = '/home/pi/MMDVM_CM/DMR2YSF/TG-YSFList.txt';
+if ($action === 'tgysf-read') {
+    $entries = [];
+    if (file_exists($TGYSF_FILE)) {
+        foreach (file($TGYSF_FILE, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES) as $line) {
+            $line = trim($line);
+            if ($line === '' || $line[0] === '#') continue;
+            $parts = explode(';', $line, 2);
+            if (count($parts) === 2 && is_numeric(trim($parts[0]))) {
+                $entries[] = ['tg' => trim($parts[0]), 'ysf' => trim($parts[1])];
+            }
+        }
+    }
+    header('Content-Type: application/json');
+    echo json_encode(['ok' => true, 'entries' => $entries]);
+    exit;
+}
+if ($action === 'tgysf-save') {
+    $raw = json_decode(file_get_contents('php://input'), true);
+    $entries = $raw['entries'] ?? [];
+    $lines = [
+        "# DMR TG - YSF ID mapping",
+        "# DMR TG ID;YSF reflector ID",
+        "#",
+    ];
+    foreach ($entries as $e) {
+        $tg  = intval($e['tg'] ?? 0);
+        $ysf = intval($e['ysf'] ?? 0);
+        if ($tg > 0 && $ysf > 0) $lines[] = $tg . ';' . $ysf;
+    }
+    $bytes = file_put_contents($TGYSF_FILE, implode("\n", $lines) . "\n");
+    header('Content-Type: application/json');
+    echo json_encode(['ok' => $bytes !== false, 'msg' => $bytes !== false ? 'Guardado correctamente' : 'Error al escribir']);
+    exit;
+}
+
 if ($action === 'dmr2ysf-status') {
     $s1 = trim(shell_exec('systemctl is-active mmdvmdmr2ysf 2>/dev/null'));
     $s2 = trim(shell_exec('systemctl is-active ysfgw-dmr2ysf 2>/dev/null'));
@@ -1240,6 +1277,9 @@ button.btn-header { font-family: var(--font-mono); }
       <a href="edit_ini.php?file=dmr2ysf" class="ini-btn view" style="flex:1;justify-content:center;color:#00ffcc;border-color:rgba(0,255,204,.3);">📄 editar DMR2YSF.ini</a>
       <button onclick="feditOpen('/home/pi/MMDVMHost/MMDVMDMR2YSF.ini')" class="ini-btn edit" style="flex:1;justify-content:center;color:#00ffcc;border-color:rgba(0,255,204,.3);">📄 editar MMDVMDMR2YSF.ini</button>
     </div>
+    <div class="service-card-btns" style="margin-top:.4rem;">
+      <button onclick="openTgYsfModal()" class="ini-btn edit" style="flex:1;justify-content:center;color:#00ffcc;border-color:rgba(0,255,204,.3);background:rgba(0,255,204,.06);">📋 TG-YSF List</button>
+    </div>
   </div>
 </div>
 <div class="display-row" style="margin-top:1rem;">
@@ -1443,486 +1483,3 @@ button.btn-header { font-family: var(--font-mono); }
     <div style="display:flex;align-items:center;justify-content:space-between;padding:.7rem 1.2rem;background:#111720;border-bottom:1px solid #1e2d3d;flex-shrink:0;">
       <span style="font-family:'Share Tech Mono',monospace;font-size:.8rem;color:var(--cyan);letter-spacing:.12em;text-transform:uppercase;">⌨ Terminal</span>
       <button onclick="xtTtydClose()" style="background:transparent;border:1px solid var(--red);color:var(--red);font-family:'Share Tech Mono',monospace;font-size:.7rem;border-radius:4px;padding:.25rem .8rem;cursor:pointer;transition:background .2s;" onmouseover="this.style.background='rgba(255,69,96,.15)'" onmouseout="this.style.background='transparent'">✖ Cerrar</button>
-    </div>
-    <iframe id="xtTtydFrame" src="" style="flex:1;border:none;width:100%;background:#000;" allow="clipboard-read; clipboard-write"></iframe>
-  </div>
-</div>
-
-<!-- Modal Terminal -->
-<div id="xtModal" class="xterm-modal" onclick="if(event.target===this)xtClose()">
-<div class="xterm-box">
-  <div class="xterm-title">⌨ Emulador de terminal</div>
-  <div class="xterm-out" id="xtOut">pi@raspberry:~$ Terminal lista
-</div>
-  <div class="xterm-row">
-    <span class="xterm-pr" id="xtPr">pi@raspberry:~$</span>
-    <input id="xtInp" class="xterm-inp" autocomplete="off" spellcheck="false" placeholder="escribe un comando…">
-  </div>
-  <div class="restore-btns">
-    <button class="restore-btn-cancel" onclick="xtClose()">✖ Cerrar</button>
-  </div>
-</div>
-</div>
-
-<!-- Modal Actualización -->
-<div id="updateModal" class="update-modal">
-<div class="update-box">
-<div class="update-title" id="updateTitle">⬇ Actualizando…</div>
-<div class="update-console" id="updateConsole">Iniciando…</div>
-<div class="restore-btns"><button class="restore-btn-cancel" id="updateCloseBtn" onclick="closeUpdate()">✖ Cerrar</button></div>
-</div>
-</div>
-
-<!-- Modal Restore -->
-<div id="restoreModal" class="restore-modal">
-<div class="restore-box">
-<div class="restore-title">📂 Restaurar configuración</div>
-<label class="restore-label" for="restoreFile">Selecciona fichero Copia_PHPPLUS.zip</label>
-<input type="file" id="restoreFile" accept=".zip" class="restore-file">
-<div class="restore-btns">
-<button class="restore-btn-ok" onclick="doRestore()">▶ Restaurar</button>
-<button class="restore-btn-cancel" onclick="closeRestore()">✖ Cancelar</button>
-</div>
-<div id="restoreMsg" class="restore-msg"></div>
-</div>
-</div>
-
-<!-- Modal Instalar Display Driver -->
-<div id="installModal" class="install-modal">
-<div class="install-box">
-<div class="install-title">⚙ Instalar Display Driver</div>
-<div id="installOutput" class="install-output"></div>
-<div class="restore-btns">
-<button class="restore-btn-ok" id="btnInstalarOk" onclick="confirmarInstalacion()">▶ Confirmar instalación</button>
-<button class="restore-btn-cancel" onclick="closeInstalar()">✖ Cancelar</button>
-</div>
-<div id="installMsg" class="restore-msg"></div>
-</div>
-</div>
-
-<script>
-let refreshTimer=null,txTimer=null,vuTimer=null,ysfTimer=null,mmdvmYsfTimer=null,ysfTxTimer=null,ysfVuTimer=null,dstarTimer=null;
-let running=false,ysfRunning=false,mmdvmYsfRunning=false,dstarRunning=false,currentlyActive=false,ysfCurrentlyActive=false;
-let dmrLastActiveTs=0,ysfLastActiveTs=0;
-const DMR_IDLE_TIMEOUT=12000,YSF_IDLE_TIMEOUT=12000;
-
-async function fetchStationInfo(){try{const r=await fetch('?action=station-info');const d=await r.json();document.getElementById('scCallsign').textContent='📡 '+d.callsign;const nxPort=document.getElementById('nxPort');if(nxPort)nxPort.textContent=d.port||'—';const nxFrx=document.getElementById('nxFrx');if(nxFrx)nxFrx.textContent=d.freqRX||'—';const nxFtx=document.getElementById('nxFtx');if(nxFtx)nxFtx.textContent=d.freq||'—';const nxIp=document.getElementById('nxIp');if(nxIp)nxIp.textContent=d.ip||'—';const yNxPort=document.getElementById('ysfNxPort');if(yNxPort)yNxPort.textContent=d.ysfPort||'—';const yNxFrx=document.getElementById('ysfNxFrx');if(yNxFrx)yNxFrx.textContent=d.ysfFreqRX||'—';const yNxFtx=document.getElementById('ysfNxFtx');if(yNxFtx)yNxFtx.textContent=d.ysfFreqTX||'—';const yNxIp=document.getElementById('ysfNxIp');if(yNxIp)yNxIp.textContent=d.ysfIp||'—';const label=d.callsign+' · ADER';const nx=document.getElementById('nxStationLabel');if(nx)nx.textContent=label;const yx=document.getElementById('ysfStationLabel');if(yx)yx.textContent=label;const dx=document.getElementById('dstarStationLabel');if(dx)dx.textContent=label;const nxdnLbl=document.getElementById('nxdnStationLabel');if(nxdnLbl)nxdnLbl.textContent=label;const dNxPort=document.getElementById('dstarNxPort');if(dNxPort)dNxPort.textContent=d.dstarPort||'—';const dNxFrx=document.getElementById('dstarNxFrx');if(dNxFrx)dNxFrx.textContent=d.dstarFreqRX||'—';const dNxFtx=document.getElementById('dstarNxFtx');if(dNxFtx)dNxFtx.textContent=d.dstarFreqTX||'—';const dNxIp=document.getElementById('dstarNxIp');if(dNxIp)dNxIp.textContent=d.dstarIp||'—';const nNxPort=document.getElementById('nxdnNxPort');if(nNxPort)nNxPort.textContent=d.nxdnPort||'—';const nNxFrx=document.getElementById('nxdnNxFrx');if(nNxFrx)nNxFrx.textContent=d.nxdnFreqRX||'—';const nNxFtx=document.getElementById('nxdnNxFtx');if(nNxFtx)nNxFtx.textContent=d.nxdnFreqTX||'—';const nNxIp=document.getElementById('nxdnNxIp');if(nNxIp)nNxIp.textContent=d.nxdnIp||'—';
-        const d2DmrId=document.getElementById('dmr2ysfDmrId');if(d2DmrId)d2DmrId.textContent=d.dmr2ysfDmrId||'—';
-        const d2Gw=document.getElementById('dmr2ysfGw');if(d2Gw)d2Gw.textContent=d.dmr2ysfGw||'—';
-        const d2DefTG=document.getElementById('dmr2ysfDefTG');if(d2DefTG)d2DefTG.textContent=d.dmr2ysfDefTG||'—';
-        const d2YsfGw=document.getElementById('dmr2ysfYsfGw');if(d2YsfGw)d2YsfGw.textContent='YSF: '+(d.dmr2ysfYsfGw||'—');
-        const d2Lbl=document.getElementById('dmr2ysfStationLabel');if(d2Lbl)d2Lbl.textContent=d.callsign+' · ADER';}catch(e){console.warn('station-info error:',e);}}
-
-const _winOS = /Windows/i.test(navigator.userAgent);
-const _TBASE = 'https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/72x72/';
-const _FLAGS = [
-    {re:/^E[ABCDEFGH][1-9]/,  e:'🇪🇸', t:'1f1ea-1f1f8'},
-    {re:/^C[TUQ]/,            e:'🇵🇹', t:'1f1f5-1f1f9'},
-    {re:/^F[A-Z]/,            e:'🇫🇷', t:'1f1eb-1f1f7'},
-    {re:/^I[0-9]|^IK|^IW|^IZ/,e:'🇮🇹',t:'1f1ee-1f1f9'},
-    {re:/^G[0-9]|^M[0-9]|^2E|^GB|^MJ|^MU/,e:'🇬🇧',t:'1f1ec-1f1e7'},
-    {re:/^D[A-R]|^Y[2-9]/,   e:'🇩🇪', t:'1f1e9-1f1ea'},
-    {re:/^[KWN][0-9]|^AA|^AB|^AC|^AD|^AE|^AF/,e:'🇺🇸',t:'1f1fa-1f1f8'},
-    {re:/^VE|^VA|^VO|^VY/,   e:'🇨🇦', t:'1f1e8-1f1e6'},
-    {re:/^PY|^PU|^PV|^PW|^PX/,e:'🇧🇷',t:'1f1e7-1f1f7'},
-    {re:/^LU|^LV|^LW|^LX/,   e:'🇦🇷', t:'1f1e6-1f1f7'},
-    {re:/^JA|^JE|^JF|^JG|^JH|^JI|^JJ|^JK|^JL|^JR/,e:'🇯🇵',t:'1f1ef-1f1f5'},
-    {re:/^VK/,                e:'🇦🇺', t:'1f1e6-1f1fa'},
-    {re:/^ZS|^ZT|^ZU/,       e:'🇿🇦', t:'1f1ff-1f1e6'},
-    {re:/^OH|^OG/,            e:'🇫🇮', t:'1f1eb-1f1ee'},
-    {re:/^PA|^PB|^PC|^PD|^PE|^PF|^PG|^PH/,e:'🇳🇱',t:'1f1f3-1f1f1'},
-    {re:/^HB/,                e:'🇨🇭', t:'1f1e8-1f1ed'},
-    {re:/^OE/,                e:'🇦🇹', t:'1f1e6-1f1f9'},
-    {re:/^SP|^SQ|^SR|^HF/,   e:'🇵🇱', t:'1f1f5-1f1f1'},
-    {re:/^UA|^UB|^UC|^UD|^UE|^UF|^RA|^RB|^RC/,e:'🇷🇺',t:'1f1f7-1f1fa'},
-    {re:/^SV|^SW|^SX|^SY|^SZ/,e:'🇬🇷',t:'1f1ec-1f1f7'},
-    {re:/^LY/,                e:'🇱🇹', t:'1f1f1-1f1f9'},
-    {re:/^9A/,                e:'🇭🇷', t:'1f1ed-1f1f7'},
-];
-function getFlagByCall(callsign){
-    if(!callsign)return'';
-    const cs=callsign.toUpperCase().trim();
-    for(const p of _FLAGS){
-        if(p.re.test(cs)){
-            if(_winOS)
-                return'<img class="flag-emoji-img" src="'+_TBASE+p.t+'.png" alt="">';
-            return'<span class="flag-emoji">'+p.e+'</span>';
-        }
-    }
-    return'';
-}
-
-function buildVU(id){const el=document.getElementById(id);for(let i=0;i<18;i++){const d=document.createElement('div');d.className='nx-vu-bar';d.id=`${id}-${i}`;el.appendChild(d);}}
-buildVU('vuLeft');buildVU('vuRight');buildVU('ysfVuLeft');buildVU('ysfVuRight');buildVU('nxdnVuLeft');buildVU('nxdnVuRight');
-
-function animateVU(on,prefix){clearInterval(prefix==='ysf'?ysfVuTimer:vuTimer);const ids=prefix==='ysf'?['ysfVuLeft','ysfVuRight']:['vuLeft','vuRight'];ids.forEach(id=>{for(let i=0;i<18;i++)document.getElementById(`${id}-${i}`).className='nx-vu-bar';});if(!on)return;const timer=setInterval(()=>{ids.forEach(id=>{const lvl=Math.floor(Math.random()*16)+1;for(let i=0;i<18;i++){let cls='nx-vu-bar';if(i<lvl)cls+=prefix==='ysf'?(i<10?' lit-v':i<14?' lit-vd':' lit-r'):(i<10?' lit-g':i<14?' lit-a':' lit-r');document.getElementById(`${id}-${i}`).className=cls;}});},80);if(prefix==='ysf')ysfVuTimer=timer;else vuTimer=timer;}
-
-let nxdnVuTimerAnim=null;
-function animateNXDNVU(on){clearInterval(nxdnVuTimerAnim);['nxdnVuLeft','nxdnVuRight'].forEach(id=>{for(let i=0;i<18;i++)document.getElementById(`${id}-${i}`).className='nx-vu-bar';});if(!on)return;nxdnVuTimerAnim=setInterval(()=>{['nxdnVuLeft','nxdnVuRight'].forEach(id=>{const lvl=Math.floor(Math.random()*16)+1;for(let i=0;i<18;i++){let cls='nx-vu-bar';if(i<lvl)cls+=i<10?' lit-y':i<14?' lit-ya':' lit-r';document.getElementById(`${id}-${i}`).className=cls;}});},80);}
-
-function updateClock(){const now=new Date();const hms=now.toLocaleTimeString('es-ES');const date=now.toLocaleDateString('es-ES',{weekday:'short',day:'2-digit',month:'short',year:'numeric'}).toUpperCase();if(!currentlyActive){const clk=document.getElementById('nxClock');if(clk){clk.textContent=hms;document.getElementById('nxDate').textContent=date;}}if(!ysfCurrentlyActive){const yClk=document.getElementById('ysfNxClock');if(yClk){yClk.textContent=hms;document.getElementById('ysfNxDate').textContent=date;}}}
-setInterval(updateClock,1000);updateClock();
-
-function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
-
-function setDMRToggle(on){const chk=document.getElementById('chkDMR'),lbl=document.getElementById('dmrToggleLabel'),sta=document.getElementById('dmrToggleStatus');chk.checked=on;lbl.className='toggle-label'+(on?' on-dmr':'');sta.className='toggle-status'+(on?' on':'');sta.textContent=on?'ON':'OFF';document.getElementById('autoRefreshBadge').style.display=on?'flex':'none';document.getElementById('dmrLogPanels').style.display=on?'':'none';document.getElementById('dmrLastHeardPanel').style.display=on?'':'none';document.getElementById('dmrDisplayPanel').style.display=on?'':'none';}
-function setYSFToggle(on){const chk=document.getElementById('chkYSF'),lbl=document.getElementById('ysfToggleLabel'),sta=document.getElementById('ysfToggleStatus');chk.checked=on;lbl.className='toggle-label'+(on?' on-ysf':'');sta.className='toggle-status'+(on?' on':'');sta.textContent=on?'ON':'OFF';document.getElementById('ysfRefreshBadge').style.display=on?'flex':'none';document.getElementById('ysfLogPanels').style.display=on?'':'none';document.getElementById('ysfLastHeardPanel').style.display=on?'':'none';document.getElementById('ysfDisplayPanel').style.display=on?'':'none';}
-
-function showIdle(){currentlyActive=false;animateVU(false,'dmr');document.getElementById('nxTxBar').classList.remove('active');document.getElementById('nxTG').textContent='—';document.getElementById('nxSlot').textContent='—';document.getElementById('nxDmrid').textContent='—';const src=document.getElementById('nxSource');src.textContent='';src.className='nx-source';document.getElementById('nxCenter').innerHTML='<div class="nx-clock" id="nxClock">00:00:00</div><div class="nx-date" id="nxDate">—</div>';updateClock();}
-function showActive(d){currentlyActive=true;animateVU(true,'dmr');document.getElementById('nxTxBar').classList.add('active');document.getElementById('nxTG').textContent=d.tg?'TG '+d.tg:'—';document.getElementById('nxSlot').textContent=d.slot||'—';document.getElementById('nxDmrid').textContent=d.dmrid||'—';const src=document.getElementById('nxSource');if(d.source==='RF'){src.textContent='RF';src.className='nx-source rf';}else if(d.source==='NETWORK'){src.textContent='NET';src.className='nx-source net';}else{src.textContent='';src.className='nx-source';}const flag=getFlagByCall(d.callsign);document.getElementById('nxCenter').innerHTML=`<div class="nx-callsign">${flag} ${esc(d.callsign)}</div>`+(d.name?`<div class="nx-name">${esc(d.name)}</div>`:'');}
-function showYSFIdle(){ysfCurrentlyActive=false;animateVU(false,'ysf');document.getElementById('ysfTxBar').className='nx-txbar';document.getElementById('ysfDest').textContent='—';document.getElementById('ysfProto').textContent='C4FM . DIGITAL VOICE';const src=document.getElementById('ysfSource');src.textContent='';src.className='nx-source';document.getElementById('ysfNxCenter').innerHTML='<div class="nx-clock" id="ysfNxClock" style="color:#c084ff;">00:00:00</div><div class="nx-date" id="ysfNxDate" style="color:#9b59d4;">—</div>';updateClock();}
-function showYSFActive(d){ysfCurrentlyActive=true;animateVU(true,'ysf');document.getElementById('ysfTxBar').className='nx-txbar active-ysf';document.getElementById('ysfDest').textContent=d.dest?d.dest:'ALL';const src=document.getElementById('ysfSource');if(d.source==='RF'){src.textContent='RF';src.className='nx-source rf';}else if(d.source==='NETWORK'){src.textContent='NET';src.className='nx-source net';}else{src.textContent='';src.className='nx-source';}const flag=getFlagByCall(d.callsign);document.getElementById('ysfNxCenter').innerHTML=`<div class="nx-callsign ysf">${flag} ${esc(d.callsign)}</div>`+(d.name?`<div class="nx-name ysf">${esc(d.name)}</div>`:'');}
-
-function renderLastHeard(list,activeCall){const body=document.getElementById('lhBody');if(!list||list.length===0){body.innerHTML='<div class="lh-empty">Sin actividad reciente</div>';return;}body.innerHTML=list.map(r=>{const isActive=activeCall&&r.callsign===activeCall;const srcCls=r.source==='RF'?'rf':'net',srcLbl=r.source==='RF'?'RF':'NET';const dot=isActive?'<span class="lh-tx-dot"></span>':'';const flag=getFlagByCall(r.callsign);return`<div class="lh-row${isActive?' lh-active':''}"><div class="lh-call-wrap">${dot}<span class="lh-call">${flag} ${esc(r.callsign)}</span></div><span class="lh-name">${esc(r.name||'—')}</span><span class="lh-tg">${esc(r.tg||'—')}</span><span class="lh-time">${esc(r.time||'—')}</span><span class="lh-src ${srcCls}">${srcLbl}</span></div>`;}).join('');}
-
-function renderYSFLastHeard(list,activeCall){const body=document.getElementById('ysfLhBody');if(!list||list.length===0){body.innerHTML='<div class="lh-empty">Sin actividad C4FM</div>';return;}body.innerHTML=list.map(r=>{const isActive=activeCall&&r.callsign===activeCall;const srcCls=r.source==='RF'?'rf':'net',srcLbl=r.source==='RF'?'RF':'NET';const dot=isActive?'<span class="lh-tx-dot-ysf"></span>':'';const flag=getFlagByCall(r.callsign);return`<div class="lh-row-ysf${isActive?' lh-active':''}"><div class="lh-call-wrap">${dot}<span class="lh-call-ysf">${flag} ${esc(r.callsign)}</span></div><span class="lh-name">${esc(r.name||'—')}</span><span class="lh-time">${esc(r.time||'—')}</span><span class="lh-src ${srcCls}">${srcLbl}</span></div>`;}).join('');}
-
-async function fetchTransmission(){try{const r=await fetch('?action=transmission');const d=await r.json();if(d.active){showActive(d);}else{showIdle();}renderLastHeard(d.lastHeard||[],d.active?d.callsign:null);}catch(e){}}
-
-async function fetchYSFTransmission(){try{const r=await fetch('?action=ysf-transmission');const d=await r.json();if(d.active){ysfLastActiveTs=Date.now();showYSFActive(d);}else{if(ysfCurrentlyActive)showYSFIdle();}renderYSFLastHeard(d.lastHeard||[],d.active?d.callsign:null);}catch(e){if(ysfCurrentlyActive&&(Date.now()-ysfLastActiveTs)>YSF_IDLE_TIMEOUT)showYSFIdle();}}
-
-async function checkStatus(){try{const r=await fetch('?action=status');const d=await r.json();const gw=d.gateway==='active',mmd=d.mmdvm==='active';setDot('dot-gateway',gw?'active':'off');setDot('dot-mmdvm',mmd?'active':'off');setDot('dot-mosquitto',gw?'active':'off');running=gw||mmd;setDMRToggle(running);if(running)startRefresh();}catch(e){}}
-async function checkYSFStatus(){try{const r=await fetch('?action=ysf-status');const d=await r.json();ysfRunning=d.ysf==='active';setDot('dot-ysf',ysfRunning?'active':'off');setYSFToggle(ysfRunning||mmdvmYsfRunning);}catch(e){}}
-async function checkMMDVMYSFStatus(){try{const r=await fetch('?action=mmdvmysf-status');const d=await r.json();mmdvmYsfRunning=d.mmdvmysf==='active';setDot('dot-mmdvmysf',mmdvmYsfRunning?'active':'off');setYSFToggle(ysfRunning||mmdvmYsfRunning);}catch(e){}}
-function setDot(id,state){document.getElementById(id).className='dot'+(state==='active'?' active':state==='error'?' error':'');}
-
-function setDSTARToggle(on){const chk=document.getElementById('chkDSTAR'),lbl=document.getElementById('dstarToggleLabel'),sta=document.getElementById('dstarToggleStatus');chk.checked=on;lbl.style.color=on?'#00e5ff':'';sta.className='toggle-status'+(on?' on':'');sta.textContent=on?'ON':'OFF';document.getElementById('dstarRefreshBadge').style.display=on?'flex':'none';document.getElementById('dstarLogPanels').style.display=on?'':'none';document.getElementById('dstarDisplayPanel').style.display=on?'':'none';document.getElementById('dstarLastHeardPanel').style.display=on?'':'none';}
-
-let dstarVuTimer=null,dstarCurrentlyActive=false,dstarTxTimer2=null;
-function buildDStarVU(){['dstarVuLeft','dstarVuRight'].forEach(id=>{const el=document.getElementById(id);for(let i=0;i<18;i++){const d=document.createElement('div');d.className='nx-vu-bar';d.id=`${id}-${i}`;el.appendChild(d);}});}
-buildDStarVU();
-function animateDStarVU(on){clearInterval(dstarVuTimer);['dstarVuLeft','dstarVuRight'].forEach(id=>{for(let i=0;i<18;i++)document.getElementById(`${id}-${i}`).className='nx-vu-bar';});if(!on)return;dstarVuTimer=setInterval(()=>{['dstarVuLeft','dstarVuRight'].forEach(id=>{const lvl=Math.floor(Math.random()*16)+1;for(let i=0;i<18;i++){let cls='nx-vu-bar';if(i<lvl)cls+=i<10?' lit-g':i<14?' lit-a':' lit-r';document.getElementById(`${id}-${i}`).className=cls;}});},80);}
-function updateDStarClock(){if(!dstarCurrentlyActive){const now=new Date();const clk=document.getElementById('dstarNxClock');if(clk){clk.textContent=now.toLocaleTimeString('es-ES');document.getElementById('dstarNxDate').textContent=now.toLocaleDateString('es-ES',{weekday:'short',day:'2-digit',month:'short',year:'numeric'}).toUpperCase();}}}
-setInterval(updateDStarClock,1000);updateDStarClock();
-function showDStarIdle(){dstarCurrentlyActive=false;animateDStarVU(false);document.getElementById('dstarTxBar').className='nx-txbar';const src=document.getElementById('dstarSource');src.textContent='';src.className='nx-source';document.getElementById('dstarNxCenter').innerHTML='<div class="nx-clock" id="dstarNxClock" style="color:#00e5ff;">00:00:00</div><div class="nx-date" id="dstarNxDate" style="color:#009090;">—</div>';updateDStarClock();}
-function showDStarActive(d){dstarCurrentlyActive=true;animateDStarVU(true);document.getElementById('dstarTxBar').className='nx-txbar active';document.getElementById('dstarTxBar').style.background='linear-gradient(90deg,transparent,#00e5ff,transparent)';const src=document.getElementById('dstarSource');if(d.source==='RF'){src.textContent='RF';src.className='nx-source rf';}else{src.textContent='NET';src.className='nx-source net';}const flag=getFlagByCall(d.callsign.replace(/\/.*$/,''));document.getElementById('dstarNxCenter').innerHTML=`<div class="nx-callsign dstar">${flag} ${esc(d.callsign)}</div>`+(d.name?`<div class="nx-name dstar">${esc(d.name)}</div>`:'');}
-function renderDStarLastHeard(list,activeCall){const body=document.getElementById('dstarLhBody');if(!list||list.length===0){body.innerHTML='<div class="lh-empty">Sin actividad D-STAR</div>';return;}body.innerHTML=list.map(r=>{const isActive=activeCall&&r.callsign===activeCall;const srcCls=r.source==='RF'?'rf':'net',srcLbl=r.source==='RF'?'RF':'NET';const dot=isActive?'<span class="lh-tx-dot" style="background:#00e5ff;box-shadow:0 0 6px #00e5ff;"></span>':'';const flag=getFlagByCall(r.callsign.replace(/\/.*$/,''));return`<div class="lh-row${isActive?' lh-active':''}"><div class="lh-call-wrap">${dot}<span class="lh-call" style="color:#00e5ff;">${flag} ${esc(r.callsign)}</span></div><span class="lh-name">${esc(r.name||'—')}</span><span class="lh-time">${esc(r.time||'—')}</span><span class="lh-src ${srcCls}">${srcLbl}</span></div>`;}).join('');}
-async function fetchDStarTransmission(){try{const r=await fetch('?action=dstar-transmission');const d=await r.json();if(d.active)showDStarActive(d);else showDStarIdle();renderDStarLastHeard(d.lastHeard||[],d.active?d.callsign:null);}catch(e){}}
-function startDStarTransmissionPoll(){fetchDStarTransmission();dstarTxTimer2=setInterval(fetchDStarTransmission,4000);}
-function stopDStarTransmissionPoll(){clearInterval(dstarTxTimer2);dstarTxTimer2=null;}
-async function checkDStarStatus(){try{const r=await fetch('?action=dstar-status');const d=await r.json();const gw=d.gateway==='active',mmd=d.mmdvm==='active';setDot('dot-dstargw',gw?'active':'off');setDot('dot-dstarmmd',mmd?'active':'off');dstarRunning=(gw||mmd)&&!d.stopped;setDSTARToggle(dstarRunning);if(dstarRunning){startDStarLogs();startDStarTransmissionPoll();}}catch(e){}}
-async function toggleDStar(chk){const wasOn=!chk.checked;const sw=document.getElementById('swDSTAR');chk.checked=wasOn;sw.classList.add('busy');try{await fetch(wasOn?'?action=dstar-stop':'?action=dstar-start');let ok=false;for(let i=0;i<15;i++){await new Promise(r=>setTimeout(r,1000));const r=await fetch('?action=dstar-status');const d=await r.json();const gw=d.gateway==='active',mmd=d.mmdvm==='active';const isOn=(gw||mmd)&&!d.stopped;if(wasOn&&!isOn){ok=true;setDot('dot-dstargw','off');setDot('dot-dstarmmd','off');dstarRunning=false;setDSTARToggle(false);stopDStarLogs();stopDStarTransmissionPoll();showDStarIdle();clearLog('logDstarGw');clearLog('logDstarMmd');break;}if(!wasOn&&isOn){ok=true;setDot('dot-dstargw',gw?'active':'off');setDot('dot-dstarmmd',mmd?'active':'off');dstarRunning=true;setDSTARToggle(true);startDStarLogs();startDStarTransmissionPoll();break;}}if(!ok){const r=await fetch('?action=dstar-status');const d=await r.json();const gw=d.gateway==='active',mmd=d.mmdvm==='active';dstarRunning=(gw||mmd)&&!d.stopped;setDot('dot-dstargw',gw?'active':'off');setDot('dot-dstarmmd',mmd?'active':'off');setDSTARToggle(dstarRunning);}}catch(e){console.warn('toggleDStar error:',e);}finally{sw.classList.remove('busy');}}
-async function fetchDStarLogs(){try{const r=await fetch('?action=dstar-logs&lines=15');const d=await r.json();['logDstarGw:gateway','logDstarMmd:mmdvm'].forEach(pair=>{const[id,key]=pair.split(':');const el=document.getElementById(id);const atBot=el.scrollHeight-el.clientHeight<=el.scrollTop+10;el.innerHTML=colorize(d[key]);if(atBot)el.scrollTop=el.scrollHeight;});}catch(e){}}
-function startDStarLogs(){fetchDStarLogs();dstarTimer=setInterval(fetchDStarLogs,5000);}
-function stopDStarLogs(){clearInterval(dstarTimer);dstarTimer=null;}
-
-let nxdnRunning=false,nxdnTimer=null,nxdnTxTimer=null,nxdnCurrentlyActive=false,nxdnLastActiveTs=0;
-const NXDN_IDLE_TIMEOUT=12000;
-
-function setNXDNToggle(on){
-    const chk=document.getElementById('chkNXDN'),lbl=document.getElementById('nxdnToggleLabel'),sta=document.getElementById('nxdnToggleStatus');
-    chk.checked=on;lbl.style.color=on?'#ffd700':'';
-    sta.className='toggle-status'+(on?' on':'');sta.textContent=on?'ON':'OFF';
-    document.getElementById('nxdnRefreshBadge').style.display=on?'flex':'none';
-    document.getElementById('nxdnLogPanels').style.display=on?'':'none';
-    document.getElementById('nxdnDisplayPanel').style.display=on?'':'none';
-    document.getElementById('nxdnLastHeardPanel').style.display=on?'':'none';
-}
-
-function updateNXDNClock(){if(!nxdnCurrentlyActive){const now=new Date();const clk=document.getElementById('nxdnNxClock');if(clk){clk.textContent=now.toLocaleTimeString('es-ES');document.getElementById('nxdnNxDate').textContent=now.toLocaleDateString('es-ES',{weekday:'short',day:'2-digit',month:'short',year:'numeric'}).toUpperCase();}}}
-setInterval(updateNXDNClock,1000);updateNXDNClock();
-
-function showNXDNIdle(){nxdnCurrentlyActive=false;animateNXDNVU(false);document.getElementById('nxdnTxBar').className='nx-txbar';document.getElementById('nxdnTGLabel').textContent='—';const src=document.getElementById('nxdnSource');src.textContent='';src.className='nx-source';document.getElementById('nxdnNxCenter').innerHTML='<div class="nx-clock" id="nxdnNxClock" style="color:#ffd700;">00:00:00</div><div class="nx-date" id="nxdnNxDate" style="color:#b8a000;">—</div>';updateNXDNClock();}
-function showNXDNActive(d){nxdnCurrentlyActive=true;animateNXDNVU(true);document.getElementById('nxdnTxBar').className='nx-txbar active-nxdn';document.getElementById('nxdnTGLabel').textContent=d.tg?'TG '+d.tg:'—';const src=document.getElementById('nxdnSource');if(d.source==='RF'){src.textContent='RF';src.className='nx-source rf';}else{src.textContent='NET';src.className='nx-source net';}const flag=getFlagByCall(d.callsign);document.getElementById('nxdnNxCenter').innerHTML=`<div class="nx-callsign nxdn">${flag} ${esc(d.callsign)}</div>`+(d.name?`<div class="nx-name nxdn">${esc(d.name)}</div>`:'');}
-
-function renderNXDNLastHeard(list,activeCall){const body=document.getElementById('nxdnLhBody');if(!list||list.length===0){body.innerHTML='<div class="lh-empty">Sin actividad NXDN</div>';return;}body.innerHTML=list.map(r=>{const isActive=activeCall&&r.callsign===activeCall;const srcCls=r.source==='RF'?'rf':'net',srcLbl=r.source==='RF'?'RF':'NET';const dot=isActive?'<span class="lh-tx-dot-nxdn"></span>':'';const flag=getFlagByCall(r.callsign);return`<div class="lh-row-nxdn${isActive?' lh-active':''}"><div class="lh-call-wrap">${dot}<span class="lh-call-nxdn">${flag} ${esc(r.callsign)}</span></div><span class="lh-name">${esc(r.name||'—')}</span><span class="lh-tg">${esc(r.tg||'—')}</span><span class="lh-time">${esc(r.time||'—')}</span><span class="lh-src ${srcCls}">${srcLbl}</span></div>`;}).join('');}
-
-async function fetchNXDNTransmission(){try{const r=await fetch('?action=nxdn-transmission');const d=await r.json();if(d.active){nxdnLastActiveTs=Date.now();showNXDNActive(d);}else{if(nxdnCurrentlyActive&&(Date.now()-nxdnLastActiveTs)>NXDN_IDLE_TIMEOUT)showNXDNIdle();}renderNXDNLastHeard(d.lastHeard||[],d.active?d.callsign:null);}catch(e){if(nxdnCurrentlyActive&&(Date.now()-nxdnLastActiveTs)>NXDN_IDLE_TIMEOUT)showNXDNIdle();}}
-
-async function checkNXDNStatus(){try{const r=await fetch('?action=nxdn-status');const d=await r.json();const gw=d.gateway==='active',mmd=d.mmdvm==='active';setDot('dot-nxdngw',gw?'active':'off');setDot('dot-nxdnmmd',mmd?'active':'off');nxdnRunning=gw||mmd;setNXDNToggle(nxdnRunning);if(nxdnRunning){startNXDNLogs();startNXDNTxPoll();}}catch(e){}}
-
-async function toggleNXDN(chk){const wasOn=!chk.checked;const sw=document.getElementById('swNXDN');chk.checked=wasOn;sw.classList.add('busy');
-try{
-    await fetch(wasOn?'?action=nxdn-stop':'?action=nxdn-start');
-    let ok=false;
-    for(let i=0;i<15;i++){
-        await new Promise(r=>setTimeout(r,1000));
-        const r=await fetch('?action=nxdn-status');
-        const d=await r.json();
-        const gw=d.gateway==='active',mmd=d.mmdvm==='active';
-        const isOn=gw||mmd;
-        if(wasOn&&!isOn){ok=true;setDot('dot-nxdngw','off');setDot('dot-nxdnmmd','off');nxdnRunning=false;setNXDNToggle(false);stopNXDNLogs();stopNXDNTxPoll();showNXDNIdle();clearLog('logNxdnGw');clearLog('logNxdnMmd');break;}
-        if(!wasOn&&isOn){ok=true;setDot('dot-nxdngw',gw?'active':'off');setDot('dot-nxdnmmd',mmd?'active':'off');nxdnRunning=true;setNXDNToggle(true);startNXDNLogs();startNXDNTxPoll();break;}
-    }
-    if(!ok)await checkNXDNStatus();
-}catch(e){console.warn('toggleNXDN error:',e);}
-finally{sw.classList.remove('busy');}}
-
-async function fetchNXDNLogs(){try{const r=await fetch('?action=nxdn-logs&lines=15');const d=await r.json();[['logNxdnGw','gateway'],['logNxdnMmd','mmdvm']].forEach(([id,key])=>{const el=document.getElementById(id);const atBot=el.scrollHeight-el.clientHeight<=el.scrollTop+10;el.innerHTML=colorize(d[key]);if(atBot)el.scrollTop=el.scrollHeight;});}catch(e){}}
-function startNXDNLogs(){fetchNXDNLogs();nxdnTimer=setInterval(fetchNXDNLogs,5000);}
-function stopNXDNLogs(){clearInterval(nxdnTimer);nxdnTimer=null;}
-function startNXDNTxPoll(){fetchNXDNTransmission();nxdnTxTimer=setInterval(fetchNXDNTransmission,4000);}
-function stopNXDNTxPoll(){clearInterval(nxdnTxTimer);nxdnTxTimer=null;}
-
-async function toggleServices(chk){const wasOn=!chk.checked;const sw=document.getElementById('swDMR');chk.checked=wasOn;sw.classList.add('busy');try{await fetch(wasOn?'?action=stop':'?action=start');await new Promise(r=>setTimeout(r,2200));const r=await fetch('?action=status');const d=await r.json();const gw=d.gateway==='active',mmd=d.mmdvm==='active';running=gw||mmd;setDot('dot-gateway',gw?'active':'off');setDot('dot-mmdvm',mmd?'active':'off');setDot('dot-mosquitto',gw?'active':'off');setDMRToggle(running);if(wasOn){stopRefresh();clearLog('logGw');clearLog('logMmd');showIdle();document.getElementById('lhBody').innerHTML='<div class="lh-empty">Sin actividad reciente</div>';}else startRefresh();}finally{sw.classList.remove('busy');}}
-async function toggleYSF(chk){const wasOn=!chk.checked;const sw=document.getElementById('swYSF');chk.checked=wasOn;sw.classList.add('busy');try{if(wasOn){await fetch('?action=ysf-stop');await new Promise(r=>setTimeout(r,1000));await fetch('?action=mmdvmysf-stop');await new Promise(r=>setTimeout(r,2000));clearLog('logYsf');clearLog('logMmdvmYsf');stopYSFLogs();stopMMDVMYSFLogs();showYSFIdle();document.getElementById('ysfLhBody').innerHTML='<div class="lh-empty">Sin actividad C4FM</div>';}else{await fetch('?action=mmdvmysf-start');await new Promise(r=>setTimeout(r,2000));await fetch('?action=ysf-start');await new Promise(r=>setTimeout(r,1500));startYSFLogs();startMMDVMYSFLogs();}await checkYSFStatus();await checkMMDVMYSFStatus();}finally{sw.classList.remove('busy');}}
-
-function toggleDropdown(e){e.stopPropagation();document.getElementById('dropActualizaciones').classList.toggle('open');}
-document.addEventListener('click',()=>document.getElementById('dropActualizaciones').classList.remove('open'));
-function closeUpdate(){document.getElementById('updateModal').classList.remove('open');}
-const UPDATE_TITLES={imagen:'🖼 Actualizar Imagen',ids:'📋 Actualizar IDs',ysf:'📡 Actualizar Reflectores YSF'};
-const UPDATE_ACTIONS={imagen:'?action=update-imagen',ids:'?action=update-ids',ysf:'?action=update-ysf'};
-async function runUpdate(type){document.getElementById('dropActualizaciones').classList.remove('open');document.getElementById('updateTitle').textContent=UPDATE_TITLES[type];const con=document.getElementById('updateConsole');con.textContent='⏳ Ejecutando, espera…';document.getElementById('updateCloseBtn').disabled=true;document.getElementById('updateModal').classList.add('open');try{const r=await fetch(UPDATE_ACTIONS[type]);const d=await r.json();con.textContent=d.output||'(sin salida)';con.scrollTop=con.scrollHeight;}catch(e){con.textContent='✖ Error de red: '+e.message;}finally{document.getElementById('updateCloseBtn').disabled=false;}}
-async function rebootPi(){
-    if(!confirm('¿Seguro que quieres reiniciar la Raspberry Pi?'))return;
-    const btn=document.getElementById('btnReboot');
-    btn.textContent='⏻ Reiniciando…';
-    btn.disabled=true;
-    try{await fetch('?action=reboot');}catch(e){}
-    // Esperar a que el servidor caiga
-    let caido=false;
-    for(let i=0;i<30;i++){
-        await new Promise(r=>setTimeout(r,2000));
-        try{await fetch('?action=sysinfo',{signal:AbortSignal.timeout(2000)});}
-        catch(e){caido=true;break;}
-    }
-    // Ahora esperar a que vuelva y recargar
-    btn.textContent='⏻ Esperando arranque…';
-    for(let i=0;i<60;i++){
-        await new Promise(r=>setTimeout(r,3000));
-        try{
-            const r=await fetch('?action=sysinfo',{signal:AbortSignal.timeout(3000)});
-            if(r.ok){location.reload();return;}
-        }catch(e){}
-    }
-    // Si tras 3 min no responde, mostrar aviso
-    btn.textContent='⏻ Sin respuesta — recarga manual';
-    btn.disabled=false;
-}
-function closeInstalar(){document.getElementById('installModal').classList.remove('open');}
-async function confirmarInstalacion(){const btn=document.getElementById('btnInstalarOk');const msg=document.getElementById('installMsg');const out=document.getElementById('installOutput');btn.disabled=true;btn.textContent='⏳ Instalando…';msg.className='restore-msg loading';msg.style.display='block';msg.textContent='⏳ Ejecutando instalador, espera…';out.className='install-output visible';out.textContent='';try{const r=await fetch('?action=install-display');const d=await r.json();out.textContent=d.output||'(sin salida)';out.scrollTop=out.scrollHeight;msg.className='restore-msg ok';msg.textContent='✔ Instalación completada.';btn.textContent='✔ Cerrar';btn.disabled=false;btn.onclick=function(){closeInstalar();};}catch(e){msg.className='restore-msg err';msg.textContent='✖ Error durante la instalación.';btn.textContent='▶ Confirmar instalación';btn.disabled=false;}}
-function openRestore(){document.getElementById('restoreModal').classList.add('open');document.getElementById('restoreFile').value='';const msg=document.getElementById('restoreMsg');msg.style.display='none';msg.className='restore-msg';}
-function closeRestore(){document.getElementById('restoreModal').classList.remove('open');}
-async function doRestore(){const file=document.getElementById('restoreFile').files[0];if(!file){alert('Selecciona un fichero ZIP primero.');return;}const msg=document.getElementById('restoreMsg');if(!file.name.startsWith('Copia_PHP')){msg.className='restore-msg err';msg.style.display='block';msg.textContent='✖ Fichero no válido. El nombre debe empezar por "Copia_PHP".';return;}msg.className='restore-msg loading';msg.style.display='block';msg.textContent='⏳ Restaurando…';try{const form=new FormData();form.append('zipfile',file);const r=await fetch('?action=restore-configs',{method:'POST',body:form});const text=await r.text();let d;try{d=JSON.parse(text);}catch(parseErr){msg.className='restore-msg err';msg.textContent='✖ Respuesta inesperada: '+text.substring(0,200);return;}msg.className='restore-msg '+(d.ok?'ok':'err');msg.textContent=(d.ok?'✔ ':'✖ ')+d.msg;if(d.ok)setTimeout(closeRestore,2500);}catch(e){msg.className='restore-msg err';msg.textContent='✖ Error de red: '+e.message;}}
-
-function colorize(text){return text.split('\n').map(l=>{const ll=l.toLowerCase();if(/error|fail|abort|assert/.test(ll))return`<span class="ln-err">${l}</span>`;if(/warn/.test(ll))return`<span class="ln-warn">${l}</span>`;if(/connect|start|open|loaded|success/.test(ll))return`<span class="ln-ok">${l}</span>`;return`<span class="ln-info">${l}</span>`;}).join('\n');}
-function clearLog(id){document.getElementById(id).innerHTML='';}
-async function fetchLogs(){try{const r=await fetch('?action=logs&lines=15');const d=await r.json();['logGw:gateway','logMmd:mmdvm'].forEach(pair=>{const[id,key]=pair.split(':');const el=document.getElementById(id);const atBot=el.scrollHeight-el.clientHeight<=el.scrollTop+10;el.innerHTML=colorize(d[key]);if(atBot)el.scrollTop=el.scrollHeight;});}catch(e){}}
-async function fetchYSFLogs(){try{const r=await fetch('?action=ysf-logs&lines=15');const d=await r.json();const el=document.getElementById('logYsf');const atBot=el.scrollHeight-el.clientHeight<=el.scrollTop+10;el.innerHTML=colorize(d.ysf);if(atBot)el.scrollTop=el.scrollHeight;}catch(e){}}
-async function fetchMMDVMYSFLogs(){try{const r=await fetch('?action=mmdvmysf-logs&lines=15');const d=await r.json();const el=document.getElementById('logMmdvmYsf');const atBot=el.scrollHeight-el.clientHeight<=el.scrollTop+10;el.innerHTML=colorize(d.mmdvmysf);if(atBot)el.scrollTop=el.scrollHeight;}catch(e){}}
-function startRefresh(){fetchLogs();fetchTransmission();refreshTimer=setInterval(fetchLogs,5000);txTimer=setInterval(fetchTransmission,3000);}
-function stopRefresh(){clearInterval(refreshTimer);clearInterval(txTimer);refreshTimer=txTimer=null;}
-function startYSFLogs(){fetchYSFLogs();ysfTimer=setInterval(fetchYSFLogs,4000);}
-function stopYSFLogs(){clearInterval(ysfTimer);ysfTimer=null;}
-function startMMDVMYSFLogs(){fetchMMDVMYSFLogs();mmdvmYsfTimer=setInterval(fetchMMDVMYSFLogs,4000);}
-function stopMMDVMYSFLogs(){clearInterval(mmdvmYsfTimer);mmdvmYsfTimer=null;}
-function startYSFTransmissionPoll(){fetchYSFTransmission();ysfTxTimer=setInterval(fetchYSFTransmission,4000);}
-async function fetchSysInfo(){try{const r=await fetch('?action=sysinfo');const d=await r.json();const cpuEl=document.getElementById('siCpu');cpuEl.textContent=d.cpu+' %';cpuEl.style.color=d.cpu>80?'var(--red)':d.cpu>50?'var(--amber)':'var(--green)';const tempEl=document.getElementById('siTemp');tempEl.textContent=d.temp||'—';const t=parseFloat(d.temp);tempEl.style.color=t>75?'var(--red)':t>60?'var(--amber)':'var(--green)';document.getElementById('siRam').textContent=d.ramUsed+' GB / '+d.ramTotal+' GB';document.getElementById('siRamFree').textContent=d.ramFree+' GB';document.getElementById('siDisk').textContent=d.diskUsed+' GB / '+d.diskTotal+' GB';document.getElementById('siDiskFree').textContent=d.diskFree+' GB';}catch(e){}}
-fetchSysInfo();setInterval(fetchSysInfo,2000);
-
-async function feditOpen(path){
-    const msg=document.getElementById('feditMsg');
-    msg.style.display='none';
-    document.getElementById('feditPath').textContent=path;
-    document.getElementById('feditArea').value='Cargando…';
-    document.getElementById('feditModal').classList.add('open');
-    try{
-        const r=await fetch('?action=read-file',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:'path='+encodeURIComponent(path)});
-        const d=await r.json();
-        if(d.ok){document.getElementById('feditArea').value=d.content;document.getElementById('feditArea').focus();}
-        else{document.getElementById('feditArea').value='';msg.className='fedit-msg err';msg.textContent='✖ '+d.msg;msg.style.display='block';}
-    }catch(e){document.getElementById('feditArea').value='';msg.className='fedit-msg err';msg.textContent='✖ Error: '+e.message;msg.style.display='block';}
-}
-async function feditSave(){
-    const path=document.getElementById('feditPath').textContent;
-    const content=document.getElementById('feditArea').value;
-    const msg=document.getElementById('feditMsg');
-    try{
-        const r=await fetch('?action=save-file',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:'path='+encodeURIComponent(path)+'&content='+encodeURIComponent(content)});
-        const d=await r.json();
-        msg.className='fedit-msg '+(d.ok?'ok':'err');
-        msg.textContent=(d.ok?'✔ ':'✖ ')+d.msg;
-        msg.style.display='block';
-        if(d.ok)setTimeout(()=>{msg.style.display='none';},3000);
-    }catch(e){msg.className='fedit-msg err';msg.textContent='✖ Error: '+e.message;msg.style.display='block';}
-}
-function feditClose(){document.getElementById('feditModal').classList.remove('open');}
-
-function xtTtydOpen(){
-    var url='http://'+window.location.hostname+':7681';
-    document.getElementById('xtTtydFrame').src=url;
-    document.getElementById('xtTtydModal').style.display='flex';
-}
-function xtTtydClose(){
-    document.getElementById('xtTtydModal').style.display='none';
-    document.getElementById('xtTtydFrame').src='';
-}
-
-(function(){
-var xtHist=[],xtHidx=-1,xtCwd='/home/pi';
-function xtPr(){return 'pi@raspberry:'+xtCwd.replace('/home/pi','~')+'$';}
-function xtApp(html){var o=document.getElementById('xtOut');o.innerHTML+=html+'\n';o.scrollTop=o.scrollHeight;}
-function xtEsc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
-window.xtOpen=function(){document.getElementById('xtModal').classList.add('open');setTimeout(function(){document.getElementById('xtInp').focus();},80);};
-window.xtClose=function(){document.getElementById('xtModal').classList.remove('open');};
-document.getElementById('xtInp').addEventListener('keydown',async function(e){
-    if(e.key==='Escape'){xtClose();return;}
-    if(e.key==='ArrowUp'){e.preventDefault();if(xtHidx<xtHist.length-1)this.value=xtHist[++xtHidx]||'';return;}
-    if(e.key==='ArrowDown'){e.preventDefault();xtHidx>0?this.value=xtHist[--xtHidx]:(xtHidx=-1,this.value='');return;}
-    if(e.key!=='Enter')return;
-    var cmd=this.value.trim();if(!cmd)return;
-    xtHist.unshift(cmd);xtHidx=-1;this.value='';
-    xtApp('<span class="xt-cmd">'+xtEsc(xtPr())+' '+xtEsc(cmd)+'</span>');
-    if(/^\s*clear\s*$/.test(cmd)){document.getElementById('xtOut').innerHTML='';return;}
-    if(/^\s*(edit|nano)(\s+\S+)?\s*$/.test(cmd)){
-        var fpath=cmd.replace(/^\s*(edit|nano)\s*/,'').trim();
-        if(!fpath)fpath=xtCwd.replace(/\/$/,'')+'/nuevo.txt';
-        if(!fpath.startsWith('/'))fpath=xtCwd.replace(/\/$/,'')+'/'+fpath;
-        xtApp('<span class="xt-out">Abriendo editor: '+xtEsc(fpath)+'</span>');
-        feditOpen(fpath);return;
-    }
-    if(/^\s*(sudo\s+su|su\s*$|top|htop|vim|vi|less|more)\s*/.test(cmd)){xtApp('<span class="xt-err">Comando interactivo no soportado. Usa: nano /ruta/fichero</span>');return;}
-    if(/^\s*cd(\s|$)/.test(cmd)){
-        var t=cmd.replace(/^\s*cd\s*/,'').trim()||'~';
-        if(t==='~'||t===''){xtCwd='/home/pi';}
-        else if(t.startsWith('/')){xtCwd=t;}
-        else if(t==='..'){var parts=xtCwd.split('/').filter(Boolean);parts.pop();xtCwd='/'+parts.join('/')||'/';}
-        else{xtCwd=xtCwd.replace(/\/$/,'')+'/'+t;}
-        document.getElementById('xtPr').textContent=xtPr();return;
-    }
-    try{
-        var resp=await fetch('?action=terminal',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:'cmd='+encodeURIComponent('cd '+xtCwd+' && '+cmd)});
-        var dat=await resp.json();
-        if(dat.output){xtApp('<span class="xt-out">'+dat.output+'</span>');}
-    }catch(err){xtApp('<span class="xt-err">Error: '+xtEsc(err.message)+'</span>');}
-});
-})();
-
-// ── DMR2YSF JS ────────────────────────────────────────────────────────────────
-let dmr2ysfRunning=false,dmr2ysfTimer=null,dmr2ysfTxTimer=null,dmr2ysfCurrentlyActive=false,dmr2ysfLastActiveTs=0,dmr2ysfVuTimerAnim=null;
-const DMR2YSF_IDLE_TIMEOUT=12000;
-
-function buildDmr2ysfVU(){['dmr2ysfVuLeft','dmr2ysfVuRight'].forEach(id=>{const el=document.getElementById(id);for(let i=0;i<18;i++){const d=document.createElement('div');d.className='nx-vu-bar';d.id=`${id}-${i}`;el.appendChild(d);}});}
-buildDmr2ysfVU();
-
-function animateDmr2ysfVU(on){clearInterval(dmr2ysfVuTimerAnim);['dmr2ysfVuLeft','dmr2ysfVuRight'].forEach(id=>{for(let i=0;i<18;i++)document.getElementById(`${id}-${i}`).className='nx-vu-bar';});if(!on)return;dmr2ysfVuTimerAnim=setInterval(()=>{['dmr2ysfVuLeft','dmr2ysfVuRight'].forEach(id=>{const lvl=Math.floor(Math.random()*16)+1;for(let i=0;i<18;i++){let cls='nx-vu-bar';if(i<lvl)cls+=i<10?' lit-g':i<14?' lit-a':' lit-r';document.getElementById(`${id}-${i}`).className=cls;}});},80);}
-
-function updateDmr2ysfClock(){if(!dmr2ysfCurrentlyActive){const now=new Date();const clk=document.getElementById('dmr2ysfNxClock');if(clk){clk.textContent=now.toLocaleTimeString('es-ES');document.getElementById('dmr2ysfNxDate').textContent=now.toLocaleDateString('es-ES',{weekday:'short',day:'2-digit',month:'short',year:'numeric'}).toUpperCase();}}}
-setInterval(updateDmr2ysfClock,1000);updateDmr2ysfClock();
-
-function setDMR2YSFToggle(on){
-    const chk=document.getElementById('chkDMR2YSF'),lbl=document.getElementById('dmr2ysfToggleLabel'),sta=document.getElementById('dmr2ysfToggleStatus');
-    chk.checked=on;lbl.style.color=on?'#00ffcc':'';
-    sta.className='toggle-status'+(on?' on':'');sta.textContent=on?'ON':'OFF';
-    document.getElementById('dmr2ysfRefreshBadge').style.display=on?'flex':'none';
-    document.getElementById('dmr2ysfPanel').style.display=on?'':'none';
-    document.getElementById('dmr2ysfLogPanels').style.display=on?'':'none';
-    document.getElementById('dmr2ysfDisplayPanel').style.display=on?'':'none';
-    document.getElementById('dmr2ysfLastHeardPanel').style.display=on?'':'none';
-    // Actualizar estilo del switch
-    const track=document.querySelector('#swDMR2YSF .sw-track');
-    const knob=document.querySelector('#swDMR2YSF .sw-knob');
-    if(track)track.style.borderColor=on?'#00ff4c':'#ff4560';
-    if(knob){knob.style.background=on?'#00ff4c':'#ff4560';knob.style.transform=on?'translateX(28px)':'translateX(0)';}
-}
-
-function showDmr2ysfIdle(){dmr2ysfCurrentlyActive=false;animateDmr2ysfVU(false);document.getElementById('dmr2ysfTxBar').className='nx-txbar';document.getElementById('dmr2ysfTGLabel').textContent='—';const src=document.getElementById('dmr2ysfSource');src.textContent='';src.className='nx-source';document.getElementById('dmr2ysfNxCenter').innerHTML='<div class="nx-clock" id="dmr2ysfNxClock" style="color:#00ffcc;">00:00:00</div><div class="nx-date" id="dmr2ysfNxDate" style="color:#007060;">—</div>';updateDmr2ysfClock();}
-function showDmr2ysfActive(d){dmr2ysfCurrentlyActive=true;animateDmr2ysfVU(true);document.getElementById('dmr2ysfTxBar').className='nx-txbar active-dmr2ysf';document.getElementById('dmr2ysfTGLabel').textContent=d.tg?'TG '+d.tg:'—';const src=document.getElementById('dmr2ysfSource');src.textContent='DMR';src.className='nx-source rf';const flag=getFlagByCall(d.callsign);document.getElementById('dmr2ysfNxCenter').innerHTML=`<div class="nx-callsign dmr2ysf">${flag} ${esc(d.callsign)}</div>`+(d.name?`<div class="nx-name dmr2ysf">${esc(d.name)}</div>`:'');}
-
-function renderDmr2ysfLastHeard(list,activeCall){const body=document.getElementById('dmr2ysfLhBody');if(!list||list.length===0){body.innerHTML='<div class="lh-empty">Sin actividad DMR2YSF</div>';return;}body.innerHTML=list.map(r=>{const isActive=activeCall&&r.callsign===activeCall;const dot=isActive?'<span class="lh-tx-dot-dmr2ysf"></span>':'';const flag=getFlagByCall(r.callsign);return`<div class="lh-row-dmr2ysf${isActive?' lh-active':''}"><div class="lh-call-wrap">${dot}<span class="lh-call-dmr2ysf">${flag} ${esc(r.callsign)}</span></div><span class="lh-name">${esc(r.name||'—')}</span><span class="lh-tg" style="color:#00ffcc">${esc(r.tg||'—')}</span><span class="lh-time">${esc(r.time||'—')}</span><span class="lh-src rf">DMR</span></div>`;}).join('');}
-
-async function fetchDmr2ysfTransmission(){try{const r=await fetch('?action=dmr2ysf-transmission');const d=await r.json();if(d.active){dmr2ysfLastActiveTs=Date.now();showDmr2ysfActive(d);}else{if(dmr2ysfCurrentlyActive&&(Date.now()-dmr2ysfLastActiveTs)>DMR2YSF_IDLE_TIMEOUT)showDmr2ysfIdle();}renderDmr2ysfLastHeard(d.lastHeard||[],d.active?d.callsign:null);}catch(e){if(dmr2ysfCurrentlyActive&&(Date.now()-dmr2ysfLastActiveTs)>DMR2YSF_IDLE_TIMEOUT)showDmr2ysfIdle();}}
-
-async function fetchDmr2ysfLogs(){try{const r=await fetch('?action=dmr2ysf-logs&lines=15');const d=await r.json();const el=document.getElementById('logDmr2ysf');const atBot=el.scrollHeight-el.clientHeight<=el.scrollTop+10;el.innerHTML=colorize(d.dmr2ysf);if(atBot)el.scrollTop=el.scrollHeight;}catch(e){}
-try{const r2=await fetch('?action=ysfgw-dmr2ysf-logs&lines=15');const d2=await r2.json();const el2=document.getElementById('logYsfGwDmr2ysf');const atBot2=el2.scrollHeight-el2.clientHeight<=el2.scrollTop+10;el2.innerHTML=colorize(d2.ysfgwdmr2ysf);if(atBot2)el2.scrollTop=el2.scrollHeight;}catch(e){}}
-
-async function checkDmr2ysfStatus(){try{const r=await fetch('?action=dmr2ysf-status');const d=await r.json();const active=d.dmr2ysf==='active';setDot('dot-dmr2ysf-mmd',d.s1==='active'?'active':'off');setDot('dot-dmr2ysf-ysf',d.s2==='active'?'active':'off');setDot('dot-dmr2ysf',d.s3==='active'?'active':'off');dmr2ysfRunning=active;setDMR2YSFToggle(active);if(active){startDmr2ysfLogs();startDmr2ysfTxPoll();}}catch(e){}}
-
-async function toggleDMR2YSF(chk){const wasOn=!chk.checked;const sw=document.getElementById('swDMR2YSF');chk.checked=wasOn;sw.classList.add('busy');
-try{
-    await fetch(wasOn?'?action=dmr2ysf-stop':'?action=dmr2ysf-start');
-    let ok=false;
-    for(let i=0;i<15;i++){
-        await new Promise(r=>setTimeout(r,1000));
-        const r=await fetch('?action=dmr2ysf-status');
-        const d=await r.json();
-        const isOn=d.dmr2ysf==='active';
-        if(wasOn&&!isOn){ok=true;setDot('dot-dmr2ysf-mmd','off');setDot('dot-dmr2ysf-ysf','off');setDot('dot-dmr2ysf','off');dmr2ysfRunning=false;setDMR2YSFToggle(false);stopDmr2ysfLogs();stopDmr2ysfTxPoll();showDmr2ysfIdle();clearLog('logDmr2ysf');clearLog('logYsfGwDmr2ysf');break;}
-        if(!wasOn&&isOn){ok=true;setDot('dot-dmr2ysf','active');dmr2ysfRunning=true;setDMR2YSFToggle(true);startDmr2ysfLogs();startDmr2ysfTxPoll();break;}
-    }
-    if(!ok)await checkDmr2ysfStatus();
-}catch(e){console.warn('toggleDMR2YSF error:',e);}
-finally{sw.classList.remove('busy');}}
-
-function startDmr2ysfLogs(){fetchDmr2ysfLogs();dmr2ysfTimer=setInterval(fetchDmr2ysfLogs,5000);}
-function stopDmr2ysfLogs(){clearInterval(dmr2ysfTimer);dmr2ysfTimer=null;}
-function startDmr2ysfTxPoll(){fetchDmr2ysfTransmission();dmr2ysfTxTimer=setInterval(fetchDmr2ysfTransmission,4000);}
-function stopDmr2ysfTxPoll(){clearInterval(dmr2ysfTxTimer);dmr2ysfTxTimer=null;}
-
-// ── Bloque init ───────────────────────────────────────────────────────────────
-(async()=>{
-    await fetchStationInfo();
-    setInterval(fetchStationInfo,60000);
-    await checkStatus();
-    await checkYSFStatus();
-    await checkMMDVMYSFStatus();
-    await checkDStarStatus();
-    await checkNXDNStatus();
-    await checkDmr2ysfStatus();
-    setInterval(checkStatus,10000);
-    setInterval(checkYSFStatus,8000);
-    setInterval(checkMMDVMYSFStatus,8000);
-    setInterval(checkDStarStatus,10000);
-    setInterval(checkNXDNStatus,10000);
-    setInterval(checkDmr2ysfStatus,10000);
-    if(!running){showIdle();fetchTransmission();}
-    showYSFIdle();
-    showNXDNIdle();
-    showDmr2ysfIdle();
-    startYSFLogs();
-    startMMDVMYSFLogs();
-    startYSFTransmissionPoll();
-})();
-// ── Modal Config MMDVMDMR2YSF ─────────────────────────────────────────────────
-const d2cfgFields=['Callsign','Id','Timeout','Duplex','RXFrequency','TXFrequency','DmrEnable','DmrType','DmrLocalAddr','DmrLocalPort','DmrRemoteAddr','DmrRemotePort','DmrPassword','DmrJitter','UARTPort'];
-async function openDmr2ysfConfigModal(){
-    const modal=document.getElementById('dmr2ysfCfgModal');
-    const msg=document.getElementById('d2cfgMsg');
-    msg.style.display='none';
-    modal.style.display='flex';
-    d2cfgFields.forEach(f=>{const el=document.getElementById('d2cfg_'+f);if(el)el.value='';});
-    try{
-        const r=await fetch('?action=mmdvmdmr2ysf-config-read');
-        const d=await r.json();
-        d2cfgFields.forEach(f=>{
-            const el=document.getElementById('d2cfg_'+f);
-            if(!el||d[f]===undefined)return;
-            if(el.tagName==='SELECT'){
-                // Seleccionar la opción correcta; si no existe añadirla
-                let found=false;
-                for(const opt of el.options){if(opt.value===d[f]){opt.selected=true;found=true;break;}}
-                if(!found){const opt=document.createElement('option');opt.value=d[f];opt.textContent=d[f];el.appendChild(opt);opt.selected=true;}
-            } else {
-                el.value=d[f];
-            }
-        });
-    }catch(e){
-        msg.style.cssText='font-family:var(--font-mono);font-size:.75rem;display:block;padding:.4rem .8rem;border-radius:4px;border:1px solid var(--red);color:var(--red);background:rgba(255,69,96,.06);margin-top:.4rem;';
-        msg.textContent='✖ Error al leer el fichero';
-    }
-}
-function closeDmr2ysfConfigModal(){document.getElementById('dmr2ysfCfgModal').style.display='none';}
-async function saveDmr2ysfConfigModal(){
-    const msg=document.getElementById('d2cfgMsg');
-    msg.style.cssText='font-family:var(--font-mono);font-size:.75rem;display:block;padding:.4rem .8rem;border-radius:4px;border:1px solid var(--amber);color:var(--amber);background:rgba(255,179,0,.06);margin-top:.4rem;';
-    msg.textContent='⏳ Guardando…';
-    const body=d2cfgFields.map(f=>{const el=document.getElementById('d2cfg_'+f);return el?encodeURIComponent(f)+'='+encodeURIComponent(el.value):'';}).filter(Boolean).join('&');
-    try{
-        const r=await fetch('?action=mmdvmdmr2ysf-config-save',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body});
-        const d=await r.json();
-        if(d.ok){
-            msg.style.cssText='font-family:var(--font-mono);font-size:.75rem;display:block;padding:.4rem .8rem;border-radius:4px;border:1px solid #00ffcc;color:#00ffcc;background:rgba(0,255,204,.06);margin-top:.4rem;';
-            msg.textContent='✔ Guardado correctamente';
-            setTimeout(()=>{msg.style.display='none';},3000);
-        }else{
-            msg.style.cssText='font-family:var(--font-mono);font-size:.75rem;display:block;padding:.4rem .8rem;border-radius:4px;border:1px solid var(--red);color:var(--red);background:rgba(255,69,96,.06);margin-top:.4rem;';
-            msg.textContent='✖ '+(d.msg||'Error al guardar');
-        }
-    }catch(e){
-        msg.style.cssText='font-family:var(--font-mono);font-size:.75rem;display:block;padding:.4rem .8rem;border-radius:4px;border:1px solid var(--red);color:var(--red);background:rgba(255,69,96,.06);margin-top:.4rem;';
-        msg.textContent='✖ Error de red: '+e.message;
-    }
-}
-</script>
-</body>
-</html>
