@@ -2036,12 +2036,12 @@ async function saveDmr2ysfConfigModal(){
   <div style="display:grid;grid-template-columns:90px 110px 1fr auto;gap:.5rem;align-items:end;">
     <div>
       <div style="font-family:var(--font-mono);font-size:.62rem;color:var(--text-dim);margin-bottom:.25rem;text-transform:uppercase;">TG DMR</div>
-      <input type="number" id="tgYsfNewTG" placeholder="21465" min="1"
+      <input type="text" id="tgYsfNewTG" placeholder="21465"
         style="width:100%;background:var(--surface);border:1px solid #00ffcc44;border-radius:4px;color:#00ffcc;font-family:var(--font-mono);font-size:.82rem;padding:.42rem .5rem;outline:none;">
     </div>
     <div>
       <div style="font-family:var(--font-mono);font-size:.62rem;color:var(--text-dim);margin-bottom:.25rem;text-transform:uppercase;">YSF ID</div>
-      <input type="number" id="tgYsfNewYSF" placeholder="32027" min="1"
+      <input type="text" id="tgYsfNewYSF" placeholder="32027"
         style="width:100%;background:var(--surface);border:1px solid #00ffcc44;border-radius:4px;color:#00ffcc;font-family:var(--font-mono);font-size:.82rem;padding:.42rem .5rem;outline:none;">
     </div>
     <div>
@@ -2056,7 +2056,7 @@ async function saveDmr2ysfConfigModal(){
       </button>
       <button onclick="tgYsfToggleHosts()"
         style="background:#0d2535;color:#00ffcc;border:1px solid #00ffcc44;border-radius:4px;font-family:var(--font-mono);font-size:.78rem;padding:.42rem .8rem;cursor:pointer;white-space:nowrap;">
-        📡 Listar sala
+        📡 Buscar Sala para Añadir
       </button>
     </div>
   </div>
