@@ -417,16 +417,24 @@ function lookupCall($callsign) {
 
 // ── DMR2YSF ───────────────────────────────────────────────────────────────────
 // ── TG-YSFList editor ─────────────────────────────────────────────────────────
-$TGYSF_FILE = '/home/pi/MMDVM_CM/DMR2YSF/TG-YSFList.txt';
+$TGYSF_FILE   = '/home/pi/MMDVM_CM/DMR2YSF/TG-YSFList.txt';
+$TGYSF_NAMES  = '/home/pi/MMDVM_CM/DMR2YSF/TG-YSFNames.json';
+
 if ($action === 'tgysf-read') {
     $entries = [];
+    $names = file_exists($TGYSF_NAMES) ? (json_decode(file_get_contents($TGYSF_NAMES), true) ?: []) : [];
     if (file_exists($TGYSF_FILE)) {
         foreach (file($TGYSF_FILE, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES) as $line) {
             $line = trim($line);
             if ($line === '' || $line[0] === '#') continue;
             $parts = explode(';', $line, 2);
             if (count($parts) === 2 && is_numeric(trim($parts[0]))) {
-                $entries[] = ['tg' => trim($parts[0]), 'ysf' => trim($parts[1])];
+                $tg = trim($parts[0]);
+                $entries[] = [
+                    'tg'   => $tg,
+                    'ysf'  => trim($parts[1]),
+                    'name' => $names[$tg] ?? '',
+                ];
             }
         }
     }
@@ -437,19 +445,27 @@ if ($action === 'tgysf-read') {
 if ($action === 'tgysf-save') {
     $raw = json_decode(file_get_contents('php://input'), true);
     $entries = $raw['entries'] ?? [];
+    // Guardar TG-YSFList.txt (formato original sin nombres)
     $lines = [
         "# DMR TG - YSF ID mapping",
         "# DMR TG ID;YSF reflector ID",
         "#",
     ];
+    $names = [];
     foreach ($entries as $e) {
-        $tg  = intval($e['tg'] ?? 0);
-        $ysf = intval($e['ysf'] ?? 0);
-        if ($tg > 0 && $ysf > 0) $lines[] = $tg . ';' . $ysf;
+        $tg  = intval($e['tg']   ?? 0);
+        $ysf = intval($e['ysf']  ?? 0);
+        $nm  = trim($e['name']   ?? '');
+        if ($tg > 0 && $ysf > 0) {
+            $lines[] = $tg . ';' . $ysf;
+            if ($nm !== '') $names[(string)$tg] = $nm;
+        }
     }
-    $bytes = file_put_contents($TGYSF_FILE, implode("\n", $lines) . "\n");
+    $b1 = file_put_contents($TGYSF_FILE,  implode("\n", $lines) . "\n");
+    $b2 = file_put_contents($TGYSF_NAMES, json_encode($names, JSON_PRETTY_PRINT));
+    $ok = ($b1 !== false && $b2 !== false);
     header('Content-Type: application/json');
-    echo json_encode(['ok' => $bytes !== false, 'msg' => $bytes !== false ? 'Guardado correctamente' : 'Error al escribir']);
+    echo json_encode(['ok' => $ok, 'msg' => $ok ? 'Guardado correctamente' : 'Error al escribir']);
     exit;
 }
 
@@ -1966,32 +1982,37 @@ async function saveDmr2ysfConfigModal(){
 </script>
 <!-- Modal TG-YSF List -->
 <div id="tgYsfModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.8);z-index:9900;align-items:center;justify-content:center;" onclick="if(event.target===this)closeTgYsfModal()">
-<div style="background:var(--surface);border:1px solid #00ffcc44;border-radius:8px;padding:1.5rem;width:520px;max-width:95vw;display:flex;flex-direction:column;gap:.8rem;">
+<div style="background:var(--surface);border:1px solid #00ffcc44;border-radius:8px;padding:1.5rem;width:680px;max-width:95vw;display:flex;flex-direction:column;gap:.8rem;">
   <div style="font-family:var(--font-mono);font-size:.8rem;color:#00ffcc;letter-spacing:.12em;text-transform:uppercase;">📋 TG-YSF List · Mapeo TalkGroup → Reflector YSF</div>
   <div style="font-family:var(--font-mono);font-size:.65rem;color:var(--text-dim);">/home/pi/MMDVM_CM/DMR2YSF/TG-YSFList.txt</div>
 
   <!-- Tabla de entradas -->
   <div style="background:#060c10;border:1px solid #00ffcc22;border-radius:4px;overflow:hidden;">
-    <div style="display:grid;grid-template-columns:1fr 1fr 40px;padding:.4rem .8rem;background:#0a1a16;font-family:var(--font-mono);font-size:.65rem;color:#007060;letter-spacing:.1em;text-transform:uppercase;">
-      <span>TG DMR</span><span>YSF Reflector ID</span><span></span>
+    <div style="display:grid;grid-template-columns:100px 120px 1fr 36px;padding:.4rem .8rem;background:#0a1a16;font-family:var(--font-mono);font-size:.65rem;color:#007060;letter-spacing:.1em;text-transform:uppercase;gap:.5rem;">
+      <span>TG DMR</span><span>YSF ID</span><span>Nombre</span><span></span>
     </div>
     <div id="tgYsfRows" style="max-height:280px;overflow-y:auto;"></div>
   </div>
 
   <!-- Añadir nueva entrada -->
-  <div style="display:grid;grid-template-columns:1fr 1fr auto;gap:.6rem;align-items:end;">
+  <div style="display:grid;grid-template-columns:100px 120px 1fr auto;gap:.5rem;align-items:end;">
     <div>
-      <div style="font-family:var(--font-mono);font-size:.65rem;color:var(--text-dim);margin-bottom:.3rem;text-transform:uppercase;">TG DMR</div>
-      <input type="number" id="tgYsfNewTG" placeholder="ej: 21465" min="1"
-        style="width:100%;background:var(--surface);border:1px solid #00ffcc44;border-radius:4px;color:#00ffcc;font-family:var(--font-mono);font-size:.85rem;padding:.45rem .6rem;outline:none;">
+      <div style="font-family:var(--font-mono);font-size:.62rem;color:var(--text-dim);margin-bottom:.25rem;text-transform:uppercase;">TG DMR</div>
+      <input type="number" id="tgYsfNewTG" placeholder="21465" min="1"
+        style="width:100%;background:var(--surface);border:1px solid #00ffcc44;border-radius:4px;color:#00ffcc;font-family:var(--font-mono);font-size:.82rem;padding:.42rem .5rem;outline:none;">
     </div>
     <div>
-      <div style="font-family:var(--font-mono);font-size:.65rem;color:var(--text-dim);margin-bottom:.3rem;text-transform:uppercase;">YSF Reflector ID</div>
-      <input type="number" id="tgYsfNewYSF" placeholder="ej: 32027" min="1"
-        style="width:100%;background:var(--surface);border:1px solid #00ffcc44;border-radius:4px;color:#00ffcc;font-family:var(--font-mono);font-size:.85rem;padding:.45rem .6rem;outline:none;">
+      <div style="font-family:var(--font-mono);font-size:.62rem;color:var(--text-dim);margin-bottom:.25rem;text-transform:uppercase;">YSF ID</div>
+      <input type="number" id="tgYsfNewYSF" placeholder="32027" min="1"
+        style="width:100%;background:var(--surface);border:1px solid #00ffcc44;border-radius:4px;color:#00ffcc;font-family:var(--font-mono);font-size:.82rem;padding:.42rem .5rem;outline:none;">
+    </div>
+    <div>
+      <div style="font-family:var(--font-mono);font-size:.62rem;color:var(--text-dim);margin-bottom:.25rem;text-transform:uppercase;">Nombre</div>
+      <input type="text" id="tgYsfNewName" placeholder="ej: ES-ADER"
+        style="width:100%;background:var(--surface);border:1px solid #00ffcc44;border-radius:4px;color:#80ffe8;font-family:var(--font-mono);font-size:.82rem;padding:.42rem .5rem;outline:none;">
     </div>
     <button onclick="tgYsfAdd()"
-      style="background:#00cc99;color:#000;border:none;border-radius:4px;font-family:var(--font-mono);font-size:.8rem;padding:.45rem 1rem;cursor:pointer;white-space:nowrap;">
+      style="background:#00cc99;color:#000;border:none;border-radius:4px;font-family:var(--font-mono);font-size:.8rem;padding:.42rem .9rem;cursor:pointer;white-space:nowrap;height:fit-content;">
       ➕ Añadir
     </button>
   </div>
@@ -2031,25 +2052,30 @@ function tgYsfRender() {
         return;
     }
     container.innerHTML = _tgYsfEntries.map((e, i) => `
-        <div style="display:grid;grid-template-columns:1fr 1fr 40px;padding:.4rem .8rem;border-bottom:1px solid #00ffcc11;align-items:center;">
+        <div style="display:grid;grid-template-columns:100px 120px 1fr 36px;padding:.38rem .8rem;border-bottom:1px solid #00ffcc11;align-items:center;gap:.5rem;">
             <span style="font-family:var(--font-mono);font-size:.82rem;color:#00ffcc;">${esc(e.tg)}</span>
             <span style="font-family:var(--font-mono);font-size:.82rem;color:#80ffe8;">${esc(e.ysf)}</span>
+            <input type="text" value="${esc(e.name||'')}" placeholder="—"
+              onchange="_tgYsfEntries[${i}].name=this.value"
+              style="background:transparent;border:none;border-bottom:1px solid #00ffcc22;color:#a8b9cc;font-family:var(--font-mono);font-size:.78rem;padding:.15rem .2rem;outline:none;width:100%;">
             <button onclick="tgYsfRemove(${i})" style="background:transparent;border:1px solid #ff456044;border-radius:3px;color:#ff4560;font-size:.7rem;cursor:pointer;padding:.15rem .3rem;">✖</button>
         </div>
     `).join('');
 }
 function tgYsfAdd() {
-    const tg  = document.getElementById('tgYsfNewTG').value.trim();
-    const ysf = document.getElementById('tgYsfNewYSF').value.trim();
+    const tg   = document.getElementById('tgYsfNewTG').value.trim();
+    const ysf  = document.getElementById('tgYsfNewYSF').value.trim();
+    const name = document.getElementById('tgYsfNewName').value.trim();
     if (!tg || !ysf || isNaN(tg) || isNaN(ysf)) {
-        tgYsfShowMsg('Introduce valores numéricos válidos', false); return;
+        tgYsfShowMsg('Introduce valores numéricos válidos para TG e ID', false); return;
     }
     if (_tgYsfEntries.some(e => e.tg === tg)) {
         tgYsfShowMsg('El TG ' + tg + ' ya existe', false); return;
     }
-    _tgYsfEntries.push({tg, ysf});
-    document.getElementById('tgYsfNewTG').value = '';
-    document.getElementById('tgYsfNewYSF').value = '';
+    _tgYsfEntries.push({tg, ysf, name});
+    document.getElementById('tgYsfNewTG').value   = '';
+    document.getElementById('tgYsfNewYSF').value  = '';
+    document.getElementById('tgYsfNewName').value = '';
     tgYsfRender();
 }
 function tgYsfRemove(i) {
@@ -2077,6 +2103,7 @@ function tgYsfShowMsg(msg, ok) {
     if (ok) setTimeout(() => el.style.display = 'none', 3000);
 }
 </script>
+
 
 </body>
 </html>
