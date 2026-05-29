@@ -416,25 +416,63 @@ function lookupCall($callsign) {
 }
 
 // ── DMR2YSF ───────────────────────────────────────────────────────────────────
-// ── TG-YSFList editor ─────────────────────────────────────────────────────────
+if ($action === 'tgysf-hosts') {
+    $hostsFile = '/home/pi/YSFClients/YSFGateway/YSFHosts.json';
+    $list = [];
+    if (file_exists($hostsFile)) {
+        $json = json_decode(file_get_contents($hostsFile), true);
+        if (isset($json['reflectors']) && is_array($json['reflectors'])) {
+            foreach ($json['reflectors'] as $ref) {
+                $id      = intval($ref['designator'] ?? 0);
+                $name    = trim($ref['name']    ?? '');
+                $desc    = trim($ref['sponsor'] ?? '');
+                $country = strtoupper(trim($ref['country'] ?? ''));
+                if ($id <= 0) continue;
+                $list[] = ['id'=>$id,'name'=>$name,'desc'=>$desc,'country'=>$country];
+            }
+        }
+    }
+    usort($list, function($a,$b){
+        $aES = $a['country']==='ES'?0:1;
+        $bES = $b['country']==='ES'?0:1;
+        if ($aES !== $bES) return $aES - $bES;
+        return strcmp($a['name'], $b['name']);
+    });
+    header('Content-Type: application/json');
+    echo json_encode(['ok'=>true,'hosts'=>$list]);
+    exit;
+}
+
 $TGYSF_FILE   = '/home/pi/MMDVM_CM/DMR2YSF/TG-YSFList.txt';
 $TGYSF_NAMES  = '/home/pi/MMDVM_CM/DMR2YSF/TG-YSFNames.json';
 
 if ($action === 'tgysf-read') {
     $entries = [];
     $names = file_exists($TGYSF_NAMES) ? (json_decode(file_get_contents($TGYSF_NAMES), true) ?: []) : [];
+    // Cargar mapa id→nombre desde YSFHosts.json
+    $hostNames = [];
+    $hostsFile = '/home/pi/YSFClients/YSFGateway/YSFHosts.json';
+    if (file_exists($hostsFile)) {
+        $hjson = json_decode(file_get_contents($hostsFile), true);
+        if (isset($hjson['reflectors'])) {
+            foreach ($hjson['reflectors'] as $ref) {
+                $hid  = intval($ref['designator'] ?? 0);
+                $hnm  = trim($ref['name'] ?? '');
+                if ($hid > 0 && $hnm !== '') $hostNames[(string)$hid] = $hnm;
+            }
+        }
+    }
     if (file_exists($TGYSF_FILE)) {
         foreach (file($TGYSF_FILE, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES) as $line) {
             $line = trim($line);
             if ($line === '' || $line[0] === '#') continue;
             $parts = explode(';', $line, 2);
             if (count($parts) === 2 && is_numeric(trim($parts[0]))) {
-                $tg = trim($parts[0]);
-                $entries[] = [
-                    'tg'   => $tg,
-                    'ysf'  => trim($parts[1]),
-                    'name' => $names[$tg] ?? '',
-                ];
+                $tg  = trim($parts[0]);
+                $ysf = trim($parts[1]);
+                // Prioridad: nombre guardado → nombre del hosts → vacío
+                $nm  = $names[$tg] ?? $hostNames[$ysf] ?? '';
+                $entries[] = ['tg' => $tg, 'ysf' => $ysf, 'name' => $nm];
             }
         }
     }
@@ -1981,6 +2019,225 @@ async function saveDmr2ysfConfigModal(){
 }
 </script>
 <!-- Modal TG-YSF List -->
+<div id="tgYsfModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.8);z-index:9900;align-items:center;justify-content:center;" onclick="if(event.target===this)closeTgYsfModal()">
+<div style="background:var(--surface);border:1px solid #00ffcc44;border-radius:8px;padding:1.5rem;width:720px;max-width:96vw;display:flex;flex-direction:column;gap:.8rem;">
+  <div style="font-family:var(--font-mono);font-size:.8rem;color:#00ffcc;letter-spacing:.12em;text-transform:uppercase;">📋 TG-YSF List · Mapeo TalkGroup → Reflector YSF</div>
+  <div style="font-family:var(--font-mono);font-size:.65rem;color:var(--text-dim);">/home/pi/MMDVM_CM/DMR2YSF/TG-YSFList.txt</div>
+
+  <!-- Tabla de entradas -->
+  <div style="background:#060c10;border:1px solid #00ffcc22;border-radius:4px;overflow:hidden;">
+    <div style="display:grid;grid-template-columns:90px 110px 1fr 36px;padding:.4rem .8rem;background:#0a1a16;font-family:var(--font-mono);font-size:.65rem;color:#007060;letter-spacing:.1em;text-transform:uppercase;gap:.5rem;">
+      <span>TG DMR</span><span>YSF ID</span><span>Nombre</span><span></span>
+    </div>
+    <div id="tgYsfRows" style="max-height:220px;overflow-y:auto;"></div>
+  </div>
+
+  <!-- Añadir nueva entrada -->
+  <div style="display:grid;grid-template-columns:90px 110px 1fr auto;gap:.5rem;align-items:end;">
+    <div>
+      <div style="font-family:var(--font-mono);font-size:.62rem;color:var(--text-dim);margin-bottom:.25rem;text-transform:uppercase;">TG DMR</div>
+      <input type="number" id="tgYsfNewTG" placeholder="21465" min="1"
+        style="width:100%;background:var(--surface);border:1px solid #00ffcc44;border-radius:4px;color:#00ffcc;font-family:var(--font-mono);font-size:.82rem;padding:.42rem .5rem;outline:none;">
+    </div>
+    <div>
+      <div style="font-family:var(--font-mono);font-size:.62rem;color:var(--text-dim);margin-bottom:.25rem;text-transform:uppercase;">YSF ID</div>
+      <input type="number" id="tgYsfNewYSF" placeholder="32027" min="1"
+        style="width:100%;background:var(--surface);border:1px solid #00ffcc44;border-radius:4px;color:#00ffcc;font-family:var(--font-mono);font-size:.82rem;padding:.42rem .5rem;outline:none;">
+    </div>
+    <div>
+      <div style="font-family:var(--font-mono);font-size:.62rem;color:var(--text-dim);margin-bottom:.25rem;text-transform:uppercase;">Nombre</div>
+      <input type="text" id="tgYsfNewName" placeholder="ej: ES-ADER"
+        style="width:100%;background:var(--surface);border:1px solid #00ffcc44;border-radius:4px;color:#80ffe8;font-family:var(--font-mono);font-size:.82rem;padding:.42rem .5rem;outline:none;">
+    </div>
+    <div style="display:flex;flex-direction:column;gap:.25rem;">
+      <button onclick="tgYsfAdd()"
+        style="background:#00cc99;color:#000;border:none;border-radius:4px;font-family:var(--font-mono);font-size:.78rem;padding:.42rem .8rem;cursor:pointer;white-space:nowrap;">
+        ➕ Añadir
+      </button>
+      <button onclick="tgYsfToggleHosts()"
+        style="background:#0d2535;color:#00ffcc;border:1px solid #00ffcc44;border-radius:4px;font-family:var(--font-mono);font-size:.78rem;padding:.42rem .8rem;cursor:pointer;white-space:nowrap;">
+        📡 Listar sala
+      </button>
+    </div>
+  </div>
+
+  <!-- Panel buscador de reflectores YSF -->
+  <div id="tgYsfHostPanel" style="display:none;background:#060c10;border:1px solid #00ffcc33;border-radius:4px;padding:.8rem;">
+    <div style="display:flex;gap:.5rem;margin-bottom:.6rem;align-items:center;">
+      <input type="text" id="tgYsfSearch" placeholder="🔍 Buscar reflector por nombre, descripción o país…" oninput="tgYsfFilterHosts(this.value)"
+        style="flex:1;background:var(--surface);border:1px solid #00ffcc44;border-radius:4px;color:#00ffcc;font-family:var(--font-mono);font-size:.78rem;padding:.38rem .6rem;outline:none;">
+      <button onclick="tgYsfToggleHosts()" style="background:transparent;border:1px solid #ff456044;color:#ff4560;border-radius:4px;font-family:var(--font-mono);font-size:.7rem;padding:.35rem .6rem;cursor:pointer;">✖</button>
+    </div>
+    <div id="tgYsfHostList" style="max-height:200px;overflow-y:auto;font-family:var(--font-mono);font-size:.72rem;">
+      <div style="color:var(--text-dim);text-align:center;padding:.5rem;">Cargando…</div>
+    </div>
+    <div style="font-family:var(--font-mono);font-size:.6rem;color:var(--text-dim);margin-top:.4rem;">
+      ↑ Haz clic en un reflector para rellenar el YSF ID automáticamente
+    </div>
+  </div>
+
+  <div id="tgYsfMsg" style="display:none;font-family:var(--font-mono);font-size:.75rem;padding:.4rem .8rem;border-radius:4px;border:1px solid;"></div>
+
+  <div style="display:flex;gap:.8rem;margin-top:.2rem;">
+    <button onclick="tgYsfSave()" style="flex:1;background:#00cc99;color:#000;border:none;border-radius:6px;font-family:var(--font-mono);font-size:.8rem;letter-spacing:.08em;text-transform:uppercase;padding:.6rem;cursor:pointer;">💾 Guardar</button>
+    <button onclick="closeTgYsfModal()" style="flex:1;background:transparent;color:var(--text-dim);border:1px solid var(--border);border-radius:6px;font-family:var(--font-mono);font-size:.8rem;text-transform:uppercase;padding:.6rem;cursor:pointer;">✖ Cerrar</button>
+  </div>
+</div>
+</div>
+
+<script>
+let _tgYsfEntries = [];
+let _tgYsfHosts   = [];
+let _tgYsfHostsLoaded = false;
+
+function openTgYsfModal() {
+    document.getElementById('tgYsfModal').style.display = 'flex';
+    document.getElementById('tgYsfMsg').style.display = 'none';
+    document.getElementById('tgYsfHostPanel').style.display = 'none';
+    tgYsfLoad();
+}
+function closeTgYsfModal() {
+    document.getElementById('tgYsfModal').style.display = 'none';
+}
+
+async function tgYsfLoad() {
+    try {
+        const r = await fetch('?action=tgysf-read');
+        const d = await r.json();
+        _tgYsfEntries = d.entries || [];
+        tgYsfRender();
+    } catch(e) { console.warn('tgYsfLoad error', e); }
+}
+
+function tgYsfRender() {
+    const container = document.getElementById('tgYsfRows');
+    if (_tgYsfEntries.length === 0) {
+        container.innerHTML = '<div style="padding:1rem;font-family:var(--font-mono);font-size:.72rem;color:var(--text-dim);text-align:center;">Sin entradas</div>';
+        return;
+    }
+    container.innerHTML = _tgYsfEntries.map((e, i) => `
+        <div style="display:grid;grid-template-columns:90px 110px 1fr 36px;padding:.38rem .8rem;border-bottom:1px solid #00ffcc11;align-items:center;gap:.5rem;">
+            <span style="font-family:var(--font-mono);font-size:.82rem;color:#00ffcc;">${esc(e.tg)}</span>
+            <span style="font-family:var(--font-mono);font-size:.82rem;color:#80ffe8;">${esc(e.ysf)}</span>
+            <input type="text" value="${esc(e.name||'')}" placeholder="—"
+              onchange="_tgYsfEntries[${i}].name=this.value"
+              style="background:transparent;border:none;border-bottom:1px solid #00ffcc22;color:#a8b9cc;font-family:var(--font-mono);font-size:.78rem;padding:.15rem .2rem;outline:none;width:100%;">
+            <button onclick="tgYsfRemove(${i})" style="background:transparent;border:1px solid #ff456044;border-radius:3px;color:#ff4560;font-size:.7rem;cursor:pointer;padding:.15rem .3rem;">✖</button>
+        </div>
+    `).join('');
+}
+
+function tgYsfAdd() {
+    const tg   = document.getElementById('tgYsfNewTG').value.trim();
+    const ysf  = document.getElementById('tgYsfNewYSF').value.trim();
+    const name = document.getElementById('tgYsfNewName').value.trim();
+    if (!tg || !ysf || isNaN(tg) || isNaN(ysf)) {
+        tgYsfShowMsg('Introduce valores numéricos válidos para TG e ID', false); return;
+    }
+    if (_tgYsfEntries.some(e => e.tg === tg)) {
+        tgYsfShowMsg('El TG ' + tg + ' ya existe', false); return;
+    }
+    _tgYsfEntries.push({tg, ysf, name});
+    document.getElementById('tgYsfNewTG').value   = '';
+    document.getElementById('tgYsfNewYSF').value  = '';
+    document.getElementById('tgYsfNewName').value = '';
+    tgYsfRender();
+}
+
+function tgYsfRemove(i) {
+    _tgYsfEntries.splice(i, 1);
+    tgYsfRender();
+}
+
+async function tgYsfSave() {
+    try {
+        const r = await fetch('?action=tgysf-save', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({entries: _tgYsfEntries})
+        });
+        const d = await r.json();
+        tgYsfShowMsg(d.msg, d.ok);
+    } catch(e) { tgYsfShowMsg('Error de red', false); }
+}
+
+// ── Buscador de reflectores YSF ───────────────────────────────────────────────
+async function tgYsfToggleHosts() {
+    const panel = document.getElementById('tgYsfHostPanel');
+    const visible = panel.style.display !== 'none';
+    panel.style.display = visible ? 'none' : 'block';
+    if (!visible && !_tgYsfHostsLoaded) await tgYsfLoadHosts();
+}
+
+async function tgYsfLoadHosts() {
+    document.getElementById('tgYsfHostList').innerHTML =
+        '<div style="color:var(--text-dim);text-align:center;padding:.5rem;">Cargando reflectores…</div>';
+    try {
+        const r = await fetch('?action=tgysf-hosts');
+        const d = await r.json();
+        _tgYsfHosts = d.hosts || [];
+        _tgYsfHostsLoaded = true;
+        tgYsfRenderHosts(_tgYsfHosts);
+    } catch(e) {
+        document.getElementById('tgYsfHostList').innerHTML =
+            '<div style="color:var(--red);text-align:center;padding:.5rem;">Error cargando YSFHosts.json</div>';
+    }
+}
+
+function tgYsfFilterHosts(q) {
+    const term = q.trim().toLowerCase();
+    const filtered = term === ''
+        ? _tgYsfHosts
+        : _tgYsfHosts.filter(h =>
+            String(h.id).includes(term) ||
+            h.name.toLowerCase().includes(term) ||
+            h.desc.toLowerCase().includes(term) ||
+            h.country.toLowerCase().includes(term)
+          );
+    tgYsfRenderHosts(filtered);
+}
+
+function tgYsfRenderHosts(list) {
+    const el = document.getElementById('tgYsfHostList');
+    if (!list.length) {
+        el.innerHTML = '<div style="color:var(--text-dim);text-align:center;padding:.5rem;">Sin resultados</div>';
+        return;
+    }
+    el.innerHTML = list.map(h => {
+        const flag = h.country === 'ES' ? '🇪🇸 ' : h.country ? h.country + ' ' : '';
+        const nm   = h.name || '—';
+        const desc = h.desc ? ' · ' + h.desc : '';
+        const nmEsc = nm.replace(/\\/g,'\\\\').replace(/'/g,"\\'");
+        return `<div onclick="tgYsfSelectHost(${h.id},'${nmEsc}')"
+            style="padding:.35rem .6rem;cursor:pointer;border-bottom:1px solid #00ffcc11;transition:background .15s;display:flex;gap:.8rem;align-items:center;"
+            onmouseover="this.style.background='rgba(0,255,204,.08)'"
+            onmouseout="this.style.background='transparent'">
+            <span style="color:#00ffcc;min-width:52px;">${h.id}</span>
+            <span style="color:#80ffe8;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${flag}${esc(nm)}${esc(desc)}</span>
+            <span style="color:var(--text-dim);font-size:.6rem;">${h.country}</span>
+        </div>`;
+    }).join('');
+}
+
+function tgYsfSelectHost(id, name) {
+    document.getElementById('tgYsfNewYSF').value  = id;
+    document.getElementById('tgYsfNewName').value = name;
+    document.getElementById('tgYsfHostPanel').style.display = 'none';
+    document.getElementById('tgYsfSearch').value = '';
+    document.getElementById('tgYsfNewTG').focus();
+}
+
+function tgYsfShowMsg(msg, ok) {
+    const el = document.getElementById('tgYsfMsg');
+    el.textContent = (ok ? '✔ ' : '✖ ') + msg;
+    el.style.display = 'block';
+    el.style.color = ok ? 'var(--green)' : 'var(--red)';
+    el.style.borderColor = ok ? 'var(--green)' : 'var(--red)';
+    el.style.background = ok ? 'rgba(0,255,159,.06)' : 'rgba(255,69,96,.06)';
+    if (ok) setTimeout(() => el.style.display = 'none', 3000);
+}
+</script>
+
 <div id="tgYsfModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.8);z-index:9900;align-items:center;justify-content:center;" onclick="if(event.target===this)closeTgYsfModal()">
 <div style="background:var(--surface);border:1px solid #00ffcc44;border-radius:8px;padding:1.5rem;width:680px;max-width:95vw;display:flex;flex-direction:column;gap:.8rem;">
   <div style="font-family:var(--font-mono);font-size:.8rem;color:#00ffcc;letter-spacing:.12em;text-transform:uppercase;">📋 TG-YSF List · Mapeo TalkGroup → Reflector YSF</div>
