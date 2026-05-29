@@ -421,23 +421,27 @@ body{background:#00004d;color:var(--text);font-family:var(--font-ui);font-size:1
 <div style="background:var(--surface);border:1px solid #00ffcc44;border-radius:8px;padding:1.5rem;width:700px;max-width:96vw;max-height:90vh;overflow-y:auto;display:flex;flex-direction:column;gap:.8rem;">
   <div style="font-family:var(--font-mono);font-size:.8rem;color:var(--d2y);letter-spacing:.12em;text-transform:uppercase;border-bottom:1px solid #00ffcc33;padding-bottom:.6rem;">⚙ MMDVMDMR2YSF.ini</div>
   <?php
-  $inp = '<input id="d2cfg_%s" style="width:100%;background:#060c10;border:1px solid #00ffcc33;border-radius:3px;color:#00ffcc;font-family:var(--font-mono);font-size:.82rem;padding:.35rem .6rem;outline:none;" onfocus="this.style.borderColor=\'#00ffcc\'" onblur="this.style.borderColor=\'#00ffcc33\'">';
-  $lbl = '<label style="font-family:var(--font-mono);font-size:.65rem;color:var(--text-dim);display:block;margin-bottom:.25rem;">%s</label>';
-  $fld = function($id, $label) use ($inp, $lbl) { return '<div>'.sprintf($lbl,$label).sprintf($inp,$id).'</div>'; };
-  $sec = '<div style="font-family:var(--font-mono);font-size:.65rem;color:#007060;letter-spacing:.1em;text-transform:uppercase;margin-top:.4rem;">%s</div>';
-  echo sprintf($sec,'[General]');
+  function d2field($id, $label) {
+      return '<div><label style="font-family:\'Share Tech Mono\',monospace;font-size:.65rem;color:#4a5568;display:block;margin-bottom:.25rem;">'
+           . htmlspecialchars($label)
+           . '</label><input id="d2cfg_' . $id . '" style="width:100%;background:#060c10;border:1px solid #00ffcc33;border-radius:3px;color:#00ffcc;font-family:\'Share Tech Mono\',monospace;font-size:.82rem;padding:.35rem .6rem;outline:none;" onfocus="this.style.borderColor=\'#00ffcc\'" onblur="this.style.borderColor=\'#00ffcc33\'"></div>';
+  }
+  function d2sec($label) {
+      return '<div style="font-family:\'Share Tech Mono\',monospace;font-size:.65rem;color:#007060;letter-spacing:.1em;text-transform:uppercase;margin-top:.4rem;">' . htmlspecialchars($label) . '</div>';
+  }
+  echo d2sec('[General]');
   echo '<div style="display:grid;grid-template-columns:1fr 1fr;gap:.7rem;">';
-  echo $fld('Callsign','Callsign').$fld('Id','DMR ID').$fld('Timeout','Timeout (s)').$fld('Duplex','Duplex (0/1)');
+  echo d2field('Callsign','Callsign').d2field('Id','DMR ID').d2field('Timeout','Timeout (s)').d2field('Duplex','Duplex (0/1)');
   echo '</div>';
-  echo sprintf($sec,'[Modem]');
-  echo '<div><label style="font-family:var(--font-mono);font-size:.65rem;color:var(--text-dim);display:block;margin-bottom:.25rem;">UART Port</label><select id="d2cfg_UARTPort" style="width:100%;background:#060c10;border:1px solid #00ffcc33;border-radius:3px;color:#00ffcc;font-family:var(--font-mono);font-size:.82rem;padding:.35rem .6rem;outline:none;cursor:pointer;">';
+  echo d2sec('[Modem]');
+  echo '<div><label style="font-family:\'Share Tech Mono\',monospace;font-size:.65rem;color:#4a5568;display:block;margin-bottom:.25rem;">UART Port</label><select id="d2cfg_UARTPort" style="width:100%;background:#060c10;border:1px solid #00ffcc33;border-radius:3px;color:#00ffcc;font-family:\'Share Tech Mono\',monospace;font-size:.82rem;padding:.35rem .6rem;outline:none;cursor:pointer;">';
   foreach(['/dev/ttyAMA0','/dev/ttyACM0','/dev/ttyACM1','/dev/ttyACM2','/dev/ttyUSB0','/dev/ttyUSB1'] as $p) echo "<option value=\"$p\">$p</option>";
   echo '</select></div>';
-  echo sprintf($sec,'[Info]');
-  echo '<div style="display:grid;grid-template-columns:1fr 1fr;gap:.7rem;">'.$fld('RXFrequency','RX Frequency (Hz)').$fld('TXFrequency','TX Frequency (Hz)').'</div>';
-  echo sprintf($sec,'[DMR Network]');
+  echo d2sec('[Info]');
+  echo '<div style="display:grid;grid-template-columns:1fr 1fr;gap:.7rem;">'.d2field('RXFrequency','RX Frequency (Hz)').d2field('TXFrequency','TX Frequency (Hz)').'</div>';
+  echo d2sec('[DMR Network]');
   echo '<div style="display:grid;grid-template-columns:1fr 1fr;gap:.7rem;">';
-  echo $fld('DmrEnable','Enable (0/1)').$fld('DmrType','Type (Direct/Gateway)').$fld('DmrLocalAddr','Local Address').$fld('DmrLocalPort','Local Port').$fld('DmrRemoteAddr','Remote Address').$fld('DmrRemotePort','Remote Port').$fld('DmrPassword','Password').$fld('DmrJitter','Jitter (ms)');
+  echo d2field('DmrEnable','Enable (0/1)').d2field('DmrType','Type (Direct/Gateway)').d2field('DmrLocalAddr','Local Address').d2field('DmrLocalPort','Local Port').d2field('DmrRemoteAddr','Remote Address').d2field('DmrRemotePort','Remote Port').d2field('DmrPassword','Password').d2field('DmrJitter','Jitter (ms)');
   echo '</div>';
   ?>
   <div id="d2cfgMsg" style="font-family:var(--font-mono);font-size:.75rem;display:none;padding:.4rem .8rem;border-radius:4px;border:1px solid;margin-top:.4rem;"></div>

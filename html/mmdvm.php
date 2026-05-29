@@ -153,6 +153,13 @@ if ($action === 'station-info') {
     $nxdnIpRaw  = trim($nxdnIni['General']['Address'] ?? '');
     $nxdnIp     = ($nxdnIpRaw !== '' && $nxdnIpRaw !== '0.0.0.0') ? $nxdnIpRaw : $ip;
 
+    header('Content-Type: application/json');
+    echo json_encode([
+        'callsign'=>strtoupper(trim($callsign)),'dmrid'=>trim($dmrid),'freq'=>$freq,'freqRX'=>$freqRX,
+        'port'=>$port?:'—','ip'=>$ip,'locator'=>$locator,'location'=>trim($location),'desc'=>trim($desc),'lat'=>$lat,'lon'=>$lon,
+        'ysfPort'=>$ysfPort?:'—','ysfFreqRX'=>$ysfFreqRX,'ysfFreqTX'=>$ysfFreqTX,'ysfIp'=>$ysfIp?:'—',
+        'dstarPort'=>$dstarPort?:'—','dstarFreqRX'=>$dstarFreqRX,'dstarFreqTX'=>$dstarFreqTX,'dstarIp'=>$dstarIp?:'—',
+        'nxdnPort'=>$nxdnPort?:'—','nxdnFreqRX'=>$nxdnFreqRX,'nxdnFreqTX'=>$nxdnFreqTX,'nxdnIp'=>$nxdnIp?:'—',
     ]);
     exit;
 }
