@@ -21,6 +21,7 @@ declare -A DESTMAP=(
   ["MMDVMYSF.ini"]="/home/pi/MMDVMHost/MMDVMYSF.ini"
   ["MMDVMDSTAR.ini"]="/home/pi/MMDVMHost/MMDVMDSTAR.ini"
   ["MMDVMNXDN.ini"]="/home/pi/MMDVMHost/MMDVMNXDN.ini"
+  ["MMDVMDMR2YSF.ini"]="/home/pi/MMDVMHost/MMDVMDMR2YSF.ini"
   ["DisplayDriver.ini"]="/home/pi/Display-Driver/DisplayDriver.ini"
   ["YSFGateway.ini"]="/home/pi/YSFClients/YSFGateway/YSFGateway.ini"
   ["DMRGateway.ini"]="/home/pi/DMRGateway/DMRGateway.ini"
