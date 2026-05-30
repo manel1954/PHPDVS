@@ -12,6 +12,7 @@ zip -j "$ZIPPATH" \
   /home/pi/DMRGateway/DMRGateway.ini \
   /home/pi/DStarGateway/DStarGateway.ini \
   /home/pi/NXDNClients/NXDNGateway/NXDNGateway.ini \
+  /home/pi/MMDVM_CM/DMR2YSF/DMR2YSF.ini \
   /home/pi/radiosonde_auto_rx/auto_rx/station.cfg \
   /etc/rbfeeder.ini \
   /etc/fr24feed.ini \

@@ -26,6 +26,7 @@ declare -A DESTMAP=(
   ["DMRGateway.ini"]="/home/pi/DMRGateway/DMRGateway.ini"
   ["DStarGateway.ini"]="/home/pi/DStarGateway/DStarGateway.ini"
   ["NXDNGateway.ini"]="/home/pi/NXDNClients/NXDNGateway/NXDNGateway.ini"
+  ["DMR2YSF.ini"]="/home/pi/MMDVM_CM/DMR2YSF/DMR2YSF.ini"
   ["station.cfg"]="/home/pi/radiosonde_auto_rx/auto_rx/station.cfg"
   ["rbfeeder.ini"]="/etc/rbfeeder.ini"
   ["fr24feed.ini"]="/etc/fr24feed.ini"
