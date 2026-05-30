@@ -196,15 +196,28 @@ if ($action === 'dmr2ysf-transmission') {
     $state = ['active'=>false,'callsign'=>'','name'=>'','tg'=>'','source'=>''];
     if (file_exists($stateFile)) { $saved = json_decode(file_get_contents($stateFile), true); if (is_array($saved)) $state = $saved; }
     foreach ($lines as $line) {
-        if (preg_match('/(end of|lost|watchdog|timeout)/i', $line)) { $state['active'] = false; file_put_contents($stateFile, json_encode($state)); break; }
-        if (preg_match('/received.*from\s+([A-Z0-9]+).*TG[:\s]+(\d+)/i', $line, $m)) { $cs=strtoupper(trim($m[1]));$inf=lookupCall($cs);$state=['active'=>true,'callsign'=>$cs,'name'=>$inf['name'],'tg'=>$m[2],'source'=>'DMR'];file_put_contents($stateFile,json_encode($state));break; }
-        if (preg_match('/received.*from\s+([A-Z0-9]+)/i', $line, $m)) { $cs=strtoupper(trim($m[1]));$inf=lookupCall($cs);$state=['active'=>true,'callsign'=>$cs,'name'=>$inf['name'],'tg'=>'','source'=>'DMR'];file_put_contents($stateFile,json_encode($state));break; }
+        // Fin de transmisión tiene prioridad absoluta
+        if (preg_match('/DMR received end of voice|end of voice transmission|lost|watchdog|timeout/i', $line)) {
+            $state['active'] = false; file_put_contents($stateFile, json_encode($state)); break;
+        }
+        if (preg_match('/DMR audio received from\s+([A-Z0-9]+).*TG\s+(\d+)/i', $line, $m)) {
+            $cs=strtoupper(trim($m[1]));$inf=lookupCall($cs);
+            $state=['active'=>true,'callsign'=>$cs,'name'=>$inf['name'],'tg'=>$m[2],'source'=>'DMR'];
+            file_put_contents($stateFile,json_encode($state));break;
+        }
+        if (preg_match('/DMR audio received from\s+([A-Z0-9]+)/i', $line, $m)) {
+            $cs=strtoupper(trim($m[1]));$inf=lookupCall($cs);
+            $state=['active'=>true,'callsign'=>$cs,'name'=>$inf['name'],'tg'=>'','source'=>'DMR'];
+            file_put_contents($stateFile,json_encode($state));break;
+        }
     }
     $lastHeard = []; $seen = [];
     foreach ($lines as $line) {
         $cs=''; $time=''; $tgr='';
-        if (preg_match('/(\d{2}:\d{2}:\d{2}).*received.*from\s+([A-Z0-9]+).*TG[:\s]+(\d+)/i', $line, $m)) { $time=$m[1];$cs=strtoupper(trim($m[2]));$tgr=$m[3]; }
-        elseif (preg_match('/(\d{2}:\d{2}:\d{2}).*received.*from\s+([A-Z0-9]+)/i', $line, $m)) { $time=$m[1];$cs=strtoupper(trim($m[2])); }
+        if (preg_match('/(\d{2}:\d{2}:\d{2}).*DMR audio received from\s+([A-Z0-9]+).*TG\s+(\d+)/i', $line, $m))
+            { $time=$m[1];$cs=strtoupper(trim($m[2]));$tgr=$m[3]; }
+        elseif (preg_match('/(\d{2}:\d{2}:\d{2}).*DMR audio received from\s+([A-Z0-9]+)/i', $line, $m))
+            { $time=$m[1];$cs=strtoupper(trim($m[2])); }
         if ($cs && !in_array($cs, $seen)) { $inf=lookupCall($cs);$lastHeard[]=['callsign'=>$cs,'name'=>$inf['name'],'tg'=>$tgr,'source'=>'DMR','time'=>$time];$seen[]=$cs;if(count($lastHeard)>=5)break; }
     }
     if (!empty($lastHeard)) file_put_contents($lhFile, json_encode($lastHeard));
@@ -570,10 +583,10 @@ async function fetchDmr2ysfLogs(){
     try{const r2=await fetch('?action=ysfgw-dmr2ysf-logs&lines=30');const d2=await r2.json();const el2=document.getElementById('logYsfGwDmr2ysf');const atBot2=el2.scrollHeight-el2.clientHeight<=el2.scrollTop+10;el2.innerHTML=colorize(d2.ysfgwdmr2ysf);if(atBot2)el2.scrollTop=el2.scrollHeight;}catch(e){}
     try{const r3=await fetch('?action=mmdvmdmr2ysf-logs&lines=30');const d3=await r3.json();const el3=document.getElementById('logMmdvmDmr2ysf');const atBot3=el3.scrollHeight-el3.clientHeight<=el3.scrollTop+10;el3.innerHTML=colorize(d3.mmdvmdmr2ysf);if(atBot3)el3.scrollTop=el3.scrollHeight;}catch(e){}
 }
-async function fetchDmr2ysfTransmission(){try{const r=await fetch('?action=dmr2ysf-transmission');const d=await r.json();if(d.active){dmr2ysfLastActiveTs=Date.now();showDmr2ysfActive(d);}else{if(dmr2ysfCurrentlyActive&&(Date.now()-dmr2ysfLastActiveTs)>DMR2YSF_IDLE_TIMEOUT)showDmr2ysfIdle();}renderDmr2ysfLastHeard(d.lastHeard||[],d.active?d.callsign:null);}catch(e){if(dmr2ysfCurrentlyActive&&(Date.now()-dmr2ysfLastActiveTs)>DMR2YSF_IDLE_TIMEOUT)showDmr2ysfIdle();}}
+async function fetchDmr2ysfTransmission(){try{const r=await fetch('?action=dmr2ysf-transmission');const d=await r.json();if(d.active){dmr2ysfLastActiveTs=Date.now();showDmr2ysfActive(d);}else{if(dmr2ysfCurrentlyActive)showDmr2ysfIdle();}renderDmr2ysfLastHeard(d.lastHeard||[],d.active?d.callsign:null);}catch(e){if(dmr2ysfCurrentlyActive&&(Date.now()-dmr2ysfLastActiveTs)>DMR2YSF_IDLE_TIMEOUT)showDmr2ysfIdle();}}
 function startDmr2ysfLogs(){fetchDmr2ysfLogs();dmr2ysfTimer=setInterval(fetchDmr2ysfLogs,5000);}
 function stopDmr2ysfLogs(){clearInterval(dmr2ysfTimer);dmr2ysfTimer=null;}
-function startDmr2ysfTxPoll(){fetchDmr2ysfTransmission();dmr2ysfTxTimer=setInterval(fetchDmr2ysfTransmission,4000);}
+function startDmr2ysfTxPoll(){fetchDmr2ysfTransmission();dmr2ysfTxTimer=setInterval(fetchDmr2ysfTransmission,1500);}
 function stopDmr2ysfTxPoll(){clearInterval(dmr2ysfTxTimer);dmr2ysfTxTimer=null;}
 
 // ── Info display ──
