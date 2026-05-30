@@ -196,10 +196,11 @@ if ($action === 'dmr2ysf-transmission') {
     $state = ['active'=>false,'callsign'=>'','name'=>'','tg'=>'','source'=>''];
     if (file_exists($stateFile)) { $saved = json_decode(file_get_contents($stateFile), true); if (is_array($saved)) $state = $saved; }
     foreach ($lines as $line) {
-        // Fin de transmisión tiene prioridad absoluta
-        if (preg_match('/DMR received end of voice|end of voice transmission|lost|watchdog|timeout/i', $line)) {
+        // Fin de transmisión tiene prioridad absoluta (DMR o YSF)
+        if (preg_match('/DMR received end of voice|YSF received end of voice|end of voice transmission|lost|watchdog|timeout/i', $line)) {
             $state['active'] = false; file_put_contents($stateFile, json_encode($state)); break;
         }
+        // Transmisión entrante desde DMR (yo desde radio)
         if (preg_match('/DMR audio received from\s+([A-Z0-9]+).*TG\s+(\d+)/i', $line, $m)) {
             $cs=strtoupper(trim($m[1]));$inf=lookupCall($cs);
             $state=['active'=>true,'callsign'=>$cs,'name'=>$inf['name'],'tg'=>$m[2],'source'=>'DMR'];
@@ -210,15 +211,23 @@ if ($action === 'dmr2ysf-transmission') {
             $state=['active'=>true,'callsign'=>$cs,'name'=>$inf['name'],'tg'=>'','source'=>'DMR'];
             file_put_contents($stateFile,json_encode($state));break;
         }
+        // Transmisión entrante desde YSF (alguien del reflector)
+        if (preg_match('/Received YSF Header:\s+Src:\s+([A-Z0-9]+)/i', $line, $m)) {
+            $cs=strtoupper(trim($m[1]));$inf=lookupCall($cs);
+            $state=['active'=>true,'callsign'=>$cs,'name'=>$inf['name'],'tg'=>'','source'=>'YSF'];
+            file_put_contents($stateFile,json_encode($state));break;
+        }
     }
     $lastHeard = []; $seen = [];
     foreach ($lines as $line) {
-        $cs=''; $time=''; $tgr='';
+        $cs=''; $time=''; $tgr=''; $src='DMR';
         if (preg_match('/(\d{2}:\d{2}:\d{2}).*DMR audio received from\s+([A-Z0-9]+).*TG\s+(\d+)/i', $line, $m))
-            { $time=$m[1];$cs=strtoupper(trim($m[2]));$tgr=$m[3]; }
+            { $time=$m[1];$cs=strtoupper(trim($m[2]));$tgr=$m[3];$src='DMR'; }
         elseif (preg_match('/(\d{2}:\d{2}:\d{2}).*DMR audio received from\s+([A-Z0-9]+)/i', $line, $m))
-            { $time=$m[1];$cs=strtoupper(trim($m[2])); }
-        if ($cs && !in_array($cs, $seen)) { $inf=lookupCall($cs);$lastHeard[]=['callsign'=>$cs,'name'=>$inf['name'],'tg'=>$tgr,'source'=>'DMR','time'=>$time];$seen[]=$cs;if(count($lastHeard)>=5)break; }
+            { $time=$m[1];$cs=strtoupper(trim($m[2]));$src='DMR'; }
+        elseif (preg_match('/(\d{2}:\d{2}:\d{2}).*Received YSF Header:\s+Src:\s+([A-Z0-9]+)/i', $line, $m))
+            { $time=$m[1];$cs=strtoupper(trim($m[2]));$src='YSF'; }
+        if ($cs && !in_array($cs, $seen)) { $inf=lookupCall($cs);$lastHeard[]=['callsign'=>$cs,'name'=>$inf['name'],'tg'=>$tgr,'source'=>$src,'time'=>$time];$seen[]=$cs;if(count($lastHeard)>=5)break; }
     }
     if (!empty($lastHeard)) file_put_contents($lhFile, json_encode($lastHeard));
     elseif (file_exists($lhFile)) $lastHeard = json_decode(file_get_contents($lhFile), true) ?: [];
@@ -545,7 +554,7 @@ setInterval(updateDmr2ysfClock,1000);updateDmr2ysfClock();
 
 // ── Display ──
 function showDmr2ysfIdle(){dmr2ysfCurrentlyActive=false;animateDmr2ysfVU(false);document.getElementById('dmr2ysfTxBar').className='nx-txbar';document.getElementById('dmr2ysfTGLabel').textContent='—';document.getElementById('dmr2ysfSource').textContent='';document.getElementById('dmr2ysfSource').className='nx-source';document.getElementById('dmr2ysfNxCenter').innerHTML='<div class="nx-clock" id="dmr2ysfNxClock" style="color:#00ffcc;">00:00:00</div><div class="nx-date" id="dmr2ysfNxDate" style="color:#007060;">—</div>';updateDmr2ysfClock();}
-function showDmr2ysfActive(d){dmr2ysfCurrentlyActive=true;animateDmr2ysfVU(true);document.getElementById('dmr2ysfTxBar').className='nx-txbar active-dmr2ysf';document.getElementById('dmr2ysfTGLabel').textContent=d.tg?'TG '+d.tg:'—';const src=document.getElementById('dmr2ysfSource');src.textContent='DMR';src.className='nx-source rf';const flag=getFlagByCall(d.callsign);document.getElementById('dmr2ysfNxCenter').innerHTML=`<div class="nx-callsign">${flag} ${esc(d.callsign)}</div>`+(d.name?`<div class="nx-name">${esc(d.name)}</div>`:'');}
+function showDmr2ysfActive(d){dmr2ysfCurrentlyActive=true;animateDmr2ysfVU(true);document.getElementById('dmr2ysfTxBar').className='nx-txbar active-dmr2ysf';document.getElementById('dmr2ysfTGLabel').textContent=d.tg?'TG '+d.tg:'—';const src=document.getElementById('dmr2ysfSource');const isYsf=d.source==='YSF';src.textContent=isYsf?'YSF':'DMR';src.className='nx-source '+(isYsf?'net':'rf');const flag=getFlagByCall(d.callsign);document.getElementById('dmr2ysfNxCenter').innerHTML=`<div class="nx-callsign">${flag} ${esc(d.callsign)}</div>`+(d.name?`<div class="nx-name">${esc(d.name)}</div>`:'');}
 
 function renderDmr2ysfLastHeard(list,activeCall){const body=document.getElementById('dmr2ysfLhBody');if(!list||!list.length){body.innerHTML='<div style="padding:1.5rem 1rem;font-family:var(--font-mono);font-size:.72rem;color:var(--text-dim);text-align:center;">Sin actividad</div>';return;}body.innerHTML=list.map(r=>{const isActive=activeCall&&r.callsign===activeCall;const dot=isActive?'<span class="lh-tx-dot-dmr2ysf"></span>':'';const flag=getFlagByCall(r.callsign);return`<div class="lh-row-dmr2ysf${isActive?' lh-active':''}"><div style="display:flex;align-items:center;gap:.35rem;">${dot}<span class="lh-call-dmr2ysf">${flag} ${esc(r.callsign)}</span></div><span style="font-family:var(--font-mono);font-size:.82rem;color:var(--text);">${esc(r.name||'—')}</span><span style="font-family:var(--font-mono);font-size:.72rem;color:#00ffcc;">${esc(r.tg||'—')}</span><span style="font-family:var(--font-mono);font-size:.68rem;color:var(--text-dim);">${esc(r.time||'—')}</span><span style="font-family:var(--font-mono);font-size:.6rem;" class="nx-source rf">DMR</span></div>`;}).join('');}
 
@@ -638,3 +647,4 @@ function feditClose(){document.getElementById('feditModal').style.display='none'
 </script>
 </body>
 </html>
+ 
