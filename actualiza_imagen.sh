@@ -1,115 +1,64 @@
 #!/bin/bash
 
-# ═══════════════════════════════════════════════════════════
-#   PHPPLUS — Script de Actualización Segura
-#   Associació ADER · EA3EIZ
-# ═══════════════════════════════════════════════════════════
-
+# Configuración de rutas
 REPO_DIR="/home/pi/PHPDVS"
 TARGET_DIR="/home/pi/A108"
 WEB_DIR="/var/www/html"
+BACKUP_FILE="/tmp/password_backup.json"
 
 export LANG=es_ES.UTF-8
 export LC_ALL=es_ES.UTF-8
 export LANGUAGE=es_ES:es
 
-# ── Colores ──────────────────────────────────────────────
-RED='\033[0;31m'
-GREEN='\033[0;32m'
-YELLOW='\033[1;33m'
-CYAN='\033[0;36m'
-BOLD='\033[1m'
-DIM='\033[2m'
-NC='\033[0m'
+echo "🔄 Iniciando actualización segura..."
 
-# ── Helpers ───────────────────────────────────────────────
-ok()   { echo -e "${GREEN}  ✔  ${NC}$1"; }
-err()  { echo -e "${RED}  ✘  ${NC}$1"; }
-info() { echo -e "${CYAN}  ➜  ${NC}$1"; }
-warn() { echo -e "${YELLOW}  ⚠  ${NC}$1"; }
-sep()  { echo -e "${DIM}  ────────────────────────────────────────${NC}"; }
+# 1. Entrar al repositorio
+cd "$REPO_DIR" || { echo "❌ ERROR: No existe $REPO_DIR"; exit 1; }
 
-# ── Cabecera ──────────────────────────────────────────────
-echo ""
-echo -e "${BOLD}${CYAN}  ╔══════════════════════════════════════════╗${NC}"
-echo -e "${BOLD}${CYAN}  ║       📡  PHPDVS · Actualización         ║${NC}"
-echo -e "${BOLD}${CYAN}  ╚══════════════════════════════════════════╝${NC}"
-echo ""
-
-START_TIME=$(date +%s)
-
-# ── PASO 1: Repositorio ───────────────────────────────────
-sep
-info "Entrando al repositorio..."
-
-cd "$REPO_DIR" || {
-    err "No se encuentra el directorio: $REPO_DIR"
-    echo ""
-    exit 1
-}
-
-info "Descargando últimos cambios desde git..."
-echo ""
-
-if ! git pull 2>&1 | sed 's/^/        /'; then
-    echo ""
-    err "Falló la conexión con git."
-    warn "Tu instalación actual NO ha sido modificada."
-    echo ""
+# 2. Intentar actualizar. SI FALLA, el script se detiene AQUÍ sin tocar nada más
+if ! git pull --force; then
+    echo "❌ ERROR: Falló 'git pull'. Verifica la conexión a internet o permisos de git."
+    echo "🛡️ Tu instalación actual NO ha sido modificada."
     exit 1
 fi
+echo "✅ Repositorio actualizado correctamente."
 
-echo ""
-ok "Repositorio actualizado."
-
-# ── PASO 2: Sincronizar A108 ──────────────────────────────
-sep
-info "Sincronizando directorio de trabajo..."
-
-if sudo rsync -a --delete \
-    "$REPO_DIR/" "$TARGET_DIR/" 2>/dev/null; then
-    ok "Directorio $TARGET_DIR sincronizado."
+# 3. Backup de configuración crítica
+if [ -f "$WEB_DIR/password.json" ]; then
+    cp "$WEB_DIR/password.json" "$BACKUP_FILE"
+    echo "💾 Backup de password.json guardado."
 else
-    err "Error al sincronizar $TARGET_DIR."
-    echo ""
-    exit 1
+    echo "⚠️  No se encontró password.json, se omitirá el backup."
 fi
 
-# ── PASO 3: Desplegar web ─────────────────────────────────
-sep
-info "Desplegando archivos web..."
+# 4. Preparar directorio temporal (evita corrupción si algo falla a mitad)
+TEMP_DIR=$(mktemp -d /tmp/phpdvs_update.XXXXXX)
+# Limpiar temp dir al salir (éxito o fallo)
+trap 'rm -rf "$TEMP_DIR"; echo "🧹 Archivos temporales eliminados."' EXIT
 
-if sudo rsync -a \
-    --exclude='password.json' \
-    "$REPO_DIR/html/" "$WEB_DIR/" 2>/dev/null; then
-    ok "Archivos web desplegados en $WEB_DIR."
-else
-    err "Error al desplegar archivos web."
-    echo ""
-    exit 1
+echo "📦 Preparando nuevos archivos en entorno temporal..."
+cp -a "$REPO_DIR"/. "$TEMP_DIR/"
+rm -rf "$TEMP_DIR/html"  # Excluir html del staging
+
+# 5. Reemplazar carpetas SOLO si todo lo anterior fue bien
+echo "🔄 Aplicando cambios al sistema..."
+sudo rm -rf "$TARGET_DIR"
+sudo cp -a "$TEMP_DIR" "$TARGET_DIR"
+
+sudo cp -a "$REPO_DIR/html/." "$WEB_DIR/"
+
+# 6. Restaurar configuración protegida
+if [ -f "$BACKUP_FILE" ]; then
+    sudo cp "$BACKUP_FILE" "$WEB_DIR/password.json"
+    echo "🔐 password.json restaurado correctamente."
 fi
 
-# ── PASO 4: Permisos ──────────────────────────────────────
-sep
-info "Aplicando permisos..."
+# 7. Permisos (ver nota de seguridad abajo)
+sudo chmod -R 777 "$TARGET_DIR"
+sudo chmod -R 777 "$WEB_DIR"
 
-sudo chown -R www-data:www-data "$WEB_DIR" 2>/dev/null
-sudo chmod -R 777 "$WEB_DIR" 2>/dev/null
-ok "Permisos web aplicados (777)."
-
-sudo chmod -R 777 "$TARGET_DIR" 2>/dev/null
-ok "Permisos de trabajo aplicados (777)."
-
-# ── Resumen final ─────────────────────────────────────────
-sep
-END_TIME=$(date +%s)
-ELAPSED=$((END_TIME - START_TIME))
-
-echo ""
-echo -e "${BOLD}${GREEN}  ╔══════════════════════════════════════════╗${NC}"
-echo -e "${BOLD}${GREEN}  ║   🎉  Actualización completada           ║${NC}"
-echo -e "${BOLD}${GREEN}  ║   ⏱  Tiempo: ${ELAPSED}s$(printf '%*s' $((24 - ${#ELAPSED})) '')║${NC}"
-echo -e "${BOLD}${GREEN}  ╚══════════════════════════════════════════╝${NC}"
-echo ""
-
+echo "🎉 Actualización completada con éxito."
 exit 0
+
+
+
