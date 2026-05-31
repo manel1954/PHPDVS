@@ -9,7 +9,9 @@ GRIS="\033[0m"
 MARRON="\33[38;5;138m"
 
 			cd /home/pi/
-            wget --user-agent="ADER" https://hostfiles.refcheck.radio/YSFHosts.txt
+            #wget --user-agent="ADER" https://hostfiles.refcheck.radio/YSFHosts.txt
+
+            wget -O YSFHosts.txt http://www.pistar.uk/downloads/YSF_Hosts.txt
             
             sudo mv /home/pi/YSFHosts.txt /home/pi/YSFClients/YSFGateway/
             
