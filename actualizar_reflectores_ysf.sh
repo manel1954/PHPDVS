@@ -11,9 +11,6 @@ MARRON="\33[38;5;138m"
 			cd /home/pi/
             wget --user-agent="ADER" https://hostfiles.refcheck.radio/YSFHosts.txt
             
-            #wget --user-agent="MMDVM-Host/1.0 (Amateur Radio; EA4GAX; Spain)" https://hostfiles.refcheck.radio/YSFHosts.txt
-            
-            
             sudo mv /home/pi/YSFHosts.txt /home/pi/YSFClients/YSFGateway/
             
             cp /home/pi/YSFClients/YSFGateway/YSFHosts.txt /opt/fusion2x/data/
