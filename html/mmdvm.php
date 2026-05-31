@@ -887,7 +887,7 @@ button.btn-header { font-family: var(--font-mono); }
   <button class="btn btn-light btn-sm">⬇ Actualizaciones ▾</button>
   <div class="dropdown-menu-custom">
     <button class="dropdown-item-custom" onclick="runUpdate('imagen')">⬇ Actualizar Imagen</button>
-    <button class="dropdown-item-custom" onclick="runUpdate('ids')">📋 Actualizar IDs</button>
+    <button class="dropdown-item-custom" onclick="runUpdate('ids')">📋 Actualizar IDs dmr</button>
     <button class="dropdown-item-custom" onclick="runUpdate('ysf')">📡 Actualizar Reflectores YSF</button>
     <button class="dropdown-item-custom" onclick="window.location.href='dstar_json_converter.php'">📡 Actualizar Reflectores D-STAR</button>
   </div>
