@@ -894,7 +894,7 @@ button.btn-header { font-family: var(--font-mono); }
 </div>
 <button class="btn btn-secondary btn-sm" onclick="xtTtydOpen()">🖥️ Terminal</button>
 <a href="extra.php" class="btn btn-warning btn-sm">⚙️ Menu Extra</a>
-<a href="mmdvmdmr2ysf.php" class="btn btn-primary btn-sm"> 🔀 DMR2YSF </a>
+<a href="mmdvmdmr2ysf.php" class="btn btn-primary btn-sm"> 🔗 DMR2YSF </a>
 <button id="btnReboot" class="btn btn-danger btn-sm" onclick="rebootPi()">⏻ Reiniciar Pi</button>
 </div>
 </header>
