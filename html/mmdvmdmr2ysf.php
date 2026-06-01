@@ -592,7 +592,30 @@ async function fetchDmr2ysfLogs(){
     try{const r2=await fetch('?action=ysfgw-dmr2ysf-logs&lines=30');const d2=await r2.json();const el2=document.getElementById('logYsfGwDmr2ysf');const atBot2=el2.scrollHeight-el2.clientHeight<=el2.scrollTop+10;el2.innerHTML=colorize(d2.ysfgwdmr2ysf);if(atBot2)el2.scrollTop=el2.scrollHeight;}catch(e){}
     try{const r3=await fetch('?action=mmdvmdmr2ysf-logs&lines=30');const d3=await r3.json();const el3=document.getElementById('logMmdvmDmr2ysf');const atBot3=el3.scrollHeight-el3.clientHeight<=el3.scrollTop+10;el3.innerHTML=colorize(d3.mmdvmdmr2ysf);if(atBot3)el3.scrollTop=el3.scrollHeight;}catch(e){}
 }
-async function fetchDmr2ysfTransmission(){try{const r=await fetch('?action=dmr2ysf-transmission');const d=await r.json();if(d.active){dmr2ysfLastActiveTs=Date.now();showDmr2ysfActive(d);}else{if(dmr2ysfCurrentlyActive)showDmr2ysfIdle();}renderDmr2ysfLastHeard(d.lastHeard||[],d.active?d.callsign:null);}catch(e){if(dmr2ysfCurrentlyActive&&(Date.now()-dmr2ysfLastActiveTs)>DMR2YSF_IDLE_TIMEOUT)showDmr2ysfIdle();}}
+
+// ── Status / Toggle ──
+let dmr2ysfRunning=false,dmr2ysfTimer=null,dmr2ysfTxTimer=null;
+let _dmr2ysfFirstPoll=true; // ← AÑADIR ESTA LÍNEA
+
+
+async function fetchDmr2ysfTransmission(){
+    try{
+        const r=await fetch('?action=dmr2ysf-transmission');
+        const d=await r.json();
+        if(_dmr2ysfFirstPoll){
+            // En la primera carga nunca mostramos activo — puede ser estado residual
+            _dmr2ysfFirstPoll=false;
+            showDmr2ysfIdle();
+            renderDmr2ysfLastHeard(d.lastHeard||[],null);
+            return;
+        }
+        if(d.active){dmr2ysfLastActiveTs=Date.now();showDmr2ysfActive(d);}
+        else{if(dmr2ysfCurrentlyActive)showDmr2ysfIdle();}
+        renderDmr2ysfLastHeard(d.lastHeard||[],d.active?d.callsign:null);
+    }catch(e){
+        if(dmr2ysfCurrentlyActive&&(Date.now()-dmr2ysfLastActiveTs)>DMR2YSF_IDLE_TIMEOUT)showDmr2ysfIdle();
+    }
+}
 function startDmr2ysfLogs(){fetchDmr2ysfLogs();dmr2ysfTimer=setInterval(fetchDmr2ysfLogs,5000);}
 function stopDmr2ysfLogs(){clearInterval(dmr2ysfTimer);dmr2ysfTimer=null;}
 function startDmr2ysfTxPoll(){fetchDmr2ysfTransmission();dmr2ysfTxTimer=setInterval(fetchDmr2ysfTransmission,1500);}
