@@ -196,9 +196,11 @@ if ($action === 'dmr2ysf-transmission') {
     $state = ['active'=>false,'callsign'=>'','name'=>'','tg'=>'','source'=>''];
     if (file_exists($stateFile)) { $saved = json_decode(file_get_contents($stateFile), true); if (is_array($saved)) $state = $saved; }
     foreach ($lines as $line) {
+        // Fin de transmisión tiene prioridad absoluta (DMR o YSF)
         if (preg_match('/DMR received end of voice|YSF received end of voice|end of voice transmission|lost|watchdog|timeout/i', $line)) {
             $state['active'] = false; file_put_contents($stateFile, json_encode($state)); break;
         }
+        // Transmisión entrante desde DMR (yo desde radio)
         if (preg_match('/DMR audio received from\s+([A-Z0-9]+).*TG\s+(\d+)/i', $line, $m)) {
             $cs=strtoupper(trim($m[1]));$inf=lookupCall($cs);
             $state=['active'=>true,'callsign'=>$cs,'name'=>$inf['name'],'tg'=>$m[2],'source'=>'DMR'];
@@ -209,6 +211,7 @@ if ($action === 'dmr2ysf-transmission') {
             $state=['active'=>true,'callsign'=>$cs,'name'=>$inf['name'],'tg'=>'','source'=>'DMR'];
             file_put_contents($stateFile,json_encode($state));break;
         }
+        // Transmisión entrante desde YSF (alguien del reflector)
         if (preg_match('/Received YSF Header:\s+Src:\s+([A-Z0-9]+)/i', $line, $m)) {
             $cs=strtoupper(trim($m[1]));$inf=lookupCall($cs);
             $state=['active'=>true,'callsign'=>$cs,'name'=>$inf['name'],'tg'=>'','source'=>'YSF'];
@@ -624,41 +627,8 @@ async function tgYsfSave(){try{const r=await fetch('?action=tgysf-save',{method:
 async function tgYsfToggleHosts(){const p=document.getElementById('tgYsfHostPanel');const v=p.style.display!=='none';p.style.display=v?'none':'block';if(!v&&!_tgYsfHostsLoaded)await tgYsfLoadHosts();}
 async function tgYsfLoadHosts(){document.getElementById('tgYsfHostList').innerHTML='<div style="color:var(--text-dim);text-align:center;padding:.5rem;">Cargando…</div>';try{const r=await fetch('?action=tgysf-hosts');const d=await r.json();_tgYsfHosts=d.hosts||[];_tgYsfHostsLoaded=true;tgYsfRenderHosts(_tgYsfHosts);}catch(e){document.getElementById('tgYsfHostList').innerHTML='<div style="color:var(--red);text-align:center;padding:.5rem;">Error</div>';}}
 function tgYsfFilterHosts(q){const term=q.trim().toLowerCase();tgYsfRenderHosts(term===''?_tgYsfHosts:_tgYsfHosts.filter(h=>String(h.id).includes(term)||h.name.toLowerCase().includes(term)||h.desc.toLowerCase().includes(term)||h.country.toLowerCase().includes(term)));}
-
-// ── FIX: usar data-attributes para evitar truncado de nombres con guiones u otros caracteres ──
-function tgYsfRenderHosts(list){
-    const el=document.getElementById('tgYsfHostList');
-    if(!list.length){
-        el.innerHTML='<div style="color:var(--text-dim);text-align:center;padding:.5rem;">Sin resultados</div>';
-        return;
-    }
-    el.innerHTML=list.map(h=>{
-        const nm=h.name||'—';
-        const desc=h.desc?' · '+h.desc:'';
-        const flag=h.country==='ES'?'🇪🇸 ':h.country?h.country+' ':'';
-        return `<div
-            data-id="${h.id}"
-            data-name="${esc(nm)}"
-            onclick="tgYsfSelectHostEl(this)"
-            style="padding:.35rem .6rem;cursor:pointer;border-bottom:1px solid #00ffcc11;display:flex;gap:.8rem;align-items:center;"
-            onmouseover="this.style.background='rgba(0,255,204,.08)'"
-            onmouseout="this.style.background='transparent'">
-            <span style="color:var(--d2y);min-width:52px;">${h.id}</span>
-            <span style="color:#80ffe8;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${flag}${esc(nm)}${esc(desc)}</span>
-            <span style="color:var(--text-dim);font-size:.6rem;">${h.country}</span>
-        </div>`;
-    }).join('');
-}
-
-// Lee el nombre desde el atributo data-name — sin riesgo de truncado
-function tgYsfSelectHostEl(el){
-    document.getElementById('tgYsfNewYSF').value=el.dataset.id;
-    document.getElementById('tgYsfNewName').value=el.dataset.name;
-    document.getElementById('tgYsfHostPanel').style.display='none';
-    document.getElementById('tgYsfSearch').value='';
-    document.getElementById('tgYsfNewTG').focus();
-}
-
+function tgYsfRenderHosts(list){const el=document.getElementById('tgYsfHostList');if(!list.length){el.innerHTML='<div style="color:var(--text-dim);text-align:center;padding:.5rem;">Sin resultados</div>';return;}el.innerHTML=list.map(h=>{const flag=h.country==='ES'?'🇪🇸 ':h.country?h.country+' ':'';const nm=h.name||'—';const desc=h.desc?' · '+h.desc:'';const nmEsc=nm.replace(/\\/g,'\\\\').replace(/'/g,"\\'");return`<div onclick="tgYsfSelectHost(${h.id},'${nmEsc}')" style="padding:.35rem .6rem;cursor:pointer;border-bottom:1px solid #00ffcc11;display:flex;gap:.8rem;align-items:center;" onmouseover="this.style.background='rgba(0,255,204,.08)'" onmouseout="this.style.background='transparent'"><span style="color:var(--d2y);min-width:52px;">${h.id}</span><span style="color:#80ffe8;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${flag}${esc(nm)}${esc(desc)}</span><span style="color:var(--text-dim);font-size:.6rem;">${h.country}</span></div>`;}).join('');}
+function tgYsfSelectHost(id,name){document.getElementById('tgYsfNewYSF').value=id;document.getElementById('tgYsfNewName').value=name;document.getElementById('tgYsfHostPanel').style.display='none';document.getElementById('tgYsfSearch').value='';document.getElementById('tgYsfNewTG').focus();}
 function tgYsfShowMsg(msg,ok){const el=document.getElementById('tgYsfMsg');el.textContent=(ok?'✔ ':'✖ ')+msg;el.style.display='block';el.style.color=ok?'var(--green)':'var(--red)';el.style.borderColor=ok?'var(--green)':'var(--red)';el.style.background=ok?'rgba(0,255,159,.06)':'rgba(255,69,96,.06)';if(ok)setTimeout(()=>el.style.display='none',3000);}
 
 // ── fedit ──
@@ -677,3 +647,4 @@ function feditClose(){document.getElementById('feditModal').style.display='none'
 </script>
 </body>
 </html>
+ 
