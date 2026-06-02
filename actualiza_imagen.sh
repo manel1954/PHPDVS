@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Configuración de rutas
-REPO_DIR="/home/pi/OPIPHPDVS"
+REPO_DIR="/home/pi/OPIPHPPLUS"
 TARGET_DIR="/home/pi/A108"
 WEB_DIR="/var/www/html"
 BACKUP_FILE="/tmp/password_backup.json"
