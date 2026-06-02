@@ -6,7 +6,7 @@
                         cp /home/pi/MMDVMHost/DMRIds.dat /home/pi/MMDVM_CM/DMR2YSF/DMRIds.dat
                         sudo chmod 777 /home/pi/MMDVMHost/DMRIds.dat
                         echo "*********************************************"
-                        echo "         IDS actualizados correctamenteXXXXXX"
+                        echo "         IDS actualizados correctamente"
                         echo "*********************************************"
                         sleep 3
 
