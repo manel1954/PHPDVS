@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Configuración de rutas
-REPO_DIR="/home/pi/PHPDVS"
+REPO_DIR="/home/pi/OPIPHPDVS"
 TARGET_DIR="/home/pi/A108"
 WEB_DIR="/var/www/html"
 BACKUP_FILE="/tmp/password_backup.json"
@@ -32,7 +32,7 @@ else
 fi
 
 # 4. Preparar directorio temporal (evita corrupción si algo falla a mitad)
-TEMP_DIR=$(mktemp -d /tmp/phpdvs_update.XXXXXX)
+TEMP_DIR=$(mktemp -d /tmp/OPIPHPPLUS_update.XXXXXX)
 # Limpiar temp dir al salir (éxito o fallo)
 trap 'rm -rf "$TEMP_DIR"; echo "🧹 Archivos temporales eliminados."' EXIT
 
