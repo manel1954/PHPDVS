@@ -137,7 +137,7 @@ body {
     <span class="card-number">YSF</span>
     <span class="card-label">YSF2DMR</span>
     <span class="card-subtitle">Cross-mode Bridge</span>
-    <span class="card-icon">⇄</span>
+    <span class="card-icon" style="color:#000">⇄</span>
   </a>
 
   <div class="bridge-card dmr2nxdn">
