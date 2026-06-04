@@ -297,7 +297,8 @@ if ($action === 'dmr2ysf-info') {
 :root{--bg:#032354;--surface:#111720;--border:#1e2d3d;--green:#00ff9f;--red:#ff4560;--amber:#ffb300;--cyan:#00d4ff;--violet:#b57aff;--text:#a8b9cc;--text-dim:#4a5568;--d2y:#00ffcc;--font-mono:'Share Tech Mono',monospace;--font-ui:'Rajdhani',sans-serif;--font-orb:'Orbitron',monospace;}
 *{box-sizing:border-box;}
 body{background:#00004d;color:var(--text);font-family:var(--font-ui);font-size:1rem;min-height:100vh;padding:0;margin:0;}
-.ctrl-header{border-bottom:2px solid var(--d2y);padding:1rem 2rem;display:flex;align-items:center;gap:.8rem;background:#000;}
+.ctrl-header{border-bottom:2px solid var(--d2y);background:#000;}
+.ctrl-header-inner{max-width:1200px;width:100%;margin:0 auto;padding:1rem 2rem;display:flex;align-items:center;gap:.8rem;box-sizing:border-box;}
 .ctrl-body{padding:2rem;max-width:1200px;margin:0 auto;}
 /* Switch */
 .sw{position:relative;width:56px;height:28px;flex-shrink:0;cursor:pointer;}
@@ -371,6 +372,7 @@ body{background:#00004d;color:var(--text);font-family:var(--font-ui);font-size:1
 </head>
 <body>
 <header class="ctrl-header">
+<div class="ctrl-header-inner">
   <a href="mmdvm.php" style="background:#1a2535;color:var(--d2y);border:1px solid rgba(0,255,204,.3);font-family:var(--font-mono);font-size:.75rem;padding:.35rem .9rem;border-radius:4px;text-decoration:none;">← Panel PHPPLUS</a>
   <span style="font-family:var(--font-orb);color:var(--d2y);font-size:1.2rem;letter-spacing:.1em;">DMR2YSF · CROSS-MODE BRIDGE</span>
   <div style="margin-left:auto;display:flex;align-items:center;gap:.8rem;">
@@ -380,6 +382,7 @@ body{background:#00004d;color:var(--text);font-family:var(--font-ui);font-size:1
     </label>
     <span class="toggle-status" id="dmr2ysfToggleStatus">OFF</span>
   </div>
+</div>
 </header>
 
 <div class="ctrl-body">
@@ -644,7 +647,3 @@ function feditClose(){document.getElementById('feditModal').style.display='none'
     setInterval(checkDmr2ysfStatus,10000);
     showDmr2ysfIdle();
 })();
-</script>
-</body>
-</html>
- 
