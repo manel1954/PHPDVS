@@ -45,7 +45,7 @@ body {
     letter-spacing: .06em;
 }
 .page-header span {
-    color: #b06090;
+    color: #ffffff;
     font-size: 1.2rem;
     font-weight: 700;
     letter-spacing: .1em;
