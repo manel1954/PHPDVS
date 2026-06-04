@@ -316,6 +316,9 @@ body{background:#00004d;color:var(--text);font-family:var(--font-ui);font-size:1
 .dot.error{background:var(--red);box-shadow:0 0 8px var(--red);}
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
 .display-grid{display:grid;grid-template-columns:1fr 1fr;gap:1.2rem;margin-bottom:1.5rem;}
+.card{background:var(--surface);border:1px solid #ff990033;border-radius:8px;padding:1.2rem 1.6rem;margin-bottom:1.2rem;}
+.ini-btn{font-family:var(--font-mono);font-size:.72rem;text-transform:uppercase;letter-spacing:.06em;padding:.3rem .7rem;border-radius:3px;border:1px solid rgba(255,153,0,.3);background:transparent;cursor:pointer;text-decoration:none;transition:all .2s;display:inline-flex;align-items:center;gap:.3rem;color:var(--y2d);}
+.ini-btn:hover{border-color:var(--y2d);background:rgba(255,153,0,.08);}
 @media(max-width:900px){.display-grid{grid-template-columns:1fr;}}
 .flag-emoji{font-family:'Apple Color Emoji','Segoe UI Emoji','Noto Color Emoji',sans-serif;font-size:1.6rem;display:inline-block;vertical-align:middle;margin-right:4px;line-height:1;}
 .flag-emoji-img{height:20px;width:auto;vertical-align:middle;margin-right:4px;border-radius:2px;}
@@ -328,8 +331,6 @@ body{background:#00004d;color:var(--text);font-family:var(--font-ui);font-size:1
   <a href="mmdvm.php" style="background:#1a2535;color:var(--y2d);border:1px solid rgba(255,153,0,.3);font-family:var(--font-mono);font-size:.75rem;padding:.35rem .9rem;border-radius:4px;text-decoration:none;">← Panel PHPPLUS</a>
   <span style="font-family:var(--font-orb);color:var(--y2d);font-size:1.2rem;letter-spacing:.1em;">YSF2DMR · CROSS-MODE BRIDGE</span>
   <div style="margin-left:auto;display:flex;align-items:center;gap:.8rem;">
-    <button onclick="openMmdvmYsf2dmrCfg()" style="background:transparent;color:var(--y2d);border:1px solid rgba(255,153,0,.4);font-family:var(--font-mono);font-size:.72rem;text-transform:uppercase;padding:.3rem .8rem;border-radius:4px;cursor:pointer;letter-spacing:.06em;">⚙ MMDVMYSF2DMR.ini</button>
-    <button onclick="openYsf2dmrCfg()" style="background:transparent;color:var(--y2d);border:1px solid rgba(255,153,0,.4);font-family:var(--font-mono);font-size:.72rem;text-transform:uppercase;padding:.3rem .8rem;border-radius:4px;cursor:pointer;letter-spacing:.06em;">⚙ YSF2DMR.ini</button>
     <div class="status-item"><div class="dot" id="dot-ysf2dmr"></div><span style="color:var(--y2d);">ysf2dmr</span></div>
     <label class="sw" id="swYSF2DMR">
       <input type="checkbox" id="chkYSF2DMR" onchange="toggleYSF2DMR(this)">
@@ -340,6 +341,15 @@ body{background:#00004d;color:var(--text);font-family:var(--font-ui);font-size:1
 </header>
 
 <div class="ctrl-body">
+
+  <!-- Configuración -->
+  <div class="card" style="border-color:#ff990033;margin-bottom:1.2rem;">
+    <div style="font-family:var(--font-mono);font-size:.7rem;color:var(--y2d);letter-spacing:.12em;text-transform:uppercase;margin-bottom:.8rem;">▸ Configuración</div>
+    <div style="display:flex;gap:.6rem;flex-wrap:wrap;">
+      <button onclick="openMmdvmYsf2dmrCfg()" class="ini-btn">⚙ MMDVMYSF2DMR CONFIG</button>
+      <button onclick="openYsf2dmrCfg()" class="ini-btn">⚙ YSF2DMR CONFIG</button>
+    </div>
+  </div>
 
   <!-- Display + Last heard -->
   <div class="display-grid">
