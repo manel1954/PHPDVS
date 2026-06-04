@@ -46,7 +46,7 @@ body {
 .page-header span {
     color: #b06090;
     font-size: 1.2rem;
-    font-weight: 70;
+    font-weight: 700;
     letter-spacing: .1em;
     text-transform: uppercase;
 }
@@ -69,7 +69,7 @@ body {
     position: relative;
     overflow: hidden;
     transition: transform .15s, box-shadow .15s;
-    min-height: 120px;
+    min-height: 60px;
 }
 .bridge-card:hover {
     transform: translateY(-3px);
