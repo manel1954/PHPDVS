@@ -98,8 +98,8 @@ body {
     position: absolute;
     right: 1.5rem;
     bottom: 1.2rem;
-    font-size: 4rem;
-    opacity: .2;
+    font-size: 2rem;
+  
     line-height: 1;
 }
 .bridge-card .card-subtitle {
