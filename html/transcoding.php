@@ -70,7 +70,7 @@ body {
     position: relative;
     overflow: hidden;
     transition: transform .15s, box-shadow .15s;
-    height: 120px;
+    height: 220px;
 }
 .bridge-card:hover {
     transform: translateY(-3px);
