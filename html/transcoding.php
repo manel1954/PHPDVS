@@ -99,7 +99,7 @@ body {
     right: 1.5rem;
     bottom: 1.2rem;
     font-size: 2rem;
-  
+    color: #000;
     line-height: 1;
 }
 .bridge-card .card-subtitle {
@@ -130,7 +130,7 @@ body {
     <span class="card-number">DMR</span>
     <span class="card-label">DMR2YSF</span>
     <span class="card-subtitle">Cross-mode Bridge</span>
-    <span class="card-icon">⇄</span>
+    <span class="card-icon" style="color:#000">⇄</span>
   </a>
 
   <a href="ysf2dmr.php" class="bridge-card ysf2dmr">
