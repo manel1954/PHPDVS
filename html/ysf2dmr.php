@@ -114,6 +114,135 @@ if ($action === 'ysf2dmr-transmission') {
     echo json_encode($state);
     exit;
 }
+// ── Config MMDVMYSF2DMR.ini ───────────────────────────────────────────────────
+function parseIni($path) {
+    $r=[]; if(!file_exists($path))return $r; $sec='';
+    foreach(file($path,FILE_IGNORE_NEW_LINES|FILE_SKIP_EMPTY_LINES) as $line){
+        $line=trim($line);
+        if($line===''||$line[0]==='#'||$line[0]===';')continue;
+        if(preg_match('/^\[(.+)\]$/',$line,$m)){$sec=trim($m[1]);continue;}
+        if(preg_match('/^([^=]+)=(.*)$/',$line,$m))$r[$sec][trim($m[1])]=trim($m[2]);
+    }
+    return $r;
+}
+function saveIni($path, $posts, $map) {
+    if(!file_exists($path))return false;
+    $lines=explode("\n",file_get_contents($path));
+    $sec='';
+    foreach($lines as &$line){
+        $t=trim($line);
+        if(preg_match('/^\[(.+)\]$/',$t,$m)){$sec=trim($m[1]);continue;}
+        if(preg_match('/^([^=;#]+)=(.*)$/',$t,$m)){
+            $key=trim($m[1]);
+            if(isset($map[$sec][$key])&&isset($posts[$map[$sec][$key]]))
+                $line=$key.'='.trim($posts[$map[$sec][$key]]);
+        }
+    }
+    unset($line);
+    $nc=implode("\n",$lines);
+    $r=@file_put_contents($path,$nc);
+    if($r===false){$tmp=tempnam('/tmp','ysf_');file_put_contents($tmp,$nc);shell_exec("sudo /bin/cp ".escapeshellarg($tmp)." ".escapeshellarg($path));@unlink($tmp);}
+    return true;
+}
+
+if($action==='mmdvmysf2dmr-config-read'){
+    $p='/home/pi/MMDVMHost/MMDVMYSF2DMR.ini'; $i=parseIni($p);
+    header('Content-Type: application/json');
+    echo json_encode([
+        'ok'=>file_exists($p),
+        'Callsign'       =>$i['General']['Callsign']??'',
+        'Id'             =>$i['General']['Id']??'',
+        'Timeout'        =>$i['General']['Timeout']??'180',
+        'Duplex'         =>$i['General']['Duplex']??'0',
+        'RFModeHang'     =>$i['General']['RFModeHang']??'5',
+        'NetModeHang'    =>$i['General']['NetModeHang']??'3',
+        'RXFrequency'    =>$i['Info']['RXFrequency']??'',
+        'TXFrequency'    =>$i['Info']['TXFrequency']??'',
+        'Latitude'       =>$i['Info']['Latitude']??'',
+        'Longitude'      =>$i['Info']['Longitude']??'',
+        'Location'       =>$i['Info']['Location']??'',
+        'Description'    =>$i['Info']['Description']??'',
+        'URL'            =>$i['Info']['URL']??'',
+        'UARTPort'       =>$i['Modem']['UARTPort']??'',
+        'TXDelay'        =>$i['Modem']['TXDelay']??'100',
+        'RXLevel'        =>$i['Modem']['RXLevel']??'50',
+        'TXLevel'        =>$i['Modem']['TXLevel']??'50',
+        'RXOffset'       =>$i['Modem']['RXOffset']??'0',
+        'TXOffset'       =>$i['Modem']['TXOffset']??'0',
+        'YsfEnable'      =>$i['System Fusion']['Enable']??'1',
+        'YsfTXHang'      =>$i['System Fusion']['TXHang']??'4',
+        'DmrNetEnable'   =>$i['DMR Network']['Enable']??'1',
+        'DmrNetType'     =>$i['DMR Network']['Type']??'Direct',
+        'DmrLocalPort'   =>$i['DMR Network']['LocalPort']??'62042',
+        'DmrRemoteAddr'  =>$i['DMR Network']['RemoteAddress']??'',
+        'DmrRemotePort'  =>$i['DMR Network']['RemotePort']??'62041',
+        'DmrPassword'    =>$i['DMR Network']['Password']??'',
+        'YsfNetLocalPort'=>$i['System Fusion Network']['LocalPort']??'32013',
+        'YsfNetGwAddr'   =>$i['System Fusion Network']['GatewayAddress']??'127.0.0.1',
+        'YsfNetGwPort'   =>$i['System Fusion Network']['GatewayPort']??'42013',
+    ]);
+    exit;
+}
+if($action==='mmdvmysf2dmr-config-save'){
+    $p='/home/pi/MMDVMHost/MMDVMYSF2DMR.ini';
+    $map=[
+        'General'              =>['Callsign'=>'Callsign','Id'=>'Id','Timeout'=>'Timeout','Duplex'=>'Duplex','RFModeHang'=>'RFModeHang','NetModeHang'=>'NetModeHang'],
+        'Info'                 =>['RXFrequency'=>'RXFrequency','TXFrequency'=>'TXFrequency','Latitude'=>'Latitude','Longitude'=>'Longitude','Location'=>'Location','Description'=>'Description','URL'=>'URL'],
+        'Modem'                =>['UARTPort'=>'UARTPort','TXDelay'=>'TXDelay','RXLevel'=>'RXLevel','TXLevel'=>'TXLevel','RXOffset'=>'RXOffset','TXOffset'=>'TXOffset'],
+        'System Fusion'        =>['Enable'=>'YsfEnable','TXHang'=>'YsfTXHang'],
+        'DMR Network'          =>['Enable'=>'DmrNetEnable','Type'=>'DmrNetType','LocalPort'=>'DmrLocalPort','RemoteAddress'=>'DmrRemoteAddr','RemotePort'=>'DmrRemotePort','Password'=>'DmrPassword'],
+        'System Fusion Network'=>['LocalPort'=>'YsfNetLocalPort','GatewayAddress'=>'YsfNetGwAddr','GatewayPort'=>'YsfNetGwPort'],
+    ];
+    $ok=saveIni($p,$_POST,$map);
+    header('Content-Type: application/json');
+    echo json_encode(['ok'=>$ok,'msg'=>$ok?'Guardado correctamente':'Error al guardar']);
+    exit;
+}
+
+// ── Config YSF2DMR.ini ────────────────────────────────────────────────────────
+if($action==='ysf2dmr-config-read'){
+    $p='/home/pi/MMDVM_CM/YSF2DMR/YSF2DMR.ini'; $i=parseIni($p);
+    header('Content-Type: application/json');
+    echo json_encode([
+        'ok'=>file_exists($p),
+        'Callsign'      =>$i['YSF Network']['Callsign']??'',
+        'Suffix'        =>$i['YSF Network']['Suffix']??'ND',
+        'YsfDstAddr'    =>$i['YSF Network']['DstAddress']??'127.0.0.1',
+        'YsfDstPort'    =>$i['YSF Network']['DstPort']??'32013',
+        'YsfLocalPort'  =>$i['YSF Network']['LocalPort']??'42013',
+        'EnableWiresX'  =>$i['YSF Network']['EnableWiresX']??'1',
+        'HangTime'      =>$i['YSF Network']['HangTime']??'1000',
+        'RXFrequency'   =>$i['Info']['RXFrequency']??'',
+        'TXFrequency'   =>$i['Info']['TXFrequency']??'',
+        'Latitude'      =>$i['Info']['Latitude']??'',
+        'Longitude'     =>$i['Info']['Longitude']??'',
+        'Location'      =>$i['Info']['Location']??'',
+        'Description'   =>$i['Info']['Description']??'',
+        'URL'           =>$i['Info']['URL']??'',
+        'DmrId'         =>$i['DMR Network']['Id']??'',
+        'DmrAddress'    =>$i['DMR Network']['Address']??'',
+        'DmrPort'       =>$i['DMR Network']['Port']??'55555',
+        'DmrPassword'   =>$i['DMR Network']['Password']??'',
+        'StartupDstId'  =>$i['DMR Network']['StartupDstId']??'9',
+        'Options'       =>$i['DMR Network']['Options']??'',
+        'TGUnlink'      =>$i['DMR Network']['TGUnlink']??'4000',
+        'EnableUnlink'  =>$i['DMR Network']['EnableUnlink']??'1',
+    ]);
+    exit;
+}
+if($action==='ysf2dmr-config-save'){
+    $p='/home/pi/MMDVM_CM/YSF2DMR/YSF2DMR.ini';
+    $map=[
+        'Info'        =>['RXFrequency'=>'RXFrequency','TXFrequency'=>'TXFrequency','Latitude'=>'Latitude','Longitude'=>'Longitude','Location'=>'Location','Description'=>'Description','URL'=>'URL'],
+        'YSF Network' =>['Callsign'=>'Callsign','Suffix'=>'Suffix','DstAddress'=>'YsfDstAddr','DstPort'=>'YsfDstPort','LocalPort'=>'YsfLocalPort','EnableWiresX'=>'EnableWiresX','HangTime'=>'HangTime'],
+        'DMR Network' =>['Id'=>'DmrId','Address'=>'DmrAddress','Port'=>'DmrPort','Password'=>'DmrPassword','StartupDstId'=>'StartupDstId','Options'=>'Options','TGUnlink'=>'TGUnlink','EnableUnlink'=>'EnableUnlink'],
+    ];
+    $ok=saveIni($p,$_POST,$map);
+    header('Content-Type: application/json');
+    echo json_encode(['ok'=>$ok,'msg'=>$ok?'Guardado correctamente':'Error al guardar']);
+    exit;
+}
+
 ?>
 <!DOCTYPE html>
 <html lang="es">
@@ -199,6 +328,8 @@ body{background:#00004d;color:var(--text);font-family:var(--font-ui);font-size:1
   <a href="mmdvm.php" style="background:#1a2535;color:var(--y2d);border:1px solid rgba(255,153,0,.3);font-family:var(--font-mono);font-size:.75rem;padding:.35rem .9rem;border-radius:4px;text-decoration:none;">← Panel PHPPLUS</a>
   <span style="font-family:var(--font-orb);color:var(--y2d);font-size:1.2rem;letter-spacing:.1em;">YSF2DMR · CROSS-MODE BRIDGE</span>
   <div style="margin-left:auto;display:flex;align-items:center;gap:.8rem;">
+    <button onclick="openMmdvmYsf2dmrCfg()" style="background:transparent;color:var(--y2d);border:1px solid rgba(255,153,0,.4);font-family:var(--font-mono);font-size:.72rem;text-transform:uppercase;padding:.3rem .8rem;border-radius:4px;cursor:pointer;letter-spacing:.06em;">⚙ MMDVMYSF2DMR.ini</button>
+    <button onclick="openYsf2dmrCfg()" style="background:transparent;color:var(--y2d);border:1px solid rgba(255,153,0,.4);font-family:var(--font-mono);font-size:.72rem;text-transform:uppercase;padding:.3rem .8rem;border-radius:4px;cursor:pointer;letter-spacing:.06em;">⚙ YSF2DMR.ini</button>
     <div class="status-item"><div class="dot" id="dot-ysf2dmr"></div><span style="color:var(--y2d);">ysf2dmr</span></div>
     <label class="sw" id="swYSF2DMR">
       <input type="checkbox" id="chkYSF2DMR" onchange="toggleYSF2DMR(this)">
@@ -256,6 +387,61 @@ body{background:#00004d;color:var(--text);font-family:var(--font-ui);font-size:1
   </div>
 
 </div><!-- /ctrl-body -->
+
+
+<!-- Modal MMDVMYSF2DMR.ini -->
+<div id="mmdvmYsfCfgModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:9700;align-items:center;justify-content:center;" onclick="if(event.target===this)closeMmdvmYsf2dmrCfg()">
+<div style="background:var(--surface);border:1px solid #ff990044;border-radius:8px;padding:1.5rem;width:780px;max-width:96vw;max-height:90vh;overflow-y:auto;display:flex;flex-direction:column;gap:.8rem;">
+  <div style="font-family:var(--font-mono);font-size:.8rem;color:var(--y2d);letter-spacing:.12em;text-transform:uppercase;border-bottom:1px solid #ff990033;padding-bottom:.6rem;">⚙ MMDVMYSF2DMR.ini · /home/pi/MMDVMHost/</div>
+  <?php
+  function yf($id,$label){return '<div><label style="font-family:\'Share Tech Mono\',monospace;font-size:.62rem;color:#4a5568;display:block;margin-bottom:.2rem;">'.htmlspecialchars($label).'</label><input id="mmdvmYsf_'.htmlspecialchars($id).'" style="width:100%;background:#060c10;border:1px solid #ff990033;border-radius:3px;color:#ff9900;font-family:\'Share Tech Mono\',monospace;font-size:.8rem;padding:.32rem .55rem;outline:none;" onfocus="this.style.borderColor=\'#ff9900\'" onblur="this.style.borderColor=\'#ff990033\'"></div>';}
+  function ys($label){return '<div style="font-family:\'Share Tech Mono\',monospace;font-size:.62rem;color:#7a4400;letter-spacing:.1em;text-transform:uppercase;margin-top:.5rem;padding-top:.3rem;border-top:1px solid #ff990022;">['.$label.']</div>';}
+  echo ys('General');
+  echo '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:.6rem;">'.yf('Callsign','Callsign').yf('Id','DMR ID').yf('Timeout','Timeout (s)').yf('Duplex','Duplex (0/1)').yf('RFModeHang','RF Mode Hang').yf('NetModeHang','Net Mode Hang').'</div>';
+  echo ys('Info');
+  echo '<div style="display:grid;grid-template-columns:1fr 1fr;gap:.6rem;">'.yf('RXFrequency','RX Frequency (Hz)').yf('TXFrequency','TX Frequency (Hz)').yf('Latitude','Latitude').yf('Longitude','Longitude').yf('Location','Location').yf('Description','Description').'</div>';
+  echo '<div style="display:grid;grid-template-columns:1fr;gap:.6rem;">'.yf('URL','URL').'</div>';
+  echo ys('Modem');
+  echo '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:.6rem;"><div><label style="font-family:\'Share Tech Mono\',monospace;font-size:.62rem;color:#4a5568;display:block;margin-bottom:.2rem;">UARTPort</label><select id="mmdvmYsf_UARTPort" style="width:100%;background:#060c10;border:1px solid #ff990033;border-radius:3px;color:#ff9900;font-family:\'Share Tech Mono\',monospace;font-size:.8rem;padding:.32rem .55rem;outline:none;cursor:pointer;">';
+  foreach(['/dev/ttyAMA0','/dev/ttyACM0','/dev/ttyACM1','/dev/ttyACM2','/dev/ttyUSB0','/dev/ttyUSB1'] as $p) echo "<option value=\"$p\">$p</option>";
+  echo '</select></div>'.yf('TXDelay','TX Delay').yf('RXLevel','RX Level').yf('TXLevel','TX Level').yf('RXOffset','RX Offset').yf('TXOffset','TX Offset').'</div>';
+  echo ys('System Fusion');
+  echo '<div style="display:grid;grid-template-columns:1fr 1fr;gap:.6rem;">'.yf('YsfEnable','Enable (0/1)').yf('YsfTXHang','TX Hang').'</div>';
+  echo ys('DMR Network');
+  echo '<div style="display:grid;grid-template-columns:1fr 1fr;gap:.6rem;"><div><label style="font-family:\'Share Tech Mono\',monospace;font-size:.62rem;color:#4a5568;display:block;margin-bottom:.2rem;">Type</label><select id="mmdvmYsf_DmrNetType" style="width:100%;background:#060c10;border:1px solid #ff990033;border-radius:3px;color:#ff9900;font-family:\'Share Tech Mono\',monospace;font-size:.8rem;padding:.32rem .55rem;outline:none;cursor:pointer;"><option value="Direct">Direct</option><option value="Gateway">Gateway</option></select></div>'.yf('DmrNetEnable','Enable (0/1)').yf('DmrLocalPort','Local Port').yf('DmrRemoteAddr','Remote Address').yf('DmrRemotePort','Remote Port').yf('DmrPassword','Password').'</div>';
+  echo ys('System Fusion Network');
+  echo '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:.6rem;">'.yf('YsfNetLocalPort','Local Port').yf('YsfNetGwAddr','Gateway Address').yf('YsfNetGwPort','Gateway Port').'</div>';
+  ?>
+  <div id="mmdvmYsfCfgMsg" style="display:none;font-family:var(--font-mono);font-size:.75rem;padding:.4rem .8rem;border-radius:4px;border:1px solid;margin-top:.2rem;"></div>
+  <div style="display:flex;gap:.8rem;margin-top:.4rem;">
+    <button onclick="saveMmdvmYsf2dmrCfg()" style="flex:1;background:#ff990022;color:var(--y2d);border:1px solid #ff990055;border-radius:6px;font-family:var(--font-mono);font-size:.8rem;text-transform:uppercase;padding:.6rem;cursor:pointer;">💾 Guardar</button>
+    <button onclick="closeMmdvmYsf2dmrCfg()" style="flex:1;background:transparent;color:var(--text-dim);border:1px solid var(--border);border-radius:6px;font-family:var(--font-mono);font-size:.8rem;text-transform:uppercase;padding:.6rem;cursor:pointer;">✖ Cerrar</button>
+  </div>
+</div>
+</div>
+
+<!-- Modal YSF2DMR.ini -->
+<div id="ysf2dmrCfgModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:9700;align-items:center;justify-content:center;" onclick="if(event.target===this)closeYsf2dmrCfg()">
+<div style="background:var(--surface);border:1px solid #ff990044;border-radius:8px;padding:1.5rem;width:780px;max-width:96vw;max-height:90vh;overflow-y:auto;display:flex;flex-direction:column;gap:.8rem;">
+  <div style="font-family:var(--font-mono);font-size:.8rem;color:var(--y2d);letter-spacing:.12em;text-transform:uppercase;border-bottom:1px solid #ff990033;padding-bottom:.6rem;">⚙ YSF2DMR.ini · /home/pi/MMDVM_CM/YSF2DMR/</div>
+  <?php
+  function yf2($id,$label){return '<div><label style="font-family:\'Share Tech Mono\',monospace;font-size:.62rem;color:#4a5568;display:block;margin-bottom:.2rem;">'.htmlspecialchars($label).'</label><input id="ysf2dmrCfg_'.htmlspecialchars($id).'" style="width:100%;background:#060c10;border:1px solid #ff990033;border-radius:3px;color:#ff9900;font-family:\'Share Tech Mono\',monospace;font-size:.8rem;padding:.32rem .55rem;outline:none;" onfocus="this.style.borderColor=\'#ff9900\'" onblur="this.style.borderColor=\'#ff990033\'"></div>';}
+  echo ys('YSF Network');
+  echo '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:.6rem;">'.yf2('Callsign','Callsign').yf2('Suffix','Suffix').yf2('HangTime','Hang Time (ms)').yf2('YsfDstAddr','Dst Address').yf2('YsfDstPort','Dst Port').yf2('YsfLocalPort','Local Port').yf2('EnableWiresX','Enable WiresX (0/1)').'</div>';
+  echo ys('Info');
+  echo '<div style="display:grid;grid-template-columns:1fr 1fr;gap:.6rem;">'.yf2('RXFrequency','RX Frequency (Hz)').yf2('TXFrequency','TX Frequency (Hz)').yf2('Latitude','Latitude').yf2('Longitude','Longitude').yf2('Location','Location').yf2('Description','Description').'</div>';
+  echo '<div style="display:grid;grid-template-columns:1fr;gap:.6rem;">'.yf2('URL','URL').'</div>';
+  echo ys('DMR Network');
+  echo '<div style="display:grid;grid-template-columns:1fr 1fr;gap:.6rem;">'.yf2('DmrId','DMR ID').yf2('DmrAddress','Address').yf2('DmrPort','Port').yf2('DmrPassword','Password').yf2('StartupDstId','Startup TG').yf2('TGUnlink','TG Unlink').yf2('EnableUnlink','Enable Unlink (0/1)').'</div>';
+  echo '<div style="display:grid;grid-template-columns:1fr;gap:.6rem;">'.yf2('Options','Options').'</div>';
+  ?>
+  <div id="ysf2dmrCfgMsg" style="display:none;font-family:var(--font-mono);font-size:.75rem;padding:.4rem .8rem;border-radius:4px;border:1px solid;margin-top:.2rem;"></div>
+  <div style="display:flex;gap:.8rem;margin-top:.4rem;">
+    <button onclick="saveYsf2dmrCfg()" style="flex:1;background:#ff990022;color:var(--y2d);border:1px solid #ff990055;border-radius:6px;font-family:var(--font-mono);font-size:.8rem;text-transform:uppercase;padding:.6rem;cursor:pointer;">💾 Guardar</button>
+    <button onclick="closeYsf2dmrCfg()" style="flex:1;background:transparent;color:var(--text-dim);border:1px solid var(--border);border-radius:6px;font-family:var(--font-mono);font-size:.8rem;text-transform:uppercase;padding:.6rem;cursor:pointer;">✖ Cerrar</button>
+  </div>
+</div>
+</div>
 
 <script>
 const _winOS=/Windows/i.test(navigator.userAgent);
@@ -336,6 +522,42 @@ function stopYsf2dmrTxPoll(){clearInterval(ysf2dmrTxTimer);ysf2dmrTxTimer=null;}
     setInterval(checkYsf2dmrStatus,10000);
     showYsf2dmrIdle();
 })();
+
+// ── Config MMDVMYSF2DMR.ini ──
+const mmdvmFields=['Callsign','Id','Timeout','Duplex','RFModeHang','NetModeHang','RXFrequency','TXFrequency','Latitude','Longitude','Location','Description','URL','UARTPort','TXDelay','RXLevel','TXLevel','RXOffset','TXOffset','YsfEnable','YsfTXHang','DmrNetEnable','DmrNetType','DmrLocalPort','DmrRemoteAddr','DmrRemotePort','DmrPassword','YsfNetLocalPort','YsfNetGwAddr','YsfNetGwPort'];
+async function openMmdvmYsf2dmrCfg(){
+    const modal=document.getElementById('mmdvmYsfCfgModal');const msg=document.getElementById('mmdvmYsfCfgMsg');msg.style.display='none';modal.style.display='flex';
+    mmdvmFields.forEach(f=>{const el=document.getElementById('mmdvmYsf_'+f);if(el)el.value='';});
+    try{const r=await fetch('?action=mmdvmysf2dmr-config-read');const d=await r.json();
+    mmdvmFields.forEach(f=>{const el=document.getElementById('mmdvmYsf_'+f);if(!el||d[f]===undefined)return;if(el.tagName==='SELECT'){for(const o of el.options)if(o.value===d[f]){o.selected=true;break;}}else el.value=d[f];});
+    }catch(e){cfgMsg('mmdvmYsfCfgMsg','✖ Error al leer',false);}
+}
+function closeMmdvmYsf2dmrCfg(){document.getElementById('mmdvmYsfCfgModal').style.display='none';}
+async function saveMmdvmYsf2dmrCfg(){
+    cfgMsg('mmdvmYsfCfgMsg','⏳ Guardando…','loading');
+    const body=mmdvmFields.map(f=>{const el=document.getElementById('mmdvmYsf_'+f);return el?encodeURIComponent(f)+'='+encodeURIComponent(el.value):'';}).filter(Boolean).join('&');
+    try{const r=await fetch('?action=mmdvmysf2dmr-config-save',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body});const d=await r.json();cfgMsg('mmdvmYsfCfgMsg',(d.ok?'✔ ':'✖ ')+d.msg,d.ok);if(d.ok)setTimeout(()=>document.getElementById('mmdvmYsfCfgMsg').style.display='none',3000);}
+    catch(e){cfgMsg('mmdvmYsfCfgMsg','✖ Error de red',false);}
+}
+
+// ── Config YSF2DMR.ini ──
+const ysfFields=['Callsign','Suffix','YsfDstAddr','YsfDstPort','YsfLocalPort','EnableWiresX','HangTime','RXFrequency','TXFrequency','Latitude','Longitude','Location','Description','URL','DmrId','DmrAddress','DmrPort','DmrPassword','StartupDstId','Options','TGUnlink','EnableUnlink'];
+async function openYsf2dmrCfg(){
+    const modal=document.getElementById('ysf2dmrCfgModal');const msg=document.getElementById('ysf2dmrCfgMsg');msg.style.display='none';modal.style.display='flex';
+    ysfFields.forEach(f=>{const el=document.getElementById('ysf2dmrCfg_'+f);if(el)el.value='';});
+    try{const r=await fetch('?action=ysf2dmr-config-read');const d=await r.json();
+    ysfFields.forEach(f=>{const el=document.getElementById('ysf2dmrCfg_'+f);if(!el||d[f]===undefined)return;el.value=d[f];});
+    }catch(e){cfgMsg('ysf2dmrCfgMsg','✖ Error al leer',false);}
+}
+function closeYsf2dmrCfg(){document.getElementById('ysf2dmrCfgModal').style.display='none';}
+async function saveYsf2dmrCfg(){
+    cfgMsg('ysf2dmrCfgMsg','⏳ Guardando…','loading');
+    const body=ysfFields.map(f=>{const el=document.getElementById('ysf2dmrCfg_'+f);return el?encodeURIComponent(f)+'='+encodeURIComponent(el.value):'';}).filter(Boolean).join('&');
+    try{const r=await fetch('?action=ysf2dmr-config-save',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body});const d=await r.json();cfgMsg('ysf2dmrCfgMsg',(d.ok?'✔ ':'✖ ')+d.msg,d.ok);if(d.ok)setTimeout(()=>document.getElementById('ysf2dmrCfgMsg').style.display='none',3000);}
+    catch(e){cfgMsg('ysf2dmrCfgMsg','✖ Error de red',false);}
+}
+
+function cfgMsg(id,txt,ok){const el=document.getElementById(id);const c=ok==='loading'?'var(--amber)':ok?'var(--green)':'var(--red)';const bg=ok==='loading'?'rgba(255,179,0,.06)':ok?'rgba(0,255,159,.06)':'rgba(255,69,96,.06)';el.style.cssText=`font-family:var(--font-mono);font-size:.75rem;display:block;padding:.4rem .8rem;border-radius:4px;border:1px solid ${c};color:${c};background:${bg};`;el.textContent=txt;}
 </script>
 </body>
 </html>
