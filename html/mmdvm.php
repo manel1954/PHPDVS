@@ -897,8 +897,8 @@ button.btn-header { font-family: var(--font-mono); }
 <div class="dropdown-wrap" id="dropBridge">
   <button class="btn btn-light btn-sm" style="color:#000;border-color:#b06090;" onclick="toggleDropdownBridge(event)">🔗 Bridge ▾</button>
   <div class="dropdown-menu-custom">
-    <a class="dropdown-item-custom" href="mmdvmdmr2ysf.php">🔀 DMR2YSF</a>
-    <a class="dropdown-item-custom" href="ysf2dmr.php">🔀 YSF2DMR</a>
+    <a class="dropdown-item-custom" style="font-size:.75rem;" href="mmdvmdmr2ysf.php">🔗DMR2YSF</a>
+    <a class="dropdown-item-custom" style="font-size:.75rem;" href="ysf2dmr.php">🔗YSF2DMR</a>
   </div>
 </div>
 <button id="btnReboot" class="btn btn-danger btn-sm" onclick="rebootPi()">⏻ Reiniciar Pi</button>
