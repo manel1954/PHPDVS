@@ -237,6 +237,94 @@ if ($action === 'dmr2ysf-transmission') {
     exit;
 }
 
+// ── Acciones YSF2DMR ─────────────────────────────────────────────────────────
+if ($action === 'ysf2dmr-status') {
+    $s = trim(shell_exec('systemctl is-active ysf2dmr 2>/dev/null'));
+    header('Content-Type: application/json');
+    echo json_encode(['ysf2dmr' => $s]);
+    exit;
+}
+if ($action === 'ysf2dmr-start') {
+    saveState('ysf2dmr','on');
+    shell_exec('sudo systemctl enable ysf2dmr 2>/dev/null');
+    shell_exec('sudo systemctl start ysf2dmr 2>/dev/null');
+    header('Content-Type: application/json');
+    echo json_encode(['ok' => true]);
+    exit;
+}
+if ($action === 'ysf2dmr-stop') {
+    saveState('ysf2dmr','off');
+    shell_exec('sudo systemctl stop ysf2dmr 2>/dev/null');
+    shell_exec('sudo systemctl disable ysf2dmr 2>/dev/null');
+    header('Content-Type: application/json');
+    echo json_encode(['ok' => true]);
+    exit;
+}
+if ($action === 'ysf2dmr-logs-mmdvm') {
+    $lines = intval($_GET['lines'] ?? 30);
+    $log = shell_exec("sudo journalctl -u ysf2dmr -n {$lines} --no-pager --output=short 2>/dev/null | grep -i MMDVMHost");
+    if (empty(trim($log))) {
+        $logFiles = glob('/home/pi/MMDVMHost/MMDVMYSF2DMR-*.log');
+        if ($logFiles) { $latest = end($logFiles); $log = shell_exec("tail -n {$lines} ".escapeshellarg($latest)." 2>/dev/null"); }
+    }
+    header('Content-Type: application/json');
+    echo json_encode(['log' => htmlspecialchars($log ?? '')]);
+    exit;
+}
+if ($action === 'ysf2dmr-logs-ysf') {
+    $lines = intval($_GET['lines'] ?? 30);
+    $log = shell_exec("sudo journalctl -u ysf2dmr -n {$lines} --no-pager --output=short 2>/dev/null");
+    if (empty(trim($log))) {
+        $logFiles = glob('/home/pi/MMDVM_CM/YSF2DMR/YSF2DMR-*.log');
+        if ($logFiles) { $latest = end($logFiles); $log = shell_exec("tail -n {$lines} ".escapeshellarg($latest)." 2>/dev/null"); }
+    }
+    header('Content-Type: application/json');
+    echo json_encode(['log' => htmlspecialchars($log ?? '')]);
+    exit;
+}
+if ($action === 'ysf2dmr-transmission') {
+    $stateFile = '/tmp/ysf2dmr_tx_state.json';
+    $lhFile    = '/tmp/ysf2dmr_lastheard.json';
+    $log = shell_exec("sudo journalctl -u ysf2dmr -n 200 --no-pager --output=short 2>/dev/null") ?? '';
+    if (empty(trim($log))) {
+        $logFiles = glob('/home/pi/MMDVM_CM/YSF2DMR/YSF2DMR-*.log');
+        if ($logFiles) { $latest = end($logFiles); $log = shell_exec("tail -n 200 ".escapeshellarg($latest)." 2>/dev/null") ?? ''; }
+    }
+    $lines = array_reverse(explode("\n", $log));
+    $state = ['active'=>false,'callsign'=>'','name'=>'','tg'=>'','source'=>''];
+    if (file_exists($stateFile)) { $saved = json_decode(file_get_contents($stateFile), true); if (is_array($saved)) $state = $saved; }
+    foreach ($lines as $line) {
+        if (preg_match('/end of voice|lost|watchdog|timeout/i', $line)) {
+            $state['active'] = false; file_put_contents($stateFile, json_encode($state)); break;
+        }
+        if (preg_match('/DMR audio.*from\s+([A-Z0-9]+).*TG\s+(\d+)/i', $line, $m)) {
+            $cs=strtoupper(trim($m[1]));$inf=lookupCall($cs);
+            $state=['active'=>true,'callsign'=>$cs,'name'=>$inf['name'],'tg'=>$m[2],'source'=>'DMR'];
+            file_put_contents($stateFile,json_encode($state));break;
+        }
+        if (preg_match('/YSF.*Src:\s+([A-Z0-9]+)/i', $line, $m)) {
+            $cs=strtoupper(trim($m[1]));$inf=lookupCall($cs);
+            $state=['active'=>true,'callsign'=>$cs,'name'=>$inf['name'],'tg'=>'','source'=>'YSF'];
+            file_put_contents($stateFile,json_encode($state));break;
+        }
+    }
+    $lastHeard=[]; $seen=[];
+    foreach ($lines as $line) {
+        $cs=''; $time=''; $tgr=''; $src='YSF';
+        if (preg_match('/(\d{2}:\d{2}:\d{2}).*DMR audio.*from\s+([A-Z0-9]+).*TG\s+(\d+)/i',$line,$m))
+            { $time=$m[1];$cs=strtoupper(trim($m[2]));$tgr=$m[3];$src='DMR'; }
+        elseif (preg_match('/(\d{2}:\d{2}:\d{2}).*YSF.*Src:\s+([A-Z0-9]+)/i',$line,$m))
+            { $time=$m[1];$cs=strtoupper(trim($m[2]));$src='YSF'; }
+        if ($cs && !in_array($cs,$seen)) { $inf=lookupCall($cs);$lastHeard[]=['callsign'=>$cs,'name'=>$inf['name'],'tg'=>$tgr,'source'=>$src,'time'=>$time];$seen[]=$cs;if(count($lastHeard)>=5)break; }
+    }
+    if (!empty($lastHeard)) file_put_contents($lhFile, json_encode($lastHeard));
+    elseif (file_exists($lhFile)) $lastHeard = json_decode(file_get_contents($lhFile), true) ?: [];
+    $state['lastHeard'] = $lastHeard;
+    header('Content-Type: application/json');
+    echo json_encode($state);
+    exit;
+}
+
 // ── Config MMDVMDMR2YSF ───────────────────────────────────────────────────────
 if ($action === 'mmdvmdmr2ysf-config-read') {
     $path = '/home/pi/MMDVMHost/MMDVMDMR2YSF.ini';
@@ -436,6 +524,70 @@ body{background:#00004d;color:var(--text);font-family:var(--font-ui);font-size:1
     <div class="log-panel"><div class="log-panel-header"><span class="svc-name">▸ MMDVMDmr2ysf</span><button class="btn-clear" onclick="clearLog('logMmdvmDmr2ysf')">limpiar</button></div><div class="log-output" id="logMmdvmDmr2ysf">Cargando…</div></div>
   </div>
 
+
+<!-- ══════════════════════════════════════════════════════════════════════════ -->
+<!-- YSF2DMR SECTION                                                           -->
+<!-- ══════════════════════════════════════════════════════════════════════════ -->
+<hr style="border-color:#00ffcc22;margin:2rem 0;">
+
+<!-- Cabecera YSF2DMR + toggle -->
+<div style="display:flex;align-items:center;gap:1rem;margin-bottom:1.2rem;flex-wrap:wrap;">
+  <span style="font-family:var(--font-orb);color:#ff9900;font-size:1.1rem;letter-spacing:.1em;">YSF2DMR · CROSS-MODE BRIDGE</span>
+  <div style="display:flex;align-items:center;gap:.8rem;margin-left:auto;">
+    <div class="status-item"><div class="dot" id="dot-ysf2dmr"></div><span style="color:#ff9900;">ysf2dmr</span></div>
+    <label class="sw" id="swYSF2DMR">
+      <input type="checkbox" id="chkYSF2DMR" onchange="toggleYSF2DMR(this)">
+      <span class="sw-track" style="border-color:#ff4560;"></span><span class="sw-knob" style="background:#ff4560;"></span><span class="sw-busy-dot"></span>
+    </label>
+    <span class="toggle-status" id="ysf2dmrToggleStatus">OFF</span>
+  </div>
+</div>
+
+<!-- Display + Last heard -->
+<div class="display-grid" style="margin-bottom:1.5rem;">
+  <div>
+    <div style="font-family:var(--font-mono);font-size:.7rem;color:#ff9900;letter-spacing:.15em;text-transform:uppercase;margin-bottom:.5rem;">▸ YSF2DMR Display</div>
+    <div class="nextion-dmr2ysf" style="border-color:#ff990044;box-shadow:0 0 30px rgba(255,153,0,.1);">
+      <div class="nx-topbar dmr2ysf-bar" style="background:#1a0f00;border-bottom-color:#ff990033;">
+        <span class="nx-mode" style="color:#ff9900;">YSF2DMR · BRIDGE</span>
+        <span style="color:#ff9900;opacity:.85;min-width:5rem;text-align:right;font-size:.6rem;" id="ysf2dmrTGLabel">—</span>
+      </div>
+      <div class="nx-infobar-dmr2ysf" style="border-bottom-color:#ff990022;">
+        <span class="nx-info-item"><span class="nx-info-lbl">SERV</span><span class="nx-info-val" style="color:#ff9900;" id="ysf2dmrSvc">ysf2dmr</span></span>
+      </div>
+      <div class="nx-vu" id="ysf2dmrVuLeft"></div><div class="nx-vu right" id="ysf2dmrVuRight"></div>
+      <div class="nx-center" id="ysf2dmrNxCenter">
+        <div class="nx-clock" id="ysf2dmrNxClock" style="color:#ff9900;">00:00:00</div>
+        <div class="nx-date" id="ysf2dmrNxDate" style="color:#7a4400;">—</div>
+      </div>
+      <div class="nx-txbar" id="ysf2dmrTxBar"></div>
+      <div class="nx-botbar dmr2ysf-bar" style="background:#0d0600;border-top-color:#ff990033;">
+        <span style="color:#7a4400;font-family:var(--font-mono);font-size:.65rem;">YSF2DMR · CROSS-MODE</span>
+        <span class="nx-source" id="ysf2dmrSource"></span>
+      </div>
+    </div>
+  </div>
+  <div>
+    <div style="font-family:var(--font-mono);font-size:.7rem;color:#ff9900;letter-spacing:.15em;text-transform:uppercase;margin-bottom:.5rem;">▸ Últimos escuchados</div>
+    <div class="lh-panel-dmr2ysf" style="border-color:#ff990033;">
+      <div class="lh-header-dmr2ysf" style="background:#1a0f00;border-bottom-color:#ff990033;"><span>Indicativo</span><span>Nombre</span><span>TG</span><span>Hora</span><span>Src</span></div>
+      <div id="ysf2dmrLhBody" style="flex:1;overflow-y:auto;"><div style="padding:1.5rem 1rem;font-family:var(--font-mono);font-size:.72rem;color:var(--text-dim);text-align:center;">Sin actividad</div></div>
+    </div>
+  </div>
+</div>
+
+<!-- Logs YSF2DMR -->
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:1.5rem;">
+  <div class="log-panel">
+    <div class="log-panel-header"><span class="svc-name" style="color:#ff9900;">▸ MMDVMHost/MMDVMYSF2DMR</span><button class="btn-clear" onclick="clearLog('logYsf2dmrMmdvm')">limpiar</button></div>
+    <div class="log-output" id="logYsf2dmrMmdvm">—</div>
+  </div>
+  <div class="log-panel">
+    <div class="log-panel-header"><span class="svc-name" style="color:#ff9900;">▸ MMDVM_CM/YSF2DMR</span><button class="btn-clear" onclick="clearLog('logYsf2dmrYsf')">limpiar</button></div>
+    <div class="log-output" id="logYsf2dmrYsf">—</div>
+  </div>
+</div>
+
 </div><!-- /ctrl-body -->
 
 <!-- Modal Config MMDVMDMR2YSF -->
@@ -495,156 +647,3 @@ body{background:#00004d;color:var(--text);font-family:var(--font-ui);font-size:1
     </div>
   </div>
   <div id="tgYsfHostPanel" style="display:none;background:#060c10;border:1px solid #00ffcc33;border-radius:4px;padding:.8rem;">
-    <div style="display:flex;gap:.5rem;margin-bottom:.6rem;">
-      <input type="text" id="tgYsfSearch" placeholder="🔍 Buscar reflector…" oninput="tgYsfFilterHosts(this.value)" style="flex:1;background:var(--surface);border:1px solid #00ffcc44;border-radius:4px;color:var(--d2y);font-family:var(--font-mono);font-size:.78rem;padding:.38rem .6rem;outline:none;">
-      <button onclick="tgYsfToggleHosts()" style="background:transparent;border:1px solid #ff456044;color:var(--red);border-radius:4px;font-family:var(--font-mono);font-size:.7rem;padding:.35rem .6rem;cursor:pointer;">✖</button>
-    </div>
-    <div id="tgYsfHostList" style="max-height:200px;overflow-y:auto;font-family:var(--font-mono);font-size:.72rem;"></div>
-    <div style="font-family:var(--font-mono);font-size:.6rem;color:var(--text-dim);margin-top:.4rem;">↑ Haz clic para rellenar YSF ID y Nombre</div>
-  </div>
-  <div id="tgYsfMsg" style="display:none;font-family:var(--font-mono);font-size:.75rem;padding:.4rem .8rem;border-radius:4px;border:1px solid;"></div>
-  <div style="display:flex;gap:.8rem;">
-    <button onclick="tgYsfSave()" style="flex:1;background:#00cc99;color:#000;border:none;border-radius:6px;font-family:var(--font-mono);font-size:.8rem;text-transform:uppercase;padding:.6rem;cursor:pointer;">💾 Guardar</button>
-    <button onclick="closeTgYsfModal()" style="flex:1;background:transparent;color:var(--text-dim);border:1px solid var(--border);border-radius:6px;font-family:var(--font-mono);font-size:.8rem;text-transform:uppercase;padding:.6rem;cursor:pointer;">✖ Cerrar</button>
-  </div>
-</div>
-</div>
-
-<!-- Modal Editor Ficheros -->
-<div id="feditModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:9700;align-items:center;justify-content:center;" onclick="if(event.target===this)feditClose()">
-<div style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:1.5rem;width:900px;max-width:96vw;display:flex;flex-direction:column;gap:.8rem;">
-  <div style="font-family:var(--font-mono);font-size:.8rem;color:var(--cyan);letter-spacing:.12em;text-transform:uppercase;">📝 Editor de fichero</div>
-  <div style="font-family:var(--font-mono);font-size:.72rem;color:var(--amber);" id="feditPath">—</div>
-  <textarea id="feditArea" spellcheck="false" style="font-family:var(--font-mono);font-size:.78rem;color:#c9d1d9;background:#060c10;border:1px solid var(--border);border-radius:4px;padding:.8rem;height:420px;resize:vertical;outline:none;line-height:1.5;width:100%;tab-size:4;"></textarea>
-  <div id="feditMsg" style="display:none;font-family:var(--font-mono);font-size:.75rem;padding:.4rem .8rem;border-radius:4px;border:1px solid;"></div>
-  <div style="display:flex;gap:.8rem;">
-    <button onclick="feditSave()" style="flex:1;background:#28a745;color:#fff;border:none;border-radius:6px;font-family:var(--font-mono);font-size:.8rem;text-transform:uppercase;padding:.6rem;cursor:pointer;">💾 Guardar</button>
-    <button onclick="feditClose()" style="flex:1;background:transparent;color:var(--text-dim);border:1px solid var(--border);border-radius:6px;font-family:var(--font-mono);font-size:.8rem;text-transform:uppercase;padding:.6rem;cursor:pointer;">✖ Cerrar</button>
-  </div>
-</div>
-</div>
-
-<script>
-const _winOS=/Windows/i.test(navigator.userAgent);
-const _TBASE='https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/72x72/';
-const _FLAGS=[
-    {re:/^E[ABCDEFGH][1-9]/,e:'🇪🇸',t:'1f1ea-1f1f8'},
-    {re:/^C[TUQ]/,e:'🇵🇹',t:'1f1f5-1f1f9'},
-    {re:/^F[A-Z]/,e:'🇫🇷',t:'1f1eb-1f1f7'},
-    {re:/^D[A-R]|^Y[2-9]/,e:'🇩🇪',t:'1f1e9-1f1ea'},
-    {re:/^[KWN][0-9]|^AA|^AB|^AC/,e:'🇺🇸',t:'1f1fa-1f1f8'},
-];
-function getFlagByCall(cs){if(!cs)return'';cs=cs.toUpperCase();for(const p of _FLAGS){if(p.re.test(cs)){if(_winOS)return'<img class="flag-emoji-img" src="'+_TBASE+p.t+'.png" alt="">';return'<span class="flag-emoji">'+p.e+'</span>';}}return'';}
-function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
-function colorize(text){return(text||'').split('\n').map(l=>{const ll=l.toLowerCase();if(/error|fail|abort/.test(ll))return`<span class="ln-err">${l}</span>`;if(/warn/.test(ll))return`<span class="ln-warn">${l}</span>`;if(/connect|start|open|loaded|success/.test(ll))return`<span class="ln-ok">${l}</span>`;return`<span class="ln-info">${l}</span>`;}).join('\n');}
-function clearLog(id){document.getElementById(id).innerHTML='';}
-function setDot(id,state){const el=document.getElementById(id);if(el)el.className='dot'+(state==='active'?' active':state==='error'?' error':'');}
-
-// ── VU Meters ──
-let dmr2ysfVuTimerAnim=null;
-function buildDmr2ysfVU(){['dmr2ysfVuLeft','dmr2ysfVuRight'].forEach(id=>{const el=document.getElementById(id);for(let i=0;i<18;i++){const d=document.createElement('div');d.className='nx-vu-bar';d.id=`${id}-${i}`;el.appendChild(d);}});}
-buildDmr2ysfVU();
-function animateDmr2ysfVU(on){clearInterval(dmr2ysfVuTimerAnim);['dmr2ysfVuLeft','dmr2ysfVuRight'].forEach(id=>{for(let i=0;i<18;i++)document.getElementById(`${id}-${i}`).className='nx-vu-bar';});if(!on)return;dmr2ysfVuTimerAnim=setInterval(()=>{['dmr2ysfVuLeft','dmr2ysfVuRight'].forEach(id=>{const lvl=Math.floor(Math.random()*16)+1;for(let i=0;i<18;i++){let cls='nx-vu-bar';if(i<lvl)cls+=i<10?' lit-g':i<14?' lit-a':' lit-r';document.getElementById(`${id}-${i}`).className=cls;}});},80);}
-
-// ── Clock ──
-let dmr2ysfCurrentlyActive=false,dmr2ysfLastActiveTs=0;
-const DMR2YSF_IDLE_TIMEOUT=12000;
-function updateDmr2ysfClock(){if(!dmr2ysfCurrentlyActive){const now=new Date();const clk=document.getElementById('dmr2ysfNxClock');if(clk){clk.textContent=now.toLocaleTimeString('es-ES');document.getElementById('dmr2ysfNxDate').textContent=now.toLocaleDateString('es-ES',{weekday:'short',day:'2-digit',month:'short',year:'numeric'}).toUpperCase();}}}
-setInterval(updateDmr2ysfClock,1000);updateDmr2ysfClock();
-
-// ── Display ──
-function showDmr2ysfIdle(){dmr2ysfCurrentlyActive=false;animateDmr2ysfVU(false);document.getElementById('dmr2ysfTxBar').className='nx-txbar';document.getElementById('dmr2ysfTGLabel').textContent='—';document.getElementById('dmr2ysfSource').textContent='';document.getElementById('dmr2ysfSource').className='nx-source';document.getElementById('dmr2ysfNxCenter').innerHTML='<div class="nx-clock" id="dmr2ysfNxClock" style="color:#00ffcc;">00:00:00</div><div class="nx-date" id="dmr2ysfNxDate" style="color:#007060;">—</div>';updateDmr2ysfClock();}
-function showDmr2ysfActive(d){dmr2ysfCurrentlyActive=true;animateDmr2ysfVU(true);document.getElementById('dmr2ysfTxBar').className='nx-txbar active-dmr2ysf';document.getElementById('dmr2ysfTGLabel').textContent=d.tg?'TG '+d.tg:'—';const src=document.getElementById('dmr2ysfSource');const isYsf=d.source==='YSF';src.textContent=isYsf?'YSF':'DMR';src.className='nx-source '+(isYsf?'net':'rf');const flag=getFlagByCall(d.callsign);document.getElementById('dmr2ysfNxCenter').innerHTML=`<div class="nx-callsign">${flag} ${esc(d.callsign)}</div>`+(d.name?`<div class="nx-name">${esc(d.name)}</div>`:'');}
-
-function renderDmr2ysfLastHeard(list,activeCall){const body=document.getElementById('dmr2ysfLhBody');if(!list||!list.length){body.innerHTML='<div style="padding:1.5rem 1rem;font-family:var(--font-mono);font-size:.72rem;color:var(--text-dim);text-align:center;">Sin actividad</div>';return;}body.innerHTML=list.map(r=>{const isActive=activeCall&&r.callsign===activeCall;const dot=isActive?'<span class="lh-tx-dot-dmr2ysf"></span>':'';const flag=getFlagByCall(r.callsign);return`<div class="lh-row-dmr2ysf${isActive?' lh-active':''}"><div style="display:flex;align-items:center;gap:.35rem;">${dot}<span class="lh-call-dmr2ysf">${flag} ${esc(r.callsign)}</span></div><span style="font-family:var(--font-mono);font-size:.82rem;color:var(--text);">${esc(r.name||'—')}</span><span style="font-family:var(--font-mono);font-size:.72rem;color:#00ffcc;">${esc(r.tg||'—')}</span><span style="font-family:var(--font-mono);font-size:.68rem;color:var(--text-dim);">${esc(r.time||'—')}</span><span style="font-family:var(--font-mono);font-size:.6rem;" class="nx-source rf">DMR</span></div>`;}).join('');}
-
-// ── Status / Toggle ──
-let dmr2ysfRunning=false,dmr2ysfTimer=null,dmr2ysfTxTimer=null;
-
-function setDMR2YSFToggle(on){
-    const chk=document.getElementById('chkDMR2YSF'),sta=document.getElementById('dmr2ysfToggleStatus');
-    chk.checked=on;sta.className='toggle-status'+(on?' on':'');sta.textContent=on?'ON':'OFF';
-    const track=document.querySelector('#swDMR2YSF .sw-track');
-    const knob=document.querySelector('#swDMR2YSF .sw-knob');
-    if(track)track.style.borderColor=on?'#00ff4c':'#ff4560';
-    if(knob){knob.style.background=on?'#00ff4c':'#ff4560';knob.style.transform=on?'translateX(28px)':'translateX(0)';}
-}
-
-async function checkDmr2ysfStatus(){try{const r=await fetch('?action=dmr2ysf-status');const d=await r.json();const active=d.dmr2ysf==='active';setDot('dot-dmr2ysf-mmd',d.s1==='active'?'active':'off');setDot('dot-dmr2ysf-ysf',d.s2==='active'?'active':'off');setDot('dot-dmr2ysf',d.s3==='active'?'active':'off');dmr2ysfRunning=active;setDMR2YSFToggle(active);if(active){startDmr2ysfLogs();startDmr2ysfTxPoll();}}catch(e){}}
-
-async function toggleDMR2YSF(chk){
-    const wasOn=!chk.checked;const sw=document.getElementById('swDMR2YSF');chk.checked=wasOn;sw.classList.add('busy');
-    try{
-        await fetch(wasOn?'?action=dmr2ysf-stop':'?action=dmr2ysf-start');
-        let ok=false;
-        for(let i=0;i<15;i++){
-            await new Promise(r=>setTimeout(r,1000));
-            const r=await fetch('?action=dmr2ysf-status');const d=await r.json();const isOn=d.dmr2ysf==='active';
-            if(wasOn&&!isOn){ok=true;setDot('dot-dmr2ysf-mmd','off');setDot('dot-dmr2ysf-ysf','off');setDot('dot-dmr2ysf','off');dmr2ysfRunning=false;setDMR2YSFToggle(false);stopDmr2ysfLogs();stopDmr2ysfTxPoll();showDmr2ysfIdle();clearLog('logDmr2ysf');clearLog('logYsfGwDmr2ysf');clearLog('logMmdvmDmr2ysf');break;}
-            if(!wasOn&&isOn){ok=true;setDot('dot-dmr2ysf-mmd',d.s1==='active'?'active':'off');setDot('dot-dmr2ysf-ysf',d.s2==='active'?'active':'off');setDot('dot-dmr2ysf',d.s3==='active'?'active':'off');dmr2ysfRunning=true;setDMR2YSFToggle(true);startDmr2ysfLogs();startDmr2ysfTxPoll();break;}
-        }
-        if(!ok)await checkDmr2ysfStatus();
-    }catch(e){}finally{sw.classList.remove('busy');}
-}
-
-async function fetchDmr2ysfLogs(){
-    try{const r=await fetch('?action=dmr2ysf-logs&lines=30');const d=await r.json();const el=document.getElementById('logDmr2ysf');const atBot=el.scrollHeight-el.clientHeight<=el.scrollTop+10;el.innerHTML=colorize(d.dmr2ysf);if(atBot)el.scrollTop=el.scrollHeight;}catch(e){}
-    try{const r2=await fetch('?action=ysfgw-dmr2ysf-logs&lines=30');const d2=await r2.json();const el2=document.getElementById('logYsfGwDmr2ysf');const atBot2=el2.scrollHeight-el2.clientHeight<=el2.scrollTop+10;el2.innerHTML=colorize(d2.ysfgwdmr2ysf);if(atBot2)el2.scrollTop=el2.scrollHeight;}catch(e){}
-    try{const r3=await fetch('?action=mmdvmdmr2ysf-logs&lines=30');const d3=await r3.json();const el3=document.getElementById('logMmdvmDmr2ysf');const atBot3=el3.scrollHeight-el3.clientHeight<=el3.scrollTop+10;el3.innerHTML=colorize(d3.mmdvmdmr2ysf);if(atBot3)el3.scrollTop=el3.scrollHeight;}catch(e){}
-}
-async function fetchDmr2ysfTransmission(){try{const r=await fetch('?action=dmr2ysf-transmission');const d=await r.json();if(d.active){dmr2ysfLastActiveTs=Date.now();showDmr2ysfActive(d);}else{if(dmr2ysfCurrentlyActive)showDmr2ysfIdle();}renderDmr2ysfLastHeard(d.lastHeard||[],d.active?d.callsign:null);}catch(e){if(dmr2ysfCurrentlyActive&&(Date.now()-dmr2ysfLastActiveTs)>DMR2YSF_IDLE_TIMEOUT)showDmr2ysfIdle();}}
-function startDmr2ysfLogs(){fetchDmr2ysfLogs();dmr2ysfTimer=setInterval(fetchDmr2ysfLogs,5000);}
-function stopDmr2ysfLogs(){clearInterval(dmr2ysfTimer);dmr2ysfTimer=null;}
-function startDmr2ysfTxPoll(){fetchDmr2ysfTransmission();dmr2ysfTxTimer=setInterval(fetchDmr2ysfTransmission,1500);}
-function stopDmr2ysfTxPoll(){clearInterval(dmr2ysfTxTimer);dmr2ysfTxTimer=null;}
-
-// ── Info display ──
-async function loadDmr2ysfInfo(){try{const r=await fetch('?action=dmr2ysf-info');const d=await r.json();document.getElementById('dmr2ysfDmrId').textContent=d.dmrId||'—';document.getElementById('dmr2ysfGw').textContent=d.gw||'—';document.getElementById('dmr2ysfDefTG').textContent=d.defTG||'—';document.getElementById('dmr2ysfYsfGw').textContent='YSF: '+(d.ysfGw||'—');}catch(e){}}
-
-// ── Modal Config MMDVMDMR2YSF ──
-const d2cfgFields=['Callsign','Id','Timeout','Duplex','RXFrequency','TXFrequency','DmrEnable','DmrType','DmrLocalAddr','DmrLocalPort','DmrRemoteAddr','DmrRemotePort','DmrPassword','DmrJitter','UARTPort'];
-async function openMmdvmDmr2ysfCfg(){
-    const modal=document.getElementById('mmdvmD2yCfgModal');const msg=document.getElementById('d2cfgMsg');msg.style.display='none';modal.style.display='flex';
-    d2cfgFields.forEach(f=>{const el=document.getElementById('d2cfg_'+f);if(el)el.value='';});
-    try{const r=await fetch('?action=mmdvmdmr2ysf-config-read');const d=await r.json();d2cfgFields.forEach(f=>{const el=document.getElementById('d2cfg_'+f);if(!el||d[f]===undefined)return;if(el.tagName==='SELECT'){let found=false;for(const opt of el.options){if(opt.value===d[f]){opt.selected=true;found=true;break;}}if(!found){const opt=document.createElement('option');opt.value=d[f];opt.textContent=d[f];el.appendChild(opt);opt.selected=true;}}else el.value=d[f];});}catch(e){msg.style.cssText='font-family:var(--font-mono);font-size:.75rem;display:block;padding:.4rem .8rem;border-radius:4px;border:1px solid var(--red);color:var(--red);background:rgba(255,69,96,.06);';msg.textContent='✖ Error al leer el fichero';}
-}
-function closeMmdvmDmr2ysfCfg(){document.getElementById('mmdvmD2yCfgModal').style.display='none';}
-async function saveMmdvmDmr2ysfCfg(){
-    const msg=document.getElementById('d2cfgMsg');msg.style.cssText='font-family:var(--font-mono);font-size:.75rem;display:block;padding:.4rem .8rem;border-radius:4px;border:1px solid var(--amber);color:var(--amber);background:rgba(255,179,0,.06);';msg.textContent='⏳ Guardando…';
-    const body=d2cfgFields.map(f=>{const el=document.getElementById('d2cfg_'+f);return el?encodeURIComponent(f)+'='+encodeURIComponent(el.value):'';}).filter(Boolean).join('&');
-    try{const r=await fetch('?action=mmdvmdmr2ysf-config-save',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body});const d=await r.json();if(d.ok){msg.style.cssText='font-family:var(--font-mono);font-size:.75rem;display:block;padding:.4rem .8rem;border-radius:4px;border:1px solid #00ffcc;color:#00ffcc;background:rgba(0,255,204,.06);';msg.textContent='✔ Guardado correctamente';setTimeout(()=>msg.style.display='none',3000);}else{msg.style.cssText='font-family:var(--font-mono);font-size:.75rem;display:block;padding:.4rem .8rem;border-radius:4px;border:1px solid var(--red);color:var(--red);background:rgba(255,69,96,.06);';msg.textContent='✖ '+(d.msg||'Error');}}catch(e){msg.style.cssText='font-family:var(--font-mono);font-size:.75rem;display:block;padding:.4rem .8rem;border-radius:4px;border:1px solid var(--red);color:var(--red);background:rgba(255,69,96,.06);';msg.textContent='✖ Error de red';}
-}
-
-// ── Modal TG-YSF ──
-let _tgYsfEntries=[],_tgYsfHosts=[],_tgYsfHostsLoaded=false;
-function openTgYsfModal(){document.getElementById('tgYsfModal').style.display='flex';document.getElementById('tgYsfMsg').style.display='none';document.getElementById('tgYsfHostPanel').style.display='none';tgYsfLoad();}
-function closeTgYsfModal(){document.getElementById('tgYsfModal').style.display='none';}
-async function tgYsfLoad(){try{const r=await fetch('?action=tgysf-read');const d=await r.json();_tgYsfEntries=d.entries||[];tgYsfRender();}catch(e){}}
-function tgYsfRender(){const c=document.getElementById('tgYsfRows');if(!_tgYsfEntries.length){c.innerHTML='<div style="padding:1rem;font-family:var(--font-mono);font-size:.72rem;color:var(--text-dim);text-align:center;">Sin entradas</div>';return;}c.innerHTML=_tgYsfEntries.map((e,i)=>`<div style="display:grid;grid-template-columns:90px 110px 1fr 36px;padding:.38rem .8rem;border-bottom:1px solid #00ffcc11;align-items:center;gap:.5rem;"><span style="font-family:var(--font-mono);font-size:.82rem;color:var(--d2y);">${esc(e.tg)}</span><span style="font-family:var(--font-mono);font-size:.82rem;color:#80ffe8;">${esc(e.ysf)}</span><input type="text" value="${esc(e.name||'')}" placeholder="—" onchange="_tgYsfEntries[${i}].name=this.value" style="background:transparent;border:none;border-bottom:1px solid #00ffcc22;color:#a8b9cc;font-family:var(--font-mono);font-size:.78rem;padding:.15rem .2rem;outline:none;width:100%;"><button onclick="tgYsfRemove(${i})" style="background:transparent;border:1px solid #ff456044;border-radius:3px;color:#ff4560;font-size:.7rem;cursor:pointer;padding:.15rem .3rem;">✖</button></div>`).join('');}
-function tgYsfAdd(){const tg=document.getElementById('tgYsfNewTG').value.trim();const ysf=document.getElementById('tgYsfNewYSF').value.trim();const name=document.getElementById('tgYsfNewName').value.trim();if(!tg||!ysf||isNaN(tg)||isNaN(ysf)){tgYsfShowMsg('Introduce valores numéricos válidos',false);return;}if(_tgYsfEntries.some(e=>e.tg===tg)){tgYsfShowMsg('El TG '+tg+' ya existe',false);return;}_tgYsfEntries.push({tg,ysf,name});document.getElementById('tgYsfNewTG').value='';document.getElementById('tgYsfNewYSF').value='';document.getElementById('tgYsfNewName').value='';tgYsfRender();}
-function tgYsfRemove(i){_tgYsfEntries.splice(i,1);tgYsfRender();}
-async function tgYsfSave(){try{const r=await fetch('?action=tgysf-save',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({entries:_tgYsfEntries})});const d=await r.json();tgYsfShowMsg(d.msg,d.ok);}catch(e){tgYsfShowMsg('Error de red',false);}}
-async function tgYsfToggleHosts(){const p=document.getElementById('tgYsfHostPanel');const v=p.style.display!=='none';p.style.display=v?'none':'block';if(!v&&!_tgYsfHostsLoaded)await tgYsfLoadHosts();}
-async function tgYsfLoadHosts(){document.getElementById('tgYsfHostList').innerHTML='<div style="color:var(--text-dim);text-align:center;padding:.5rem;">Cargando…</div>';try{const r=await fetch('?action=tgysf-hosts');const d=await r.json();_tgYsfHosts=d.hosts||[];_tgYsfHostsLoaded=true;tgYsfRenderHosts(_tgYsfHosts);}catch(e){document.getElementById('tgYsfHostList').innerHTML='<div style="color:var(--red);text-align:center;padding:.5rem;">Error</div>';}}
-function tgYsfFilterHosts(q){const term=q.trim().toLowerCase();tgYsfRenderHosts(term===''?_tgYsfHosts:_tgYsfHosts.filter(h=>String(h.id).includes(term)||h.name.toLowerCase().includes(term)||h.desc.toLowerCase().includes(term)||h.country.toLowerCase().includes(term)));}
-function tgYsfRenderHosts(list){const el=document.getElementById('tgYsfHostList');if(!list.length){el.innerHTML='<div style="color:var(--text-dim);text-align:center;padding:.5rem;">Sin resultados</div>';return;}el.innerHTML=list.map(h=>{const flag=h.country==='ES'?'🇪🇸 ':h.country?h.country+' ':'';const nm=h.name||'—';const desc=h.desc?' · '+h.desc:'';const nmEsc=nm.replace(/\\/g,'\\\\').replace(/'/g,"\\'");return`<div onclick="tgYsfSelectHost(${h.id},'${nmEsc}')" style="padding:.35rem .6rem;cursor:pointer;border-bottom:1px solid #00ffcc11;display:flex;gap:.8rem;align-items:center;" onmouseover="this.style.background='rgba(0,255,204,.08)'" onmouseout="this.style.background='transparent'"><span style="color:var(--d2y);min-width:52px;">${h.id}</span><span style="color:#80ffe8;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${flag}${esc(nm)}${esc(desc)}</span><span style="color:var(--text-dim);font-size:.6rem;">${h.country}</span></div>`;}).join('');}
-function tgYsfSelectHost(id,name){document.getElementById('tgYsfNewYSF').value=id;document.getElementById('tgYsfNewName').value=name;document.getElementById('tgYsfHostPanel').style.display='none';document.getElementById('tgYsfSearch').value='';document.getElementById('tgYsfNewTG').focus();}
-function tgYsfShowMsg(msg,ok){const el=document.getElementById('tgYsfMsg');el.textContent=(ok?'✔ ':'✖ ')+msg;el.style.display='block';el.style.color=ok?'var(--green)':'var(--red)';el.style.borderColor=ok?'var(--green)':'var(--red)';el.style.background=ok?'rgba(0,255,159,.06)':'rgba(255,69,96,.06)';if(ok)setTimeout(()=>el.style.display='none',3000);}
-
-// ── fedit ──
-async function feditOpen(path){const msg=document.getElementById('feditMsg');msg.style.display='none';document.getElementById('feditPath').textContent=path;document.getElementById('feditArea').value='Cargando…';document.getElementById('feditModal').style.display='flex';try{const r=await fetch('mmdvm.php?action=read-file',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:'path='+encodeURIComponent(path)});const d=await r.json();if(d.ok){document.getElementById('feditArea').value=d.content;}else{document.getElementById('feditArea').value='';msg.style.cssText='font-family:var(--font-mono);font-size:.75rem;display:block;padding:.4rem .8rem;border-radius:4px;border:1px solid var(--red);color:var(--red);background:rgba(255,69,96,.06);';msg.textContent='✖ '+d.msg;}}catch(e){msg.style.cssText='font-family:var(--font-mono);font-size:.75rem;display:block;padding:.4rem .8rem;border-radius:4px;border:1px solid var(--red);color:var(--red);background:rgba(255,69,96,.06);';msg.textContent='✖ Error: '+e.message;}}
-async function feditSave(){const path=document.getElementById('feditPath').textContent;const content=document.getElementById('feditArea').value;const msg=document.getElementById('feditMsg');try{const r=await fetch('mmdvm.php?action=save-file',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:'path='+encodeURIComponent(path)+'&content='+encodeURIComponent(content)});const d=await r.json();msg.style.cssText='font-family:var(--font-mono);font-size:.75rem;display:block;padding:.4rem .8rem;border-radius:4px;border:1px solid '+(d.ok?'var(--green)':'var(--red)')+';color:'+(d.ok?'var(--green)':'var(--red)')+';background:'+(d.ok?'rgba(0,255,159,.06)':'rgba(255,69,96,.06)')+';';msg.textContent=(d.ok?'✔ ':'✖ ')+d.msg;if(d.ok)setTimeout(()=>msg.style.display='none',3000);}catch(e){msg.style.cssText='font-family:var(--font-mono);font-size:.75rem;display:block;padding:.4rem .8rem;border-radius:4px;border:1px solid var(--red);color:var(--red);background:rgba(255,69,96,.06);';msg.textContent='✖ Error: '+e.message;}}
-function feditClose(){document.getElementById('feditModal').style.display='none';}
-
-// ── Init ──
-(async()=>{
-    await loadDmr2ysfInfo();
-    setInterval(loadDmr2ysfInfo,60000);
-    await checkDmr2ysfStatus();
-    setInterval(checkDmr2ysfStatus,10000);
-    showDmr2ysfIdle();
-})();
-</script>
-</body>
-</html>
- 
