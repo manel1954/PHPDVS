@@ -276,8 +276,9 @@ if($action==='ysf2dmr-config-save'){
 <style>
 :root{--bg:#032354;--surface:#111720;--border:#1e2d3d;--green:#00ff9f;--red:#ff4560;--amber:#ffb300;--cyan:#00d4ff;--violet:#b57aff;--text:#a8b9cc;--text-dim:#4a5568;--y2d:#ff9900;--font-mono:'Share Tech Mono',monospace;--font-ui:'Rajdhani',sans-serif;--font-orb:'Orbitron',monospace;}
 *{box-sizing:border-box;}
-body{background:#00004d;color:var(--text);font-family:var(--font-ui);font-size:1rem;min-height:100vh;padding:0;margin:0;}
-.ctrl-header{border-bottom:2px solid var(--y2d);padding:1rem 2rem;display:flex;align-items:center;gap:.8rem;background:#000;}
+body{background:#00004d;color:var(--text);font-family:var(--font-ui);font-size:1rem;min-height:100vh;padding:0;margin:0;overflow-x:hidden;}
+.ctrl-header{border-bottom:2px solid var(--y2d);background:#000;}
+.ctrl-header-inner{max-width:1200px;width:100%;margin:0 auto;padding:1rem 2rem;display:flex;align-items:center;gap:.8rem;box-sizing:border-box;}
 .ctrl-body{padding:2rem;max-width:1200px;width:100%;margin-left:auto;margin-right:auto;box-sizing:border-box;}
 /* Switch */
 .sw{position:relative;width:56px;height:28px;flex-shrink:0;cursor:pointer;}
@@ -349,6 +350,7 @@ body{background:#00004d;color:var(--text);font-family:var(--font-ui);font-size:1
 </head>
 <body>
 <header class="ctrl-header">
+<div class="ctrl-header-inner">
   <a href="mmdvm.php" style="background:#1a2535;color:var(--y2d);border:1px solid rgba(255,153,0,.3);font-family:var(--font-mono);font-size:.75rem;padding:.35rem .9rem;border-radius:4px;text-decoration:none;">← Panel PHPPLUS</a>
   <span style="font-family:var(--font-orb);color:var(--y2d);font-size:1.2rem;letter-spacing:.1em;">YSF2DMR · CROSS-MODE BRIDGE</span>
   <div style="margin-left:auto;display:flex;align-items:center;gap:.8rem;">
@@ -359,6 +361,7 @@ body{background:#00004d;color:var(--text);font-family:var(--font-ui);font-size:1
     </label>
     <span class="toggle-status" id="ysf2dmrToggleStatus">OFF</span>
   </div>
+</div>
 </header>
 
 <div class="ctrl-body">
