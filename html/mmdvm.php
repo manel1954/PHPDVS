@@ -894,13 +894,7 @@ button.btn-header { font-family: var(--font-mono); }
 </div>
 <button class="btn btn-secondary btn-sm" onclick="xtTtydOpen()">🖥️ Terminal</button>
 <a href="extra.php" class="btn btn-warning btn-sm">⚙️ Menu Extra</a>
-<div class="dropdown-wrap" id="dropBridge">
-  <button class="btn btn-light btn-sm" style="color:#000;border-color:#b06090;" onclick="toggleDropdownBridge(event)">🔗 Bridges ▾</button>
-  <div class="dropdown-menu-custom">
-    <a class="dropdown-item-custom" style="font-size:.80rem; text-decoration: none;" href="dmr2ysf.php">🔗 DMR2YSF</a>
-    <a class="dropdown-item-custom" style="font-size:.80rem; text-decoration: none;" href="ysf2dmr.php">🔗 YSF2DMR</a>
-  </div>
-</div>
+<a href="transcoding.php" class="btn btn-sm" style="color:#b06090;border:1px solid #b06090;">🔗 Bridge</a>
 <button id="btnReboot" class="btn btn-danger btn-sm" onclick="rebootPi()">⏻ Reiniciar Pi</button>
 </div>
 </header>
