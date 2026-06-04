@@ -46,7 +46,7 @@ body {
 .page-header span {
     color: #b06090;
     font-size: 1.2rem;
-    font-weight: 700;
+    font-weight: 70;
     letter-spacing: .1em;
     text-transform: uppercase;
 }
