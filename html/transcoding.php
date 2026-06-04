@@ -87,7 +87,7 @@ body {
     display: block;
 }
 .bridge-card .card-label {
-    font-size: 1.3rem;
+    font-size: .90rem;
     font-weight: 500;
     color: rgba(255,255,255,.9);
     display: block;
@@ -126,7 +126,7 @@ body {
 
 <div class="cards-row">
 
-  <a href="mmdvmdmr2ysf.php" class="bridge-card dmr2ysf">
+  <a href="dmr2ysf.php" class="bridge-card dmr2ysf">
     <span class="card-number">DMR</span>
     <span class="card-label">DMR2YSF</span>
     <span class="card-subtitle">Cross-mode Bridge</span>
