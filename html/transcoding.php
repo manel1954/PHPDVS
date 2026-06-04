@@ -120,7 +120,7 @@ body {
 <div class="page-header">
 <div class="page-header-inner">
   <a href="mmdvm.php" class="btn btn-primary btn-sm">← Panel PHPDVS</a>
-  <span>🔗 Transcoding</span>
+  <span>🔗 Panel . Transcoding</span>
 </div>
 </div>
 
