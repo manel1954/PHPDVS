@@ -18,7 +18,7 @@ body {
     margin: 0;
 }
 .page-header {
-    background: #f00;
+    background: #000000;
     border-bottom: 2px solid #fff;
     color: #fff;
 }
@@ -109,7 +109,7 @@ body {
     font-family: 'Share Tech Mono', monospace;
     letter-spacing: .04em;
 }
-.bridge-card.dmr2nxdn { background: #d4a017; cursor: not-allowed; opacity: .75; }
+.bridge-card.dmr2nxdn { background: #d4a017; cursor: not-allowed; }
 .bridge-card.dmr2nxdn:hover { transform: none; box-shadow: none; }
 .badge-soon { display: inline-block; background: rgba(0,0,0,.25); color: #fff; font-size: .65rem; font-family: 'Share Tech Mono', monospace; letter-spacing: .08em; text-transform: uppercase; padding: .15rem .5rem; border-radius: 3px; margin-top: .5rem; }
 </style>
