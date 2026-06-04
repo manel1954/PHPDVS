@@ -880,11 +880,11 @@ button.btn-header { font-family: var(--font-mono); }
 
 </div>
 <div class="ctrl-header-btns">
-<a href="editor_general_config.php" class="btn btn-primary btn-sm"> ✏️ Editor General </a>
-<a href="?action=backup-configs" class="btn btn-success btn-sm"> 💾 Hacer copia de seguridad </a>
-<button onclick="openRestore()" class="btn btn-info btn-sm"> 💿 Restaurar copia de seguridad </button>
+<a href="editor_general_config.php" class="btn btn-primary btn-sm"> ✏️ EDITOR GENERAL </a>
+<a href="?action=backup-configs" class="btn btn-success btn-sm"> 💾 HACER COPIA DE SEGURIDAD </a>
+<button onclick="openRestore()" class="btn btn-info btn-sm"> 💿 RESTAURAR COPIA DE SEGURIDAD </button>
 <div class="dropdown-wrap" id="dropActualizaciones">
-  <button class="btn btn-light btn-sm">⬇ Actualizaciones ▾</button>
+  <button class="btn btn-light btn-sm">⬇ ATUALIZACIONES ▾</button>
   <div class="dropdown-menu-custom">
     <button class="dropdown-item-custom" onclick="runUpdate('imagen')">⬇ Actualizar Imagen</button>
     <button class="dropdown-item-custom" onclick="runUpdate('ids')">📋 Actualizar IDs dmr</button>
@@ -892,10 +892,10 @@ button.btn-header { font-family: var(--font-mono); }
     <button class="dropdown-item-custom" onclick="window.location.href='dstar_json_converter.php'">📡 Actualizar Reflectores D-STAR</button>
   </div>
 </div>
-<button class="btn btn-secondary btn-sm" onclick="xtTtydOpen()">🖥️ Terminal</button>
-<a href="extra.php" class="btn btn-warning btn-sm">⚙️ Menu Extra</a>
-<a href="transcoding.php" class="btn btn-primary btn-sm">🔗 Bridge</a>
-<button id="btnReboot" class="btn btn-danger btn-sm" onclick="rebootPi()">⏻ Reiniciar Pi</button>
+<button class="btn btn-secondary btn-sm" onclick="xtTtydOpen()">🖥️ TERMINAL</button>
+<a href="extra.php" class="btn btn-warning btn-sm">⚙️ MENÚ EXTRA</a>
+<a href="transcoding.php" class="btn btn-primary btn-sm">🔗 BRIDGES</a>
+<button id="btnReboot" class="btn btn-danger btn-sm" onclick="rebootPi()">⏻ REINICIAR PI</button>
 </div>
 </header>
 <main class="ctrl-body">
