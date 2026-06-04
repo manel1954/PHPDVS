@@ -647,3 +647,224 @@ body{background:#00004d;color:var(--text);font-family:var(--font-ui);font-size:1
     </div>
   </div>
   <div id="tgYsfHostPanel" style="display:none;background:#060c10;border:1px solid #00ffcc33;border-radius:4px;padding:.8rem;">
+    <div style="display:flex;gap:.5rem;margin-bottom:.6rem;">
+      <input type="text" id="tgYsfSearch" placeholder="🔍 Buscar reflector…" oninput="tgYsfFilterHosts(this.value)" style="flex:1;background:var(--surface);border:1px solid #00ffcc44;border-radius:4px;color:var(--d2y);font-family:var(--font-mono);font-size:.78rem;padding:.38rem .6rem;outline:none;">
+      <button onclick="tgYsfToggleHosts()" style="background:transparent;border:1px solid #ff456044;color:var(--red);border-radius:4px;font-family:var(--font-mono);font-size:.7rem;padding:.35rem .6rem;cursor:pointer;">✖</button>
+    </div>
+    <div id="tgYsfHostList" style="max-height:200px;overflow-y:auto;font-family:var(--font-mono);font-size:.72rem;"></div>
+    <div style="font-family:var(--font-mono);font-size:.6rem;color:var(--text-dim);margin-top:.4rem;">↑ Haz clic para rellenar YSF ID y Nombre</div>
+  </div>
+  <div id="tgYsfMsg" style="display:none;font-family:var(--font-mono);font-size:.75rem;padding:.4rem .8rem;border-radius:4px;border:1px solid;"></div>
+  <div style="display:flex;gap:.8rem;">
+    <button onclick="tgYsfSave()" style="flex:1;background:#00cc99;color:#000;border:none;border-radius:6px;font-family:var(--font-mono);font-size:.8rem;text-transform:uppercase;padding:.6rem;cursor:pointer;">💾 Guardar</button>
+    <button onclick="closeTgYsfModal()" style="flex:1;background:transparent;color:var(--text-dim);border:1px solid var(--border);border-radius:6px;font-family:var(--font-mono);font-size:.8rem;text-transform:uppercase;padding:.6rem;cursor:pointer;">✖ Cerrar</button>
+  </div>
+</div>
+</div>
+
+<!-- Modal Editor Ficheros -->
+<div id="feditModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:9700;align-items:center;justify-content:center;" onclick="if(event.target===this)feditClose()">
+<div style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:1.5rem;width:900px;max-width:96vw;display:flex;flex-direction:column;gap:.8rem;">
+  <div style="font-family:var(--font-mono);font-size:.8rem;color:var(--cyan);letter-spacing:.12em;text-transform:uppercase;">📝 Editor de fichero</div>
+  <div style="font-family:var(--font-mono);font-size:.72rem;color:var(--amber);" id="feditPath">—</div>
+  <textarea id="feditArea" spellcheck="false" style="font-family:var(--font-mono);font-size:.78rem;color:#c9d1d9;background:#060c10;border:1px solid var(--border);border-radius:4px;padding:.8rem;height:420px;resize:vertical;outline:none;line-height:1.5;width:100%;tab-size:4;"></textarea>
+  <div id="feditMsg" style="display:none;font-family:var(--font-mono);font-size:.75rem;padding:.4rem .8rem;border-radius:4px;border:1px solid;"></div>
+  <div style="display:flex;gap:.8rem;">
+    <button onclick="feditSave()" style="flex:1;background:#28a745;color:#fff;border:none;border-radius:6px;font-family:var(--font-mono);font-size:.8rem;text-transform:uppercase;padding:.6rem;cursor:pointer;">💾 Guardar</button>
+    <button onclick="feditClose()" style="flex:1;background:transparent;color:var(--text-dim);border:1px solid var(--border);border-radius:6px;font-family:var(--font-mono);font-size:.8rem;text-transform:uppercase;padding:.6rem;cursor:pointer;">✖ Cerrar</button>
+  </div>
+</div>
+</div>
+
+<script>
+const _winOS=/Windows/i.test(navigator.userAgent);
+const _TBASE='https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/72x72/';
+const _FLAGS=[
+    {re:/^E[ABCDEFGH][1-9]/,e:'🇪🇸',t:'1f1ea-1f1f8'},
+    {re:/^C[TUQ]/,e:'🇵🇹',t:'1f1f5-1f1f9'},
+    {re:/^F[A-Z]/,e:'🇫🇷',t:'1f1eb-1f1f7'},
+    {re:/^D[A-R]|^Y[2-9]/,e:'🇩🇪',t:'1f1e9-1f1ea'},
+    {re:/^[KWN][0-9]|^AA|^AB|^AC/,e:'🇺🇸',t:'1f1fa-1f1f8'},
+];
+function getFlagByCall(cs){if(!cs)return'';cs=cs.toUpperCase();for(const p of _FLAGS){if(p.re.test(cs)){if(_winOS)return'<img class="flag-emoji-img" src="'+_TBASE+p.t+'.png" alt="">';return'<span class="flag-emoji">'+p.e+'</span>';}}return'';}
+function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+function colorize(text){return(text||'').split('\n').map(l=>{const ll=l.toLowerCase();if(/error|fail|abort/.test(ll))return`<span class="ln-err">${l}</span>`;if(/warn/.test(ll))return`<span class="ln-warn">${l}</span>`;if(/connect|start|open|loaded|success/.test(ll))return`<span class="ln-ok">${l}</span>`;return`<span class="ln-info">${l}</span>`;}).join('\n');}
+function clearLog(id){document.getElementById(id).innerHTML='';}
+function setDot(id,state){const el=document.getElementById(id);if(el)el.className='dot'+(state==='active'?' active':state==='error'?' error':'');}
+
+// ── VU Meters ──
+let dmr2ysfVuTimerAnim=null;
+function buildDmr2ysfVU(){['dmr2ysfVuLeft','dmr2ysfVuRight'].forEach(id=>{const el=document.getElementById(id);for(let i=0;i<18;i++){const d=document.createElement('div');d.className='nx-vu-bar';d.id=`${id}-${i}`;el.appendChild(d);}});}
+buildDmr2ysfVU();
+function animateDmr2ysfVU(on){clearInterval(dmr2ysfVuTimerAnim);['dmr2ysfVuLeft','dmr2ysfVuRight'].forEach(id=>{for(let i=0;i<18;i++)document.getElementById(`${id}-${i}`).className='nx-vu-bar';});if(!on)return;dmr2ysfVuTimerAnim=setInterval(()=>{['dmr2ysfVuLeft','dmr2ysfVuRight'].forEach(id=>{const lvl=Math.floor(Math.random()*16)+1;for(let i=0;i<18;i++){let cls='nx-vu-bar';if(i<lvl)cls+=i<10?' lit-g':i<14?' lit-a':' lit-r';document.getElementById(`${id}-${i}`).className=cls;}});},80);}
+
+// ── Clock ──
+let dmr2ysfCurrentlyActive=false,dmr2ysfLastActiveTs=0;
+const DMR2YSF_IDLE_TIMEOUT=12000;
+function updateDmr2ysfClock(){if(!dmr2ysfCurrentlyActive){const now=new Date();const clk=document.getElementById('dmr2ysfNxClock');if(clk){clk.textContent=now.toLocaleTimeString('es-ES');document.getElementById('dmr2ysfNxDate').textContent=now.toLocaleDateString('es-ES',{weekday:'short',day:'2-digit',month:'short',year:'numeric'}).toUpperCase();}}}
+setInterval(updateDmr2ysfClock,1000);updateDmr2ysfClock();
+
+// ── Display ──
+function showDmr2ysfIdle(){dmr2ysfCurrentlyActive=false;animateDmr2ysfVU(false);document.getElementById('dmr2ysfTxBar').className='nx-txbar';document.getElementById('dmr2ysfTGLabel').textContent='—';document.getElementById('dmr2ysfSource').textContent='';document.getElementById('dmr2ysfSource').className='nx-source';document.getElementById('dmr2ysfNxCenter').innerHTML='<div class="nx-clock" id="dmr2ysfNxClock" style="color:#00ffcc;">00:00:00</div><div class="nx-date" id="dmr2ysfNxDate" style="color:#007060;">—</div>';updateDmr2ysfClock();}
+function showDmr2ysfActive(d){dmr2ysfCurrentlyActive=true;animateDmr2ysfVU(true);document.getElementById('dmr2ysfTxBar').className='nx-txbar active-dmr2ysf';document.getElementById('dmr2ysfTGLabel').textContent=d.tg?'TG '+d.tg:'—';const src=document.getElementById('dmr2ysfSource');const isYsf=d.source==='YSF';src.textContent=isYsf?'YSF':'DMR';src.className='nx-source '+(isYsf?'net':'rf');const flag=getFlagByCall(d.callsign);document.getElementById('dmr2ysfNxCenter').innerHTML=`<div class="nx-callsign">${flag} ${esc(d.callsign)}</div>`+(d.name?`<div class="nx-name">${esc(d.name)}</div>`:'');}
+
+function renderDmr2ysfLastHeard(list,activeCall){const body=document.getElementById('dmr2ysfLhBody');if(!list||!list.length){body.innerHTML='<div style="padding:1.5rem 1rem;font-family:var(--font-mono);font-size:.72rem;color:var(--text-dim);text-align:center;">Sin actividad</div>';return;}body.innerHTML=list.map(r=>{const isActive=activeCall&&r.callsign===activeCall;const dot=isActive?'<span class="lh-tx-dot-dmr2ysf"></span>':'';const flag=getFlagByCall(r.callsign);return`<div class="lh-row-dmr2ysf${isActive?' lh-active':''}"><div style="display:flex;align-items:center;gap:.35rem;">${dot}<span class="lh-call-dmr2ysf">${flag} ${esc(r.callsign)}</span></div><span style="font-family:var(--font-mono);font-size:.82rem;color:var(--text);">${esc(r.name||'—')}</span><span style="font-family:var(--font-mono);font-size:.72rem;color:#00ffcc;">${esc(r.tg||'—')}</span><span style="font-family:var(--font-mono);font-size:.68rem;color:var(--text-dim);">${esc(r.time||'—')}</span><span style="font-family:var(--font-mono);font-size:.6rem;" class="nx-source rf">DMR</span></div>`;}).join('');}
+
+// ── Status / Toggle ──
+let dmr2ysfRunning=false,dmr2ysfTimer=null,dmr2ysfTxTimer=null;
+
+function setDMR2YSFToggle(on){
+    const chk=document.getElementById('chkDMR2YSF'),sta=document.getElementById('dmr2ysfToggleStatus');
+    chk.checked=on;sta.className='toggle-status'+(on?' on':'');sta.textContent=on?'ON':'OFF';
+    const track=document.querySelector('#swDMR2YSF .sw-track');
+    const knob=document.querySelector('#swDMR2YSF .sw-knob');
+    if(track)track.style.borderColor=on?'#00ff4c':'#ff4560';
+    if(knob){knob.style.background=on?'#00ff4c':'#ff4560';knob.style.transform=on?'translateX(28px)':'translateX(0)';}
+}
+
+async function checkDmr2ysfStatus(){try{const r=await fetch('?action=dmr2ysf-status');const d=await r.json();const active=d.dmr2ysf==='active';setDot('dot-dmr2ysf-mmd',d.s1==='active'?'active':'off');setDot('dot-dmr2ysf-ysf',d.s2==='active'?'active':'off');setDot('dot-dmr2ysf',d.s3==='active'?'active':'off');dmr2ysfRunning=active;setDMR2YSFToggle(active);if(active){startDmr2ysfLogs();startDmr2ysfTxPoll();}}catch(e){}}
+
+async function toggleDMR2YSF(chk){
+    const wasOn=!chk.checked;const sw=document.getElementById('swDMR2YSF');chk.checked=wasOn;sw.classList.add('busy');
+    try{
+        await fetch(wasOn?'?action=dmr2ysf-stop':'?action=dmr2ysf-start');
+        let ok=false;
+        for(let i=0;i<15;i++){
+            await new Promise(r=>setTimeout(r,1000));
+            const r=await fetch('?action=dmr2ysf-status');const d=await r.json();const isOn=d.dmr2ysf==='active';
+            if(wasOn&&!isOn){ok=true;setDot('dot-dmr2ysf-mmd','off');setDot('dot-dmr2ysf-ysf','off');setDot('dot-dmr2ysf','off');dmr2ysfRunning=false;setDMR2YSFToggle(false);stopDmr2ysfLogs();stopDmr2ysfTxPoll();showDmr2ysfIdle();clearLog('logDmr2ysf');clearLog('logYsfGwDmr2ysf');clearLog('logMmdvmDmr2ysf');break;}
+            if(!wasOn&&isOn){ok=true;setDot('dot-dmr2ysf-mmd',d.s1==='active'?'active':'off');setDot('dot-dmr2ysf-ysf',d.s2==='active'?'active':'off');setDot('dot-dmr2ysf',d.s3==='active'?'active':'off');dmr2ysfRunning=true;setDMR2YSFToggle(true);startDmr2ysfLogs();startDmr2ysfTxPoll();break;}
+        }
+        if(!ok)await checkDmr2ysfStatus();
+    }catch(e){}finally{sw.classList.remove('busy');}
+}
+
+async function fetchDmr2ysfLogs(){
+    try{const r=await fetch('?action=dmr2ysf-logs&lines=30');const d=await r.json();const el=document.getElementById('logDmr2ysf');const atBot=el.scrollHeight-el.clientHeight<=el.scrollTop+10;el.innerHTML=colorize(d.dmr2ysf);if(atBot)el.scrollTop=el.scrollHeight;}catch(e){}
+    try{const r2=await fetch('?action=ysfgw-dmr2ysf-logs&lines=30');const d2=await r2.json();const el2=document.getElementById('logYsfGwDmr2ysf');const atBot2=el2.scrollHeight-el2.clientHeight<=el2.scrollTop+10;el2.innerHTML=colorize(d2.ysfgwdmr2ysf);if(atBot2)el2.scrollTop=el2.scrollHeight;}catch(e){}
+    try{const r3=await fetch('?action=mmdvmdmr2ysf-logs&lines=30');const d3=await r3.json();const el3=document.getElementById('logMmdvmDmr2ysf');const atBot3=el3.scrollHeight-el3.clientHeight<=el3.scrollTop+10;el3.innerHTML=colorize(d3.mmdvmdmr2ysf);if(atBot3)el3.scrollTop=el3.scrollHeight;}catch(e){}
+}
+async function fetchDmr2ysfTransmission(){try{const r=await fetch('?action=dmr2ysf-transmission');const d=await r.json();if(d.active){dmr2ysfLastActiveTs=Date.now();showDmr2ysfActive(d);}else{if(dmr2ysfCurrentlyActive)showDmr2ysfIdle();}renderDmr2ysfLastHeard(d.lastHeard||[],d.active?d.callsign:null);}catch(e){if(dmr2ysfCurrentlyActive&&(Date.now()-dmr2ysfLastActiveTs)>DMR2YSF_IDLE_TIMEOUT)showDmr2ysfIdle();}}
+function startDmr2ysfLogs(){fetchDmr2ysfLogs();dmr2ysfTimer=setInterval(fetchDmr2ysfLogs,5000);}
+function stopDmr2ysfLogs(){clearInterval(dmr2ysfTimer);dmr2ysfTimer=null;}
+function startDmr2ysfTxPoll(){fetchDmr2ysfTransmission();dmr2ysfTxTimer=setInterval(fetchDmr2ysfTransmission,1500);}
+function stopDmr2ysfTxPoll(){clearInterval(dmr2ysfTxTimer);dmr2ysfTxTimer=null;}
+
+// ── Info display ──
+async function loadDmr2ysfInfo(){try{const r=await fetch('?action=dmr2ysf-info');const d=await r.json();document.getElementById('dmr2ysfDmrId').textContent=d.dmrId||'—';document.getElementById('dmr2ysfGw').textContent=d.gw||'—';document.getElementById('dmr2ysfDefTG').textContent=d.defTG||'—';document.getElementById('dmr2ysfYsfGw').textContent='YSF: '+(d.ysfGw||'—');}catch(e){}}
+
+// ── Modal Config MMDVMDMR2YSF ──
+const d2cfgFields=['Callsign','Id','Timeout','Duplex','RXFrequency','TXFrequency','DmrEnable','DmrType','DmrLocalAddr','DmrLocalPort','DmrRemoteAddr','DmrRemotePort','DmrPassword','DmrJitter','UARTPort'];
+async function openMmdvmDmr2ysfCfg(){
+    const modal=document.getElementById('mmdvmD2yCfgModal');const msg=document.getElementById('d2cfgMsg');msg.style.display='none';modal.style.display='flex';
+    d2cfgFields.forEach(f=>{const el=document.getElementById('d2cfg_'+f);if(el)el.value='';});
+    try{const r=await fetch('?action=mmdvmdmr2ysf-config-read');const d=await r.json();d2cfgFields.forEach(f=>{const el=document.getElementById('d2cfg_'+f);if(!el||d[f]===undefined)return;if(el.tagName==='SELECT'){let found=false;for(const opt of el.options){if(opt.value===d[f]){opt.selected=true;found=true;break;}}if(!found){const opt=document.createElement('option');opt.value=d[f];opt.textContent=d[f];el.appendChild(opt);opt.selected=true;}}else el.value=d[f];});}catch(e){msg.style.cssText='font-family:var(--font-mono);font-size:.75rem;display:block;padding:.4rem .8rem;border-radius:4px;border:1px solid var(--red);color:var(--red);background:rgba(255,69,96,.06);';msg.textContent='✖ Error al leer el fichero';}
+}
+function closeMmdvmDmr2ysfCfg(){document.getElementById('mmdvmD2yCfgModal').style.display='none';}
+async function saveMmdvmDmr2ysfCfg(){
+    const msg=document.getElementById('d2cfgMsg');msg.style.cssText='font-family:var(--font-mono);font-size:.75rem;display:block;padding:.4rem .8rem;border-radius:4px;border:1px solid var(--amber);color:var(--amber);background:rgba(255,179,0,.06);';msg.textContent='⏳ Guardando…';
+    const body=d2cfgFields.map(f=>{const el=document.getElementById('d2cfg_'+f);return el?encodeURIComponent(f)+'='+encodeURIComponent(el.value):'';}).filter(Boolean).join('&');
+    try{const r=await fetch('?action=mmdvmdmr2ysf-config-save',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body});const d=await r.json();if(d.ok){msg.style.cssText='font-family:var(--font-mono);font-size:.75rem;display:block;padding:.4rem .8rem;border-radius:4px;border:1px solid #00ffcc;color:#00ffcc;background:rgba(0,255,204,.06);';msg.textContent='✔ Guardado correctamente';setTimeout(()=>msg.style.display='none',3000);}else{msg.style.cssText='font-family:var(--font-mono);font-size:.75rem;display:block;padding:.4rem .8rem;border-radius:4px;border:1px solid var(--red);color:var(--red);background:rgba(255,69,96,.06);';msg.textContent='✖ '+(d.msg||'Error');}}catch(e){msg.style.cssText='font-family:var(--font-mono);font-size:.75rem;display:block;padding:.4rem .8rem;border-radius:4px;border:1px solid var(--red);color:var(--red);background:rgba(255,69,96,.06);';msg.textContent='✖ Error de red';}
+}
+
+// ── Modal TG-YSF ──
+let _tgYsfEntries=[],_tgYsfHosts=[],_tgYsfHostsLoaded=false;
+function openTgYsfModal(){document.getElementById('tgYsfModal').style.display='flex';document.getElementById('tgYsfMsg').style.display='none';document.getElementById('tgYsfHostPanel').style.display='none';tgYsfLoad();}
+function closeTgYsfModal(){document.getElementById('tgYsfModal').style.display='none';}
+async function tgYsfLoad(){try{const r=await fetch('?action=tgysf-read');const d=await r.json();_tgYsfEntries=d.entries||[];tgYsfRender();}catch(e){}}
+function tgYsfRender(){const c=document.getElementById('tgYsfRows');if(!_tgYsfEntries.length){c.innerHTML='<div style="padding:1rem;font-family:var(--font-mono);font-size:.72rem;color:var(--text-dim);text-align:center;">Sin entradas</div>';return;}c.innerHTML=_tgYsfEntries.map((e,i)=>`<div style="display:grid;grid-template-columns:90px 110px 1fr 36px;padding:.38rem .8rem;border-bottom:1px solid #00ffcc11;align-items:center;gap:.5rem;"><span style="font-family:var(--font-mono);font-size:.82rem;color:var(--d2y);">${esc(e.tg)}</span><span style="font-family:var(--font-mono);font-size:.82rem;color:#80ffe8;">${esc(e.ysf)}</span><input type="text" value="${esc(e.name||'')}" placeholder="—" onchange="_tgYsfEntries[${i}].name=this.value" style="background:transparent;border:none;border-bottom:1px solid #00ffcc22;color:#a8b9cc;font-family:var(--font-mono);font-size:.78rem;padding:.15rem .2rem;outline:none;width:100%;"><button onclick="tgYsfRemove(${i})" style="background:transparent;border:1px solid #ff456044;border-radius:3px;color:#ff4560;font-size:.7rem;cursor:pointer;padding:.15rem .3rem;">✖</button></div>`).join('');}
+function tgYsfAdd(){const tg=document.getElementById('tgYsfNewTG').value.trim();const ysf=document.getElementById('tgYsfNewYSF').value.trim();const name=document.getElementById('tgYsfNewName').value.trim();if(!tg||!ysf||isNaN(tg)||isNaN(ysf)){tgYsfShowMsg('Introduce valores numéricos válidos',false);return;}if(_tgYsfEntries.some(e=>e.tg===tg)){tgYsfShowMsg('El TG '+tg+' ya existe',false);return;}_tgYsfEntries.push({tg,ysf,name});document.getElementById('tgYsfNewTG').value='';document.getElementById('tgYsfNewYSF').value='';document.getElementById('tgYsfNewName').value='';tgYsfRender();}
+function tgYsfRemove(i){_tgYsfEntries.splice(i,1);tgYsfRender();}
+async function tgYsfSave(){try{const r=await fetch('?action=tgysf-save',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({entries:_tgYsfEntries})});const d=await r.json();tgYsfShowMsg(d.msg,d.ok);}catch(e){tgYsfShowMsg('Error de red',false);}}
+async function tgYsfToggleHosts(){const p=document.getElementById('tgYsfHostPanel');const v=p.style.display!=='none';p.style.display=v?'none':'block';if(!v&&!_tgYsfHostsLoaded)await tgYsfLoadHosts();}
+async function tgYsfLoadHosts(){document.getElementById('tgYsfHostList').innerHTML='<div style="color:var(--text-dim);text-align:center;padding:.5rem;">Cargando…</div>';try{const r=await fetch('?action=tgysf-hosts');const d=await r.json();_tgYsfHosts=d.hosts||[];_tgYsfHostsLoaded=true;tgYsfRenderHosts(_tgYsfHosts);}catch(e){document.getElementById('tgYsfHostList').innerHTML='<div style="color:var(--red);text-align:center;padding:.5rem;">Error</div>';}}
+function tgYsfFilterHosts(q){const term=q.trim().toLowerCase();tgYsfRenderHosts(term===''?_tgYsfHosts:_tgYsfHosts.filter(h=>String(h.id).includes(term)||h.name.toLowerCase().includes(term)||h.desc.toLowerCase().includes(term)||h.country.toLowerCase().includes(term)));}
+function tgYsfRenderHosts(list){const el=document.getElementById('tgYsfHostList');if(!list.length){el.innerHTML='<div style="color:var(--text-dim);text-align:center;padding:.5rem;">Sin resultados</div>';return;}el.innerHTML=list.map(h=>{const flag=h.country==='ES'?'🇪🇸 ':h.country?h.country+' ':'';const nm=h.name||'—';const desc=h.desc?' · '+h.desc:'';const nmEsc=nm.replace(/\\/g,'\\\\').replace(/'/g,"\\'");return`<div onclick="tgYsfSelectHost(${h.id},'${nmEsc}')" style="padding:.35rem .6rem;cursor:pointer;border-bottom:1px solid #00ffcc11;display:flex;gap:.8rem;align-items:center;" onmouseover="this.style.background='rgba(0,255,204,.08)'" onmouseout="this.style.background='transparent'"><span style="color:var(--d2y);min-width:52px;">${h.id}</span><span style="color:#80ffe8;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${flag}${esc(nm)}${esc(desc)}</span><span style="color:var(--text-dim);font-size:.6rem;">${h.country}</span></div>`;}).join('');}
+function tgYsfSelectHost(id,name){document.getElementById('tgYsfNewYSF').value=id;document.getElementById('tgYsfNewName').value=name;document.getElementById('tgYsfHostPanel').style.display='none';document.getElementById('tgYsfSearch').value='';document.getElementById('tgYsfNewTG').focus();}
+function tgYsfShowMsg(msg,ok){const el=document.getElementById('tgYsfMsg');el.textContent=(ok?'✔ ':'✖ ')+msg;el.style.display='block';el.style.color=ok?'var(--green)':'var(--red)';el.style.borderColor=ok?'var(--green)':'var(--red)';el.style.background=ok?'rgba(0,255,159,.06)':'rgba(255,69,96,.06)';if(ok)setTimeout(()=>el.style.display='none',3000);}
+
+// ── fedit ──
+async function feditOpen(path){const msg=document.getElementById('feditMsg');msg.style.display='none';document.getElementById('feditPath').textContent=path;document.getElementById('feditArea').value='Cargando…';document.getElementById('feditModal').style.display='flex';try{const r=await fetch('mmdvm.php?action=read-file',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:'path='+encodeURIComponent(path)});const d=await r.json();if(d.ok){document.getElementById('feditArea').value=d.content;}else{document.getElementById('feditArea').value='';msg.style.cssText='font-family:var(--font-mono);font-size:.75rem;display:block;padding:.4rem .8rem;border-radius:4px;border:1px solid var(--red);color:var(--red);background:rgba(255,69,96,.06);';msg.textContent='✖ '+d.msg;}}catch(e){msg.style.cssText='font-family:var(--font-mono);font-size:.75rem;display:block;padding:.4rem .8rem;border-radius:4px;border:1px solid var(--red);color:var(--red);background:rgba(255,69,96,.06);';msg.textContent='✖ Error: '+e.message;}}
+async function feditSave(){const path=document.getElementById('feditPath').textContent;const content=document.getElementById('feditArea').value;const msg=document.getElementById('feditMsg');try{const r=await fetch('mmdvm.php?action=save-file',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:'path='+encodeURIComponent(path)+'&content='+encodeURIComponent(content)});const d=await r.json();msg.style.cssText='font-family:var(--font-mono);font-size:.75rem;display:block;padding:.4rem .8rem;border-radius:4px;border:1px solid '+(d.ok?'var(--green)':'var(--red)')+';color:'+(d.ok?'var(--green)':'var(--red)')+';background:'+(d.ok?'rgba(0,255,159,.06)':'rgba(255,69,96,.06)')+';';msg.textContent=(d.ok?'✔ ':'✖ ')+d.msg;if(d.ok)setTimeout(()=>msg.style.display='none',3000);}catch(e){msg.style.cssText='font-family:var(--font-mono);font-size:.75rem;display:block;padding:.4rem .8rem;border-radius:4px;border:1px solid var(--red);color:var(--red);background:rgba(255,69,96,.06);';msg.textContent='✖ Error: '+e.message;}}
+function feditClose(){document.getElementById('feditModal').style.display='none';}
+
+// ── Init ──
+(async()=>{
+    await loadDmr2ysfInfo();
+    setInterval(loadDmr2ysfInfo,60000);
+    await checkDmr2ysfStatus();
+    setInterval(checkDmr2ysfStatus,10000);
+    showDmr2ysfIdle();
+})();
+
+// ══════════════════════════════════════════════════════════════════════════════
+// YSF2DMR JS
+// ══════════════════════════════════════════════════════════════════════════════
+let ysf2dmrRunning=false, ysf2dmrTimer=null, ysf2dmrTxTimer=null;
+let ysf2dmrCurrentlyActive=false, ysf2dmrLastActiveTs=0;
+const YSF2DMR_IDLE_TIMEOUT=12000;
+let ysf2dmrVuTimerAnim=null;
+
+// VU
+function buildYsf2dmrVU(){['ysf2dmrVuLeft','ysf2dmrVuRight'].forEach(id=>{const el=document.getElementById(id);for(let i=0;i<18;i++){const d=document.createElement('div');d.className='nx-vu-bar';d.id=`${id}-${i}`;el.appendChild(d);}});}
+buildYsf2dmrVU();
+function animateYsf2dmrVU(on){clearInterval(ysf2dmrVuTimerAnim);['ysf2dmrVuLeft','ysf2dmrVuRight'].forEach(id=>{for(let i=0;i<18;i++)document.getElementById(`${id}-${i}`).className='nx-vu-bar';});if(!on)return;ysf2dmrVuTimerAnim=setInterval(()=>{['ysf2dmrVuLeft','ysf2dmrVuRight'].forEach(id=>{const lvl=Math.floor(Math.random()*16)+1;for(let i=0;i<18;i++){let cls='nx-vu-bar';if(i<lvl)cls+=i<10?' lit-g':i<14?' lit-a':' lit-r';document.getElementById(`${id}-${i}`).className=cls;}});},80);}
+
+// Clock
+function updateYsf2dmrClock(){if(!ysf2dmrCurrentlyActive){const now=new Date();const clk=document.getElementById('ysf2dmrNxClock');if(clk){clk.textContent=now.toLocaleTimeString('es-ES');document.getElementById('ysf2dmrNxDate').textContent=now.toLocaleDateString('es-ES',{weekday:'short',day:'2-digit',month:'short',year:'numeric'}).toUpperCase();}}}
+setInterval(updateYsf2dmrClock,1000);updateYsf2dmrClock();
+
+// Display
+function showYsf2dmrIdle(){ysf2dmrCurrentlyActive=false;animateYsf2dmrVU(false);document.getElementById('ysf2dmrTxBar').className='nx-txbar';document.getElementById('ysf2dmrTGLabel').textContent='—';document.getElementById('ysf2dmrSource').textContent='';document.getElementById('ysf2dmrSource').className='nx-source';document.getElementById('ysf2dmrNxCenter').innerHTML='<div class="nx-clock" id="ysf2dmrNxClock" style="color:#ff9900;">00:00:00</div><div class="nx-date" id="ysf2dmrNxDate" style="color:#7a4400;">—</div>';updateYsf2dmrClock();}
+function showYsf2dmrActive(d){ysf2dmrCurrentlyActive=true;animateYsf2dmrVU(true);document.getElementById('ysf2dmrTxBar').className='nx-txbar';document.getElementById('ysf2dmrTxBar').style.background='linear-gradient(90deg,transparent,#ff9900,transparent)';document.getElementById('ysf2dmrTxBar').style.backgroundSize='200% 100%';document.getElementById('ysf2dmrTxBar').style.animation='scan 1.4s linear infinite';document.getElementById('ysf2dmrTGLabel').textContent=d.tg?'TG '+d.tg:'—';const src=document.getElementById('ysf2dmrSource');src.textContent=d.source||'YSF';src.className='nx-source '+(d.source==='DMR'?'rf':'net');const flag=getFlagByCall(d.callsign);document.getElementById('ysf2dmrNxCenter').innerHTML=`<div class="nx-callsign" style="color:#ff9900;text-shadow:0 0 20px rgba(255,153,0,.6);">${flag} ${esc(d.callsign)}</div>`+(d.name?`<div class="nx-name" style="color:#ffcc80;">${esc(d.name)}</div>`:'');}
+
+function renderYsf2dmrLastHeard(list,activeCall){const body=document.getElementById('ysf2dmrLhBody');if(!list||!list.length){body.innerHTML='<div style="padding:1.5rem 1rem;font-family:var(--font-mono);font-size:.72rem;color:var(--text-dim);text-align:center;">Sin actividad</div>';return;}body.innerHTML=list.map(r=>{const isActive=activeCall&&r.callsign===activeCall;const dot=isActive?'<span style="width:6px;height:6px;border-radius:50%;background:#ff9900;box-shadow:0 0 6px #ff9900;animation:pulse 1s infinite;flex-shrink:0;display:inline-block;margin-right:4px;"></span>':'';const flag=getFlagByCall(r.callsign);return`<div class="lh-row-dmr2ysf${isActive?' lh-active':''}"><div style="display:flex;align-items:center;gap:.35rem;">${dot}<span style="font-family:var(--font-mono);font-size:.82rem;color:#ff9900;letter-spacing:.05em;font-weight:bold;">${flag} ${esc(r.callsign)}</span></div><span style="font-family:var(--font-mono);font-size:.82rem;color:var(--text);">${esc(r.name||'—')}</span><span style="font-family:var(--font-mono);font-size:.72rem;color:#ff9900;">${esc(r.tg||'—')}</span><span style="font-family:var(--font-mono);font-size:.68rem;color:var(--text-dim);">${esc(r.time||'—')}</span><span style="font-family:var(--font-mono);font-size:.6rem;" class="nx-source rf">${esc(r.source||'YSF')}</span></div>`;}).join('');}
+
+// Toggle
+function setYSF2DMRToggle(on){
+    const chk=document.getElementById('chkYSF2DMR'),sta=document.getElementById('ysf2dmrToggleStatus');
+    chk.checked=on;sta.className='toggle-status'+(on?' on':'');sta.textContent=on?'ON':'OFF';
+    const track=document.querySelector('#swYSF2DMR .sw-track');
+    const knob=document.querySelector('#swYSF2DMR .sw-knob');
+    if(track)track.style.borderColor=on?'#00ff4c':'#ff4560';
+    if(knob){knob.style.background=on?'#00ff4c':'#ff4560';knob.style.transform=on?'translateX(28px)':'translateX(0)';}
+}
+
+async function checkYsf2dmrStatus(){try{const r=await fetch('?action=ysf2dmr-status');const d=await r.json();const active=d.ysf2dmr==='active';setDot('dot-ysf2dmr',active?'active':'off');ysf2dmrRunning=active;setYSF2DMRToggle(active);if(active){startYsf2dmrLogs();startYsf2dmrTxPoll();}}catch(e){}}
+
+async function toggleYSF2DMR(chk){
+    const turningOn=chk.checked;const sw=document.getElementById('swYSF2DMR');sw.classList.add('busy');
+    try{
+        await fetch(turningOn?'?action=ysf2dmr-start':'?action=ysf2dmr-stop');
+        let ok=false;
+        for(let i=0;i<15;i++){
+            await new Promise(r=>setTimeout(r,1000));
+            const r=await fetch('?action=ysf2dmr-status');const d=await r.json();const isOn=d.ysf2dmr==='active';
+            if(!turningOn&&!isOn){ok=true;setDot('dot-ysf2dmr','off');ysf2dmrRunning=false;setYSF2DMRToggle(false);stopYsf2dmrLogs();stopYsf2dmrTxPoll();showYsf2dmrIdle();clearLog('logYsf2dmrMmdvm');clearLog('logYsf2dmrYsf');break;}
+            if(turningOn&&isOn){ok=true;setDot('dot-ysf2dmr','active');ysf2dmrRunning=true;setYSF2DMRToggle(true);startYsf2dmrLogs();startYsf2dmrTxPoll();break;}
+        }
+        if(!ok)await checkYsf2dmrStatus();
+    }catch(e){}finally{sw.classList.remove('busy');}
+}
+
+async function fetchYsf2dmrLogs(){
+    try{const r=await fetch('?action=ysf2dmr-logs-mmdvm&lines=30');const d=await r.json();const el=document.getElementById('logYsf2dmrMmdvm');const atBot=el.scrollHeight-el.clientHeight<=el.scrollTop+10;el.innerHTML=colorize(d.log);if(atBot)el.scrollTop=el.scrollHeight;}catch(e){}
+    try{const r2=await fetch('?action=ysf2dmr-logs-ysf&lines=30');const d2=await r2.json();const el2=document.getElementById('logYsf2dmrYsf');const atBot2=el2.scrollHeight-el2.clientHeight<=el2.scrollTop+10;el2.innerHTML=colorize(d2.log);if(atBot2)el2.scrollTop=el2.scrollHeight;}catch(e){}
+}
+async function fetchYsf2dmrTransmission(){try{const r=await fetch('?action=ysf2dmr-transmission');const d=await r.json();if(d.active){ysf2dmrLastActiveTs=Date.now();showYsf2dmrActive(d);}else{if(ysf2dmrCurrentlyActive)showYsf2dmrIdle();}renderYsf2dmrLastHeard(d.lastHeard||[],d.active?d.callsign:null);}catch(e){if(ysf2dmrCurrentlyActive&&(Date.now()-ysf2dmrLastActiveTs)>YSF2DMR_IDLE_TIMEOUT)showYsf2dmrIdle();}}
+
+function startYsf2dmrLogs(){fetchYsf2dmrLogs();ysf2dmrTimer=setInterval(fetchYsf2dmrLogs,5000);}
+function stopYsf2dmrLogs(){clearInterval(ysf2dmrTimer);ysf2dmrTimer=null;}
+function startYsf2dmrTxPoll(){fetchYsf2dmrTransmission();ysf2dmrTxTimer=setInterval(fetchYsf2dmrTransmission,1500);}
+function stopYsf2dmrTxPoll(){clearInterval(ysf2dmrTxTimer);ysf2dmrTxTimer=null;}
+
+// Init YSF2DMR
+(async()=>{
+    await checkYsf2dmrStatus();
+    setInterval(checkYsf2dmrStatus,10000);
+    showYsf2dmrIdle();
+})();
+</script>
+</body>
+</html>
+ 
