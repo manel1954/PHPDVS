@@ -145,7 +145,7 @@ body {
     <span class="card-label">DMR2NXDN</span>
     <span class="card-subtitle">Cross-mode Bridge</span>
     <span class="badge-soon">Próximamente</span>
-    <span class="card-icon">⇄</span>
+    <span class="card-icon" style="color:#000">⇄</span>
   </div>
 
 </div>
