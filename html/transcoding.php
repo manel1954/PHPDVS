@@ -34,7 +34,7 @@ body {
 }
 .page-header a {
     background: #1a2535;
-    color: #b06090;
+    color: #a8b060;
     border: 1px solid #b06090;
     font-size: .75rem;
     padding: .3rem .8rem;
