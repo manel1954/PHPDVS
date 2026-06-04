@@ -31,7 +31,7 @@ body {
     box-sizing: border-box;
 }
 .page-header a {
-    background: #d6f108;
+    background: #2a67f6;
     color: #b06090;
     border: 1px solid #b06090;
     font-size: .75rem;
@@ -68,7 +68,7 @@ body {
     position: relative;
     overflow: hidden;
     transition: transform .15s, box-shadow .15s;
-    height: 140px;
+    height: 150px;
 }
 .bridge-card:hover {
     transform: translateY(-3px);
