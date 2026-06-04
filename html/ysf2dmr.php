@@ -52,11 +52,11 @@ if ($action === 'ysf2dmr-stop') {
 }
 if ($action === 'ysf2dmr-logs-mmdvm') {
     $lines = intval($_GET['lines'] ?? 30);
-    $log = shell_exec("sudo journalctl -u ysf2dmr -n {$lines} --no-pager --output=short 2>/dev/null | grep -i MMDVMHost");
-    if (empty(trim($log))) {
-        $logFiles = glob('/home/pi/MMDVMHost/MMDVMYSF2DMR-*.log');
-        if ($logFiles) { $latest = end($logFiles); $log = shell_exec("tail -n {$lines} ".escapeshellarg($latest)." 2>/dev/null"); }
-    }
+    $log = '';
+    $logFiles = glob('/home/pi/MMDVMHost/MMDVM-*.log');
+    if (!$logFiles) $logFiles = glob('/home/pi/MMDVMHost/MMDVMYSF2DMR-*.log');
+    if ($logFiles) { $latest = end($logFiles); $log = shell_exec("tail -n {$lines} ".escapeshellarg($latest)." 2>/dev/null"); }
+    if (empty(trim($log))) $log = shell_exec("sudo journalctl -u ysf2dmr -n {$lines} --no-pager --output=short 2>/dev/null");
     header('Content-Type: application/json');
     echo json_encode(['log' => htmlspecialchars($log ?? '')]);
     exit;
