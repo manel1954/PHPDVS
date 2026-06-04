@@ -19,7 +19,7 @@ body {
 }
 .page-header {
     background: #000;
-    border-bottom: 2px solid #b06090;
+    border-bottom: 2px solid #fff;
 }
 .page-header-inner {
     max-width: 900px;
@@ -118,7 +118,7 @@ body {
 
 <div class="page-header">
 <div class="page-header-inner">
-  <a href="mmdvm.php">← Panel PHPPLUS</a>
+  <a href="mmdvm.php">← Panel PHPDVS</a>
   <span>🔗 Bridges · Transcoding</span>
 </div>
 </div>
