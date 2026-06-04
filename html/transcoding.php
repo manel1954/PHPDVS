@@ -36,6 +36,7 @@ body {
     background: #1a2535;
     color: #b06090;
     border: 1px solid #b06090;
+    background:#0a60f4
     font-size: .75rem;
     padding: .3rem .8rem;
     border-radius: 4px;
@@ -119,7 +120,7 @@ body {
 
 <div class="page-header">
 <div class="page-header-inner">
-  <a href="mmdvm.php" class="btn btn-primary btn-sm">← Panel PHPDVSxx</a>
+  <a href="mmdvm.php" class="btn btn-primary btn-sm">← Panel PHPDVS</a>
   <span>🔗 Panel . Transcoding</span>
 </div>
 </div>
