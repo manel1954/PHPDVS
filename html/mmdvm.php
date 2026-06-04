@@ -895,7 +895,7 @@ button.btn-header { font-family: var(--font-mono); }
 <button class="btn btn-secondary btn-sm" onclick="xtTtydOpen()">🖥️ Terminal</button>
 <a href="extra.php" class="btn btn-warning btn-sm">⚙️ Menu Extra</a>
 <div class="dropdown-wrap" id="dropBridge">
-  <button class="btn btn-light btn-sm" style="color:#b06090;border-color:#b06090;" onclick="toggleDropdownBridge(event)">🔗 Bridge ▾</button>
+  <button class="btn btn-light btn-sm" style="color:#000;border-color:#b06090;" onclick="toggleDropdownBridge(event)">🔗 Bridge ▾</button>
   <div class="dropdown-menu-custom">
     <a class="dropdown-item-custom" href="mmdvmdmr2ysf.php">🔀 DMR2YSF</a>
     <a class="dropdown-item-custom" href="ysf2dmr.php">🔀 YSF2DMR</a>
