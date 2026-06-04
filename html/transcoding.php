@@ -113,8 +113,6 @@ body {
 .bridge-card.dmr2nxdn:hover { transform: none; box-shadow: none; }
 .badge-soon { display: inline-block; background: rgba(0,0,0,.25); color: #fff; font-size: .65rem; font-family: 'Share Tech Mono', monospace; letter-spacing: .08em; text-transform: uppercase; padding: .15rem .5rem; border-radius: 3px; margin-top: .5rem; }
 </style>
-<link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&display=swap" rel="stylesheet">
-<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
 
 </head>
 <body>
@@ -122,7 +120,7 @@ body {
 <div class="page-header">
 <div class="page-header-inner">
   <a href="mmdvm.php" class="btn btn-primary btn-sm">← Panel PHPDVS</a>
-  <span>🔗 Bridges · Transcoding</span>
+  <span>🔗 Transcoding</span>
 </div>
 </div>
 
