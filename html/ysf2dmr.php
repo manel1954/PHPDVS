@@ -114,6 +114,28 @@ if ($action === 'ysf2dmr-transmission') {
     echo json_encode($state);
     exit;
 }
+if ($action === 'read-file') {
+    $allowed = ['/home/pi/MMDVMHost/MMDVMYSF2DMR.ini', '/home/pi/MMDVM_CM/YSF2DMR/YSF2DMR.ini'];
+    $path = $_POST['path'] ?? '';
+    if (!in_array($path, $allowed)) { header('Content-Type: application/json'); echo json_encode(['ok'=>false,'msg'=>'Ruta no permitida']); exit; }
+    if (!file_exists($path)) { header('Content-Type: application/json'); echo json_encode(['ok'=>false,'msg'=>'Fichero no encontrado']); exit; }
+    $content = file_get_contents($path);
+    header('Content-Type: application/json');
+    echo json_encode(['ok'=>true,'content'=>$content]);
+    exit;
+}
+if ($action === 'save-file') {
+    $allowed = ['/home/pi/MMDVMHost/MMDVMYSF2DMR.ini', '/home/pi/MMDVM_CM/YSF2DMR/YSF2DMR.ini'];
+    $path = $_POST['path'] ?? '';
+    $content = $_POST['content'] ?? '';
+    if (!in_array($path, $allowed)) { header('Content-Type: application/json'); echo json_encode(['ok'=>false,'msg'=>'Ruta no permitida']); exit; }
+    $r = @file_put_contents($path, $content);
+    if ($r === false) { $tmp=tempnam('/tmp','ysf_edit_');file_put_contents($tmp,$content);shell_exec("sudo /bin/cp ".escapeshellarg($tmp)." ".escapeshellarg($path));@unlink($tmp); }
+    header('Content-Type: application/json');
+    echo json_encode(['ok'=>true,'msg'=>'Guardado correctamente']);
+    exit;
+}
+
 // ── Config MMDVMYSF2DMR.ini ───────────────────────────────────────────────────
 function parseIni($path) {
     $r=[]; if(!file_exists($path))return $r; $sec='';
@@ -348,6 +370,8 @@ body{background:#00004d;color:var(--text);font-family:var(--font-ui);font-size:1
     <div style="display:flex;gap:.6rem;flex-wrap:wrap;">
       <button onclick="openMmdvmYsf2dmrCfg()" class="ini-btn">⚙ MMDVMYSF2DMR CONFIG</button>
       <button onclick="openYsf2dmrCfg()" class="ini-btn">⚙ YSF2DMR CONFIG</button>
+      <button onclick="feditOpen('/home/pi/MMDVMHost/MMDVMYSF2DMR.ini')" class="ini-btn">📄 editar MMDVMYSF2DMR.ini</button>
+      <button onclick="feditOpen('/home/pi/MMDVM_CM/YSF2DMR/YSF2DMR.ini')" class="ini-btn">📄 editar YSF2DMR.ini</button>
     </div>
   </div>
 
@@ -398,6 +422,20 @@ body{background:#00004d;color:var(--text);font-family:var(--font-ui);font-size:1
 
 </div><!-- /ctrl-body -->
 
+
+<!-- Modal Editor Ficheros -->
+<div id="feditModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:9800;align-items:center;justify-content:center;" onclick="if(event.target===this)feditClose()">
+<div style="background:var(--surface);border:1px solid #ff990044;border-radius:8px;padding:1.5rem;width:900px;max-width:96vw;display:flex;flex-direction:column;gap:.8rem;">
+  <div style="font-family:var(--font-mono);font-size:.8rem;color:var(--y2d);letter-spacing:.12em;text-transform:uppercase;">📝 Editor de fichero</div>
+  <div style="font-family:var(--font-mono);font-size:.72rem;color:var(--amber);" id="feditPath">—</div>
+  <textarea id="feditArea" spellcheck="false" style="font-family:var(--font-mono);font-size:.78rem;color:#c9d1d9;background:#060c10;border:1px solid #ff990033;border-radius:4px;padding:.8rem;height:480px;resize:vertical;outline:none;line-height:1.5;width:100%;tab-size:4;"></textarea>
+  <div id="feditMsg" style="display:none;font-family:var(--font-mono);font-size:.75rem;padding:.4rem .8rem;border-radius:4px;border:1px solid;"></div>
+  <div style="display:flex;gap:.8rem;">
+    <button onclick="feditSave()" style="flex:1;background:#28a745;color:#fff;border:none;border-radius:6px;font-family:var(--font-mono);font-size:.8rem;text-transform:uppercase;padding:.6rem;cursor:pointer;">💾 Guardar</button>
+    <button onclick="feditClose()" style="flex:1;background:transparent;color:var(--text-dim);border:1px solid var(--border);border-radius:6px;font-family:var(--font-mono);font-size:.8rem;text-transform:uppercase;padding:.6rem;cursor:pointer;">✖ Cerrar</button>
+  </div>
+</div>
+</div>
 
 <!-- Modal MMDVMYSF2DMR.ini -->
 <div id="mmdvmYsfCfgModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:9700;align-items:center;justify-content:center;" onclick="if(event.target===this)closeMmdvmYsf2dmrCfg()">
@@ -568,6 +606,27 @@ async function saveYsf2dmrCfg(){
 }
 
 function cfgMsg(id,txt,ok){const el=document.getElementById(id);const c=ok==='loading'?'var(--amber)':ok?'var(--green)':'var(--red)';const bg=ok==='loading'?'rgba(255,179,0,.06)':ok?'rgba(0,255,159,.06)':'rgba(255,69,96,.06)';el.style.cssText=`font-family:var(--font-mono);font-size:.75rem;display:block;padding:.4rem .8rem;border-radius:4px;border:1px solid ${c};color:${c};background:${bg};`;el.textContent=txt;}
+
+// ── fedit ──
+async function feditOpen(path){
+    const msg=document.getElementById('feditMsg');msg.style.display='none';
+    document.getElementById('feditPath').textContent=path;
+    document.getElementById('feditArea').value='Cargando…';
+    document.getElementById('feditModal').style.display='flex';
+    try{const r=await fetch('?action=read-file',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:'path='+encodeURIComponent(path)});const d=await r.json();
+    if(d.ok){document.getElementById('feditArea').value=d.content;}
+    else{document.getElementById('feditArea').value='';cfgMsg('feditMsg','✖ '+d.msg,false);}
+    }catch(e){cfgMsg('feditMsg','✖ Error: '+e.message,false);}
+}
+async function feditSave(){
+    const path=document.getElementById('feditPath').textContent;
+    const content=document.getElementById('feditArea').value;
+    try{const r=await fetch('?action=save-file',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:'path='+encodeURIComponent(path)+'&content='+encodeURIComponent(content)});const d=await r.json();
+    cfgMsg('feditMsg',(d.ok?'✔ ':'✖ ')+d.msg,d.ok);
+    if(d.ok)setTimeout(()=>document.getElementById('feditMsg').style.display='none',3000);
+    }catch(e){cfgMsg('feditMsg','✖ Error: '+e.message,false);}
+}
+function feditClose(){document.getElementById('feditModal').style.display='none';}
 </script>
 </body>
 </html>
