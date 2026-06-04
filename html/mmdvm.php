@@ -897,7 +897,7 @@ button.btn-header { font-family: var(--font-mono); }
 <div class="dropdown-wrap" id="dropBridge">
   <button class="btn btn-light btn-sm" style="color:#000;border-color:#b06090;" onclick="toggleDropdownBridge(event)">🔗 Bridges ▾</button>
   <div class="dropdown-menu-custom">
-    <a class="dropdown-item-custom" style="font-size:.80rem; text-decoration: none;" href="mmdvmdmr2ysf.php">🔗 DMR2YSF</a>
+    <a class="dropdown-item-custom" style="font-size:.80rem; text-decoration: none;" href="dmr2ysf.php">🔗 DMR2YSF</a>
     <a class="dropdown-item-custom" style="font-size:.80rem; text-decoration: none;" href="ysf2dmr.php">🔗 YSF2DMR</a>
   </div>
 </div>
