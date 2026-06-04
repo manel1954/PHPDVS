@@ -272,14 +272,13 @@ if($action==='ysf2dmr-config-save'){
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>YSF2DMR · Panel</title>
-<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
 <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Rajdhani:wght@500;700&family=Orbitron:wght@700;900&display=swap" rel="stylesheet">
 <style>
 :root{--bg:#032354;--surface:#111720;--border:#1e2d3d;--green:#00ff9f;--red:#ff4560;--amber:#ffb300;--cyan:#00d4ff;--violet:#b57aff;--text:#a8b9cc;--text-dim:#4a5568;--y2d:#ff9900;--font-mono:'Share Tech Mono',monospace;--font-ui:'Rajdhani',sans-serif;--font-orb:'Orbitron',monospace;}
 *{box-sizing:border-box;}
 body{background:#00004d;color:var(--text);font-family:var(--font-ui);font-size:1rem;min-height:100vh;padding:0;margin:0;}
 .ctrl-header{border-bottom:2px solid var(--y2d);padding:1rem 2rem;display:flex;align-items:center;gap:.8rem;background:#000;}
-.ctrl-body{padding:2rem;max-width:1200px;margin:0 auto;}
+.ctrl-body{padding:2rem;max-width:1200px;width:100%;margin-left:auto;margin-right:auto;box-sizing:border-box;}
 /* Switch */
 .sw{position:relative;width:56px;height:28px;flex-shrink:0;cursor:pointer;}
 .sw input{opacity:0;width:0;height:0;position:absolute;}
