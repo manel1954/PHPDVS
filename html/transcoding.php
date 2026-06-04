@@ -36,7 +36,6 @@ body {
     background: #1a2535;
     color: #b06090;
     border: 1px solid #b06090;
-    background:#0a60f4
     font-size: .75rem;
     padding: .3rem .8rem;
     border-radius: 4px;
