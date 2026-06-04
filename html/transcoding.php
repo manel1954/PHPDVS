@@ -18,7 +18,7 @@ body {
     margin: 0;
 }
 .page-header {
-    background: #000;
+    background: #f00;
     border-bottom: 2px solid #fff;
     color: #fff;
 }
