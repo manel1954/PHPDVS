@@ -20,6 +20,7 @@ body {
 .page-header {
     background: #000;
     border-bottom: 2px solid #fff;
+    color: #fff;
 }
 .page-header-inner {
     max-width: 900px;
