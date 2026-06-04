@@ -894,7 +894,13 @@ button.btn-header { font-family: var(--font-mono); }
 </div>
 <button class="btn btn-secondary btn-sm" onclick="xtTtydOpen()">🖥️ Terminal</button>
 <a href="extra.php" class="btn btn-warning btn-sm">⚙️ Menu Extra</a>
-<a href="mmdvmdmr2ysf.php" class="btn btn-primary btn-sm"> 🔗 DMR2YSF </a>
+<div class="dropdown-wrap" id="dropBridge">
+  <button class="btn btn-light btn-sm" style="color:#b06090;border-color:#b06090;" onclick="toggleDropdownBridge(event)">🔗 Bridge ▾</button>
+  <div class="dropdown-menu-custom">
+    <a class="dropdown-item-custom" href="mmdvmdmr2ysf.php">🔀 DMR2YSF</a>
+    <a class="dropdown-item-custom" href="ysf2dmr.php">🔀 YSF2DMR</a>
+  </div>
+</div>
 <button id="btnReboot" class="btn btn-danger btn-sm" onclick="rebootPi()">⏻ Reiniciar Pi</button>
 </div>
 </header>
@@ -1342,8 +1348,9 @@ function stopNXDNTxPoll(){clearInterval(nxdnTxTimer);nxdnTxTimer=null;}
 async function toggleServices(chk){const wasOn=!chk.checked;const sw=document.getElementById('swDMR');chk.checked=wasOn;sw.classList.add('busy');try{await fetch(wasOn?'?action=stop':'?action=start');await new Promise(r=>setTimeout(r,2200));const r=await fetch('?action=status');const d=await r.json();const gw=d.gateway==='active',mmd=d.mmdvm==='active';running=gw||mmd;setDot('dot-gateway',gw?'active':'off');setDot('dot-mmdvm',mmd?'active':'off');setDot('dot-mosquitto',gw?'active':'off');setDMRToggle(running);if(wasOn){stopRefresh();clearLog('logGw');clearLog('logMmd');showIdle();document.getElementById('lhBody').innerHTML='<div class="lh-empty">Sin actividad reciente</div>';}else startRefresh();}finally{sw.classList.remove('busy');}}
 async function toggleYSF(chk){const wasOn=!chk.checked;const sw=document.getElementById('swYSF');chk.checked=wasOn;sw.classList.add('busy');try{if(wasOn){await fetch('?action=ysf-stop');await new Promise(r=>setTimeout(r,1000));await fetch('?action=mmdvmysf-stop');await new Promise(r=>setTimeout(r,2000));clearLog('logYsf');clearLog('logMmdvmYsf');stopYSFLogs();stopMMDVMYSFLogs();showYSFIdle();document.getElementById('ysfLhBody').innerHTML='<div class="lh-empty">Sin actividad C4FM</div>';}else{await fetch('?action=mmdvmysf-start');await new Promise(r=>setTimeout(r,2000));await fetch('?action=ysf-start');await new Promise(r=>setTimeout(r,1500));startYSFLogs();startMMDVMYSFLogs();}await checkYSFStatus();await checkMMDVMYSFStatus();}finally{sw.classList.remove('busy');}}
 
-function toggleDropdown(e){e.stopPropagation();document.getElementById('dropActualizaciones').classList.toggle('open');}
-document.addEventListener('click',()=>document.getElementById('dropActualizaciones').classList.remove('open'));
+function toggleDropdown(e){e.stopPropagation();document.getElementById('dropActualizaciones').classList.toggle('open');document.getElementById('dropBridge').classList.remove('open');}
+function toggleDropdownBridge(e){e.stopPropagation();document.getElementById('dropBridge').classList.toggle('open');document.getElementById('dropActualizaciones').classList.remove('open');}
+document.addEventListener('click',()=>{document.getElementById('dropActualizaciones').classList.remove('open');document.getElementById('dropBridge').classList.remove('open');});
 function closeUpdate(){document.getElementById('updateModal').classList.remove('open');}
 const UPDATE_TITLES={imagen:'🖼 Actualizar Imagen',ids:'📋 Actualizar IDs',ysf:'📡 Actualizar Reflectores YSF'};
 const UPDATE_ACTIONS={imagen:'?action=update-imagen',ids:'?action=update-ids',ysf:'?action=update-ysf'};
