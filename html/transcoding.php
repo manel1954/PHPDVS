@@ -20,10 +20,16 @@ body {
 .page-header {
     background: #000;
     border-bottom: 2px solid #b06090;
+}
+.page-header-inner {
+    max-width: 900px;
+    width: 100%;
+    margin: 0 auto;
     padding: .8rem 2rem;
     display: flex;
     align-items: center;
     gap: 1rem;
+    box-sizing: border-box;
 }
 .page-header a {
     background: #1a2535;
@@ -111,8 +117,10 @@ body {
 <body>
 
 <div class="page-header">
+<div class="page-header-inner">
   <a href="mmdvm.php">← Panel PHPPLUS</a>
   <span>🔗 Bridges · Transcoding</span>
+</div>
 </div>
 
 <div class="cards-row">
