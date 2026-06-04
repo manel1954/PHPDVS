@@ -80,7 +80,7 @@ body {
 .bridge-card.dmr2ysf { background: #e74c3c; }
 .bridge-card.ysf2dmr { background: #16a085; }
 .bridge-card .card-number {
-    font-size: .90rem;
+    font-size: 2.90rem;
     font-weight: 700;
     color: #fff;
     line-height: 1;
