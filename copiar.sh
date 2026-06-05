@@ -8,12 +8,14 @@ zip -j "$ZIPPATH" \
   /home/pi/MMDVMHost/MMDVMDSTAR.ini \
   /home/pi/MMDVMHost/MMDVMNXDN.ini \
   /home/pi/MMDVMHost/MMDVMDMR2YSF.ini \
+  /home/pi/MMDVMHost/MMDVMYSF2DMR.ini \
   /home/pi/Display-Driver/DisplayDriver.ini \
   /home/pi/YSFClients/YSFGateway/YSFGateway.ini \
   /home/pi/DMRGateway/DMRGateway.ini \
   /home/pi/DStarGateway/DStarGateway.ini \
   /home/pi/NXDNClients/NXDNGateway/NXDNGateway.ini \
   /home/pi/MMDVM_CM/DMR2YSF/DMR2YSF.ini \
+  /home/pi/MMDVM_CM/YSF2DMR/YSF2DMR.ini \
   /home/pi/MMDVM_CM/DMR2YSF/TG-YSFList.txt \
   /home/pi/radiosonde_auto_rx/auto_rx/station.cfg \
   /etc/rbfeeder.ini \
