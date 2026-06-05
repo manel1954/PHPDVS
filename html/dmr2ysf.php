@@ -196,11 +196,9 @@ if ($action === 'dmr2ysf-transmission') {
     $state = ['active'=>false,'callsign'=>'','name'=>'','tg'=>'','source'=>''];
     if (file_exists($stateFile)) { $saved = json_decode(file_get_contents($stateFile), true); if (is_array($saved)) $state = $saved; }
     foreach ($lines as $line) {
-        // Fin de transmisión tiene prioridad absoluta (DMR o YSF)
         if (preg_match('/DMR received end of voice|YSF received end of voice|end of voice transmission|lost|watchdog|timeout/i', $line)) {
             $state['active'] = false; file_put_contents($stateFile, json_encode($state)); break;
         }
-        // Transmisión entrante desde DMR (yo desde radio)
         if (preg_match('/DMR audio received from\s+([A-Z0-9]+).*TG\s+(\d+)/i', $line, $m)) {
             $cs=strtoupper(trim($m[1]));$inf=lookupCall($cs);
             $state=['active'=>true,'callsign'=>$cs,'name'=>$inf['name'],'tg'=>$m[2],'source'=>'DMR'];
@@ -211,7 +209,6 @@ if ($action === 'dmr2ysf-transmission') {
             $state=['active'=>true,'callsign'=>$cs,'name'=>$inf['name'],'tg'=>'','source'=>'DMR'];
             file_put_contents($stateFile,json_encode($state));break;
         }
-        // Transmisión entrante desde YSF (alguien del reflector)
         if (preg_match('/Received YSF Header:\s+Src:\s+([A-Z0-9]+)/i', $line, $m)) {
             $cs=strtoupper(trim($m[1]));$inf=lookupCall($cs);
             $state=['active'=>true,'callsign'=>$cs,'name'=>$inf['name'],'tg'=>'','source'=>'YSF'];
@@ -575,16 +572,17 @@ function setDMR2YSFToggle(on){
 
 async function checkDmr2ysfStatus(){try{const r=await fetch('?action=dmr2ysf-status');const d=await r.json();const active=d.dmr2ysf==='active';setDot('dot-dmr2ysf-mmd',d.s1==='active'?'active':'off');setDot('dot-dmr2ysf-ysf',d.s2==='active'?'active':'off');setDot('dot-dmr2ysf',d.s3==='active'?'active':'off');dmr2ysfRunning=active;setDMR2YSFToggle(active);if(active){startDmr2ysfLogs();startDmr2ysfTxPoll();}}catch(e){}}
 
+// ── CORRECCIÓN: wantOn=chk.checked (estado nuevo tras el click) ──
 async function toggleDMR2YSF(chk){
-    const wasOn=!chk.checked;const sw=document.getElementById('swDMR2YSF');chk.checked=wasOn;sw.classList.add('busy');
+    const wantOn=chk.checked;const sw=document.getElementById('swDMR2YSF');chk.checked=!wantOn;sw.classList.add('busy');
     try{
-        await fetch(wasOn?'?action=dmr2ysf-stop':'?action=dmr2ysf-start');
+        await fetch(wantOn?'?action=dmr2ysf-start':'?action=dmr2ysf-stop');
         let ok=false;
         for(let i=0;i<15;i++){
             await new Promise(r=>setTimeout(r,1000));
             const r=await fetch('?action=dmr2ysf-status');const d=await r.json();const isOn=d.dmr2ysf==='active';
-            if(wasOn&&!isOn){ok=true;setDot('dot-dmr2ysf-mmd','off');setDot('dot-dmr2ysf-ysf','off');setDot('dot-dmr2ysf','off');dmr2ysfRunning=false;setDMR2YSFToggle(false);stopDmr2ysfLogs();stopDmr2ysfTxPoll();showDmr2ysfIdle();clearLog('logDmr2ysf');clearLog('logYsfGwDmr2ysf');clearLog('logMmdvmDmr2ysf');break;}
-            if(!wasOn&&isOn){ok=true;setDot('dot-dmr2ysf-mmd',d.s1==='active'?'active':'off');setDot('dot-dmr2ysf-ysf',d.s2==='active'?'active':'off');setDot('dot-dmr2ysf',d.s3==='active'?'active':'off');dmr2ysfRunning=true;setDMR2YSFToggle(true);startDmr2ysfLogs();startDmr2ysfTxPoll();break;}
+            if(wantOn&&isOn){ok=true;setDot('dot-dmr2ysf-mmd',d.s1==='active'?'active':'off');setDot('dot-dmr2ysf-ysf',d.s2==='active'?'active':'off');setDot('dot-dmr2ysf',d.s3==='active'?'active':'off');dmr2ysfRunning=true;setDMR2YSFToggle(true);startDmr2ysfLogs();startDmr2ysfTxPoll();break;}
+            if(!wantOn&&!isOn){ok=true;setDot('dot-dmr2ysf-mmd','off');setDot('dot-dmr2ysf-ysf','off');setDot('dot-dmr2ysf','off');dmr2ysfRunning=false;setDMR2YSFToggle(false);stopDmr2ysfLogs();stopDmr2ysfTxPoll();showDmr2ysfIdle();clearLog('logDmr2ysf');clearLog('logYsfGwDmr2ysf');clearLog('logMmdvmDmr2ysf');break;}
         }
         if(!ok)await checkDmr2ysfStatus();
     }catch(e){}finally{sw.classList.remove('busy');}
@@ -647,3 +645,6 @@ function feditClose(){document.getElementById('feditModal').style.display='none'
     setInterval(checkDmr2ysfStatus,10000);
     showDmr2ysfIdle();
 })();
+</script>
+</body>
+</html>
