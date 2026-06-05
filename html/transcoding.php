@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -33,7 +32,6 @@ body {
 .page-header a {
     background: #2a67f6;
     color: #000;
-   
     font-size: .75rem;
     padding: .3rem .8rem;
     border-radius: 4px;
@@ -77,6 +75,7 @@ body {
 }
 .bridge-card.dmr2ysf { background: #e74c3c; }
 .bridge-card.ysf2dmr { background: #16a085; }
+.bridge-card.dmr2nxdn { background: #8e44ad; }
 .bridge-card .card-number {
     font-size: 2.90rem;
     font-weight: 700;
@@ -107,9 +106,6 @@ body {
     font-family: 'Share Tech Mono', monospace;
     letter-spacing: .04em;
 }
-.bridge-card.dmr2nxdn { background: #d4a017; cursor: not-allowed; }
-.bridge-card.dmr2nxdn:hover { transform: none; box-shadow: none; }
-.badge-soon { display: inline-block; background: rgba(0,0,0,.25); color: #fff; font-size: .65rem; font-family: 'Share Tech Mono', monospace; letter-spacing: .08em; text-transform: uppercase; padding: .15rem .5rem; border-radius: 3px; margin-top: .5rem; }
 </style>
 
 </head>
@@ -138,13 +134,12 @@ body {
     <span class="card-icon" style="color:#000">⇄</span>
   </a>
 
-  <div class="bridge-card dmr2nxdn">
+  <a href="dmr2nxdn.php" class="bridge-card dmr2nxdn">
     <span class="card-number">DMR</span>
     <span class="card-label">DMR2NXDN</span>
     <span class="card-subtitle">Cross-mode Bridge</span>
-    <span class="badge-soon">Próximamente</span>
     <span class="card-icon" style="color:#000">⇄</span>
-  </div>
+  </a>
 
 </div>
 
