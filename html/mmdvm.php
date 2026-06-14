@@ -1,8 +1,13 @@
 <?php
 require_once __DIR__ . '/auth.php';
+header('X-Content-Type-Options: nosniff');
+$action = $_GET['action'] ?? '';
+
+// ─────────────────────────────────────────────────────
 $maquina_json_path = '/var/www/html/maquina.json';
-$maquina_nombre = 'Raspberry Pi';
-$maquina_ip = '—';
+$maquina_nombre = 'Raspberry Casa'; 
+$maquina_ip = '—';                 
+
 if (file_exists($maquina_json_path)) {
     $maquina_conte = file_get_contents($maquina_json_path);
     $maquina_data = json_decode($maquina_conte, true);
@@ -11,8 +16,7 @@ if (file_exists($maquina_json_path)) {
         $maquina_ip = $maquina_data['ip'] ?? $maquina_ip;
     }
 }
-header('X-Content-Type-Options: nosniff');
-$action = $_GET['action'] ?? '';
+// ────────────────────────────────────────────────────────
 
 function saveState($key, $value) {
     $file = '/var/lib/mmdvm-state';
@@ -613,21 +617,72 @@ if ($action === 'nxdn-transmission') {
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Panel PHPDVS</title>
+<title>Panel PHPLUS ADER</title>
 <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
 <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Rajdhani:wght@500;700&family=Orbitron:wght@700;900&display=swap" rel="stylesheet">
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&display=swap" rel="stylesheet">
 <style>
 :root { --bg: #032354; --surface: #111720; --border: #1e2d3d; --green: #00ff9f; --green-dim: #00cc7a; --red: #ff4560; --amber: #ffb300; --cyan: #00d4ff; --violet: #b57aff; --text: #a8b9cc; --text-dim: #4a5568; --font-mono: 'Share Tech Mono', monospace; --font-ui: 'Rajdhani', sans-serif; --font-orb: 'Orbitron', monospace; }
 * { box-sizing: border-box; }
-body { background:#00004d; color: var(--text); font-family: var(--font-ui); font-size: 1rem; min-height: 100vh; padding: 0; margin: 0; }
+body {   background-image: url("fondo_02.png");
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: cover; color: var(--text); font-family: var(--font-ui); font-size: 1rem; min-height: 100vh; padding: 0; margin: 0; }
 
 .ctrl-header-inner { width: 100%; max-width: 1400px; margin: 0 auto; display: flex; flex-direction: column; align-items: center; gap: .6rem; }
 
 
 .ctrl-header { border-bottom: 2px solid #ffffff; padding: 1rem 2rem; display: flex; flex-direction: column; align-items: center; gap: .6rem; }
 
-.ctrl-header-top { display: flex; align-items: center; gap: .8rem; }
+.maquina-info-box {
+    display: flex;
+    align-items: center;
+    background: rgba(17, 23, 32, 0.6); 
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 0.5rem 1rem;
+    cursor: pointer;
+    transition: all 0.3s ease;   
+    position: relative;
+    margin: 0;
+    order: 2;
+}
+.maquina-info-box:hover {
+    border-color: var(--cyan);
+    box-shadow: 0 0 10px rgba(0, 212, 255, 0.3);
+    background: rgba(30, 45, 61, 0.7);
+}
+.maquina-badge {
+    background-color: var(--green);
+    color: #000;
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    font-weight: bold;
+    padding: 0.2rem 0.5rem;
+    border-radius: 4px;
+    margin-right: 0.8rem;
+    letter-spacing: 1px;
+    box-shadow: 0 0 8px var(--green);
+}
+.maquina-detalles {
+    display: flex;
+    flex-direction: column;
+}
+.maquina-nom {
+    font-family: var(--font-ui);
+    font-weight: 700;
+    color: #ffffff;
+    font-size: 1.1rem;
+    line-height: 1.2;
+    text-transform: uppercase;
+}
+.maquina-dir-ip {
+    font-family: var(--font-mono);
+    color: var(--cyan);
+    font-size: 0.9rem;
+}
+
+.ctrl-header-top { display: flex; align-items: center; justify-content: center; gap: 1.5rem; width: 100%; flex-wrap: wrap; }
 .ctrl-header-top h1 { font-family: var(--font-ui); font-weight: 700; font-size: 1.5rem; letter-spacing: .08em; color: #e2eaf5; margin: 0; text-transform: uppercase; }
 .ctrl-header-btns { display: flex; align-items: center; gap: .6rem; flex-wrap: wrap; justify-content: center; margin-top: .9rem; }
 .btn-header { font-family: var(--font-mono); font-size: .65rem; letter-spacing: .08em; text-transform: uppercase; background: transparent; border-radius: 4px; padding: .28rem .75rem; cursor: pointer; transition: background .2s; text-decoration: none; display: inline-block; }
@@ -648,8 +703,8 @@ button.btn-header { font-family: var(--font-mono); }
 .station-meta-label { font-family: var(--font-mono); font-size: .6rem; color: var(--text-dim); letter-spacing: .15em; text-transform: uppercase; }
 .station-meta-value { font-family: var(--font-mono); font-size: .95rem; color: var(--amber); letter-spacing: .06em; font-weight: bold; }
 @media (max-width:700px) { .station-card { gap: 1.2rem; padding: 1rem; } .station-divider { display: none; } }
-.status-bar { display: flex; gap: 2rem; margin-bottom: 1.8rem; flex-wrap: wrap; align-items: center; }
-.status-item { display: flex; align-items: center; gap: .5rem; font-family: var(--font-mono); font-size:13px; text-transform: uppercase; letter-spacing: .08em; }
+.status-bar { display: flex; gap: .6rem 1.2rem; margin-bottom: 1.8rem; flex-wrap: wrap; align-items: center; justify-content: space-evenly; background: linear-gradient(135deg,var(--surface) 0%,#0d1e2a 100%); border: 1px solid var(--border); border-radius: 10px; padding: .8rem 1.2rem; box-shadow: 0 4px 15px rgba(0,0,0,0.2); }
+.status-item { display: flex; align-items: center; gap: .35rem; font-family: var(--font-mono); font-size:11px; text-transform: uppercase; letter-spacing: .05em; }
 .dot { width: 10px; height: 10px; border-radius: 50%; background: var(--text-dim); transition: background .4s, box-shadow .4s; }
 .dot.active { background: var(--green); box-shadow: 0 0 8px var(--green); animation: pulse 2s infinite; }
 .dot.error { background: var(--red); box-shadow: 0 0 8px var(--red); }
@@ -767,7 +822,7 @@ button.btn-header { font-family: var(--font-mono); }
 .nx-topbar.nxdn-bar .nx-mode { color: #ffd700; opacity: .8; }
 .nx-botbar.nxdn-bar { background: #0e0e06; border-top: 1px solid #4a4a00; color: #707000; }
 .nx-infobar-nxdn { background: rgba(0,0,0,.4); border-bottom: 1px solid #303000; }
-.lh-panel { background: var(--surface); border: 3px solid #1a3a4a; border-radius: 6px; display: flex; flex-direction: column; }
+.lh-panel { background: var(--surface); border: 3px solid #1a3a4a; border-radius: 6px; display: flex; flex-direction: column; height: 240px; overflow: hidden; }
 .lh-header { background: #1c1c24; border-bottom: 1px solid var(--border); padding: .4rem 1rem; display: grid; grid-template-columns: 1.1fr 1.5fr .7fr .7fr .5fr; gap: .3rem; font-family: var(--font-mono); font-size: .6rem; color: var(--text-dim); letter-spacing: .1em; text-transform: uppercase; }
 .lh-body { flex: 1; overflow-y: auto; }
 .lh-body::-webkit-scrollbar { width: 3px; }
@@ -786,7 +841,7 @@ button.btn-header { font-family: var(--font-mono); }
 .lh-src.rf { color: var(--green); }
 .lh-src.net { color: var(--cyan); }
 .lh-empty { padding: 1.5rem 1rem; font-family: var(--font-mono); font-size: .72rem; color: var(--text-dim); text-align: center; }
-.lh-panel-ysf { background: var(--surface); border: 3px solid #2d1a4a; border-radius: 6px; display: flex; flex-direction: column; }
+.lh-panel-ysf { background: var(--surface); border: 3px solid #2d1a4a; border-radius: 6px; display: flex; flex-direction: column; height: 240px; overflow: hidden; }
 .lh-header-ysf { background: #1a1424; border-bottom: 1px solid #2d1a4a; padding: .4rem 1rem; display: grid; grid-template-columns: 1.2fr 1.8fr 1fr .6fr; gap: .3rem; font-family: var(--font-mono); font-size: .6rem; color: #4a2a7a; letter-spacing: .1em; text-transform: uppercase; }
 .lh-row-ysf { display: grid; grid-template-columns: 1.2fr 1.8fr 1fr .6fr; gap: .3rem; padding: .45rem 1rem; border-bottom: 1px solid rgba(45,26,74,.5); align-items: center; transition: background .2s; }
 .lh-row-ysf:last-child { border-bottom: none; }
@@ -794,7 +849,7 @@ button.btn-header { font-family: var(--font-mono); }
 .lh-row-ysf.lh-active { background: rgba(181,122,255,.08); }
 .lh-tx-dot-ysf { width: 6px; height: 6px; border-radius: 50%; background: var(--violet); box-shadow: 0 0 6px var(--violet); animation: pulse 1s infinite; flex-shrink: 0; }
 .lh-call-ysf { font-family: var(--font-mono); font-size: .82rem; color: var(--violet); letter-spacing: .05em; font-weight: bold; }
-.lh-panel-nxdn { background: var(--surface); border: 3px solid #4a4a00; border-radius: 6px; display: flex; flex-direction: column; }
+.lh-panel-nxdn { background: var(--surface); border: 3px solid #4a4a00; border-radius: 6px; display: flex; flex-direction: column; height: 240px; overflow: hidden; }
 .lh-header-nxdn { background: #1a1a0a; border-bottom: 1px solid #4a4a00; padding: .4rem 1rem; display: grid; grid-template-columns: 1.2fr 1.8fr .8fr 1fr .6fr; gap: .3rem; font-family: var(--font-mono); font-size: .6rem; color: #707000; letter-spacing: .1em; text-transform: uppercase; }
 .lh-row-nxdn { display: grid; grid-template-columns: 1.2fr 1.8fr .8fr 1fr .6fr; gap: .3rem; padding: .45rem 1rem; border-bottom: 1px solid rgba(74,74,0,.5); align-items: center; transition: background .2s; }
 .lh-row-nxdn:last-child { border-bottom: none; }
@@ -802,7 +857,7 @@ button.btn-header { font-family: var(--font-mono); }
 .lh-row-nxdn.lh-active { background: rgba(255,215,0,.08); }
 .lh-tx-dot-nxdn { width: 6px; height: 6px; border-radius: 50%; background: #ffd700; box-shadow: 0 0 6px #ffd700; animation: pulse 1s infinite; flex-shrink: 0; }
 .lh-call-nxdn { font-family: var(--font-mono); font-size: .82rem; color: #ffd700; letter-spacing: .05em; font-weight: bold; }
-.log-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1.2rem; }
+.log-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1.2rem; margin-top: 1rem; }
 @media (max-width:900px) { .log-grid { grid-template-columns: 1fr; } }
 .log-panel { background: var(--surface); border: 1px solid var(--border); border-radius: 4px; overflow: hidden; }
 .log-panel-header { display: flex; align-items: center; justify-content: space-between; padding: .5rem 1rem; border-bottom: 1px solid var(--border); background: rgba(0,0,0,.3); }
@@ -877,53 +932,6 @@ button.btn-header { font-family: var(--font-mono); }
 .flag-emoji-img { height: 20px; width: auto; vertical-align: middle; margin-right: 4px; border-radius: 2px; }
 .nx-callsign .flag-emoji { font-size: 3.2rem; }
 .nx-callsign .flag-emoji-img { height: 42px; }
-.maquina-info-box {
-    display: flex;
-    align-items: center;
-    background: rgba(17, 23, 32, 0.6);
-    border: 1px solid var(--border);
-    border-radius: 8px;
-    padding: 0.5rem 1rem;
-    cursor: pointer;
-    transition: all 0.3s ease;
-    position: relative;
-    margin: 0;
-    order: 2;
-}
-.maquina-info-box:hover {
-    border-color: var(--cyan);
-    box-shadow: 0 0 10px rgba(0, 212, 255, 0.3);
-    background: rgba(30, 45, 61, 0.7);
-}
-.maquina-badge {
-    background-color: var(--green);
-    color: #000;
-    font-family: var(--font-mono);
-    font-size: 0.75rem;
-    font-weight: bold;
-    padding: 0.2rem 0.5rem;
-    border-radius: 4px;
-    margin-right: 0.8rem;
-    letter-spacing: 1px;
-    box-shadow: 0 0 8px var(--green);
-}
-.maquina-detalles {
-    display: flex;
-    flex-direction: column;
-}
-.maquina-nom {
-    font-family: var(--font-ui);
-    font-weight: 700;
-    color: #ffffff;
-    font-size: 1.1rem;
-    line-height: 1.2;
-    text-transform: uppercase;
-}
-.maquina-dir-ip {
-    font-family: var(--font-mono);
-    color: var(--cyan);
-    font-size: 0.9rem;
-}
 </style>
 </head>
 <body>
@@ -932,26 +940,32 @@ button.btn-header { font-family: var(--font-mono); }
 <a href="https://associacioader.com" target="_blank">
   <img src="Logo_Ader.png" alt="EA3EIZ" style="height:40px; width:auto;">
 </a>
-<a href="info_maquina.php" style="text-decoration: none; color: inherit; order: 2;" title="Configurar equipo">
+
+        <a href="info_maquina.php" style="text-decoration: none; color: inherit; order: 2;" title="Configurar equipo">
     <div class="maquina-info-box">
         <span class="maquina-badge">ONLINE</span>
+        
         <div class="maquina-detalles" style="display: flex; flex-direction: column; align-items: center; text-align: center;">
+            
             <div class="maquina-nom"><?php echo htmlspecialchars($maquina_nombre); ?></div>
+            
             <div class="maquina-dir-ip"><?php echo htmlspecialchars($maquina_ip); ?></div>
         </div>
+        
     </div>
 </a>
+
 <span style="color:amber;font-size:1.9rem;font-family: Bebas Neue, sans-serif;">PANEL SISTEMAS DIGITALES</span>
 <span style="color:#ff8c00;font-size:1.9rem;font-family: Bebas Neue, sans-serif;">PARA RADIOAFICIONADOS</span>
-<span style="color:rgb(109,109,971);font-size:1.9rem;font-family: Bebas Neue, sans-serif;">PHPDVS</span>
+<span style="color:rgb(109,109,971);font-size:1.9rem;font-family: Bebas Neue, sans-serif;">PHPPLUS</span>
 
 </div>
 <div class="ctrl-header-btns">
-<a href="editor_general_config.php" class="btn btn-primary btn-sm"> ✏️ EDITOR GENERAL </a>
-<a href="?action=backup-configs" class="btn btn-success btn-sm"> 💾 HACER COPIA DE SEGURIDAD </a>
-<button onclick="openRestore()" class="btn btn-info btn-sm"> 💿 RESTAURAR COPIA DE SEGURIDAD </button>
+<a href="editor_general_config.php" class="btn btn-primary btn-sm"> ✏️ Editor General </a>
+<a href="?action=backup-configs" class="btn btn-success btn-sm"> 💾 Hacer copia de seguridad </a>
+<button onclick="openRestore()" class="btn btn-info btn-sm"> 💿 Restaurar copia de seguridad </button>
 <div class="dropdown-wrap" id="dropActualizaciones">
-  <button class="btn btn-light btn-sm">⬇ ATUALIZACIONES ▾</button>
+  <button class="btn btn-light btn-sm">⬇ Actualizaciones ▾</button>
   <div class="dropdown-menu-custom">
     <button class="dropdown-item-custom" onclick="runUpdate('imagen')">⬇ Actualizar Imagen</button>
     <button class="dropdown-item-custom" onclick="runUpdate('ids')">📋 Actualizar IDs dmr</button>
@@ -959,10 +973,10 @@ button.btn-header { font-family: var(--font-mono); }
     <button class="dropdown-item-custom" onclick="window.location.href='dstar_json_converter.php'">📡 Actualizar Reflectores D-STAR</button>
   </div>
 </div>
-<button class="btn btn-secondary btn-sm" onclick="xtTtydOpen()">🖥️ TERMINAL</button>
-<a href="extra.php" class="btn btn-warning btn-sm">⚙️ MENÚ EXTRA</a>
-<a href="transcoding.php" class="btn btn-primary btn-sm">🔗 BRIDGES</a>
-<button id="btnReboot" class="btn btn-danger btn-sm" onclick="rebootPi()">⏻ REINICIAR PI</button>
+<button class="btn btn-secondary btn-sm" onclick="xtTtydOpen()">🖥️ Terminal</button>
+<a href="extra.php" class="btn btn-warning btn-sm">⚙️ Menu Extra</a>
+<a href="bridge.php" class="btn btn-primary btn-sm"> 🔗 BRIDGES </a>
+<button id="btnReboot" class="btn btn-danger btn-sm" onclick="rebootPi()">⏻ Reiniciar Pi</button>
 </div>
 </header>
 <main class="ctrl-body">
@@ -1090,6 +1104,19 @@ button.btn-header { font-family: var(--font-mono); }
       <div class="nx-botbar"><span class="nx-dmrid" id="nxDmrid">—</span><span>DMR · DIGITAL VOICE</span><span id="nxSlot" style="display:none">—</span><span class="nx-source" id="nxSource"></span></div>
     </div>
   </div>
+  <div id="dmrLastHeardPanel">
+    <div class="panel-label">▸ Últimos escuchados DMR</div>
+    <div class="lh-panel">
+      <div class="lh-header"><span>Indicativo</span><span>Nombre</span><span>TG</span><span>Hora</span><span>Src</span></div>
+      <div class="lh-body" id="lhBody"><div class="lh-empty">Sin actividad reciente</div></div>
+    </div>
+  </div>
+</div>
+<div class="log-grid" id="dmrLogPanels">
+<div class="log-panel"><div class="log-panel-header"><span class="svc-name">▸ MMDVMHost</span><button class="btn-clear" onclick="clearLog('logMmd')">limpiar</button></div><div class="log-output" id="logMmd">Esperando servicios…</div></div>
+<div class="log-panel"><div class="log-panel-header"><span class="svc-name gw">▸ DMRGateway</span><button class="btn-clear" onclick="clearLog('logGw')">limpiar</button></div><div class="log-output" id="logGw">Esperando servicios…</div></div>
+</div>
+<div class="display-row" style="margin-top:1.2rem;">
   <div id="ysfDisplayPanel">
     <div class="panel-label ysf-label">▸ C4FM Display</div>
     <div class="nextion-ysf">
@@ -1101,6 +1128,17 @@ button.btn-header { font-family: var(--font-mono); }
       <div class="nx-botbar ysf-bar"><span style="color:#5a3a8a;font-family:var(--font-mono);font-size:.65rem;" id="ysfProto">C4FM . DIGITAL VOICE</span><span style="color:#5a3a8a;font-family:var(--font-mono);font-size:.65rem;"><?php $ysfGwIni=parseMMDVMIni('/home/pi/YSFClients/YSFGateway/YSFGateway.ini');$ysfRefStart=trim($ysfGwIni['Network']['Startup']??'—');echo "Reflector: " . htmlspecialchars($ysfRefStart); ?></span><span class="nx-source" id="ysfSource"></span></div>
     </div>
   </div>
+  <div id="ysfLastHeardPanel">
+    <div class="panel-label ysf-label">▸ Últimos escuchados C4FM</div>
+    <div class="lh-panel-ysf">
+      <div class="lh-header-ysf"><span>Indicativo</span><span>Nombre</span><span>Hora</span><span>Src</span></div>
+      <div class="lh-body" id="ysfLhBody"><div class="lh-empty">Sin actividad C4FM</div></div>
+    </div>
+  </div>
+</div>
+<div class="log-grid" id="ysfLogPanels">
+<div class="log-panel"><div class="log-panel-header"><span class="svc-name" style="color:#26c6da">▸ MMDVMHost YSF</span><button class="btn-clear" onclick="clearLog('logMmdvmYsf')">limpiar</button></div><div class="log-output" id="logMmdvmYsf">Esperando MMDVMHost YSF…</div></div>
+<div class="log-panel"><div class="log-panel-header"><span class="svc-name ysf">▸ YSFGateway</span><button class="btn-clear" onclick="clearLog('logYsf')">limpiar</button></div><div class="log-output" id="logYsf">Esperando YSFGateway…</div></div>
 </div>
 <div class="display-row" style="margin-top:1.2rem;">
   <div id="dstarDisplayPanel">
@@ -1114,6 +1152,21 @@ button.btn-header { font-family: var(--font-mono); }
       <div class="nx-botbar dstar-bar"><span style="color:#006070;font-family:var(--font-mono);font-size:.65rem;">D-STAR · DIGITAL VOICE</span><span style="color:green;font-family:var(--font-mono);font-size:.65rem;"><?php $dgwIni=parseMMDVMIni('/home/pi/DStarGateway/DStarGateway.ini');$dstarRef=trim($dgwIni['Repeater 1']['Reflector']??'—');echo "Reflector: " . htmlspecialchars($dstarRef); ?></span><span class="nx-source" id="dstarSource"></span></div>
     </div>
   </div>
+  <div id="dstarLastHeardPanel">
+    <div class="panel-label" style="color:#00e5ff;">▸ Últimos escuchados D-STAR</div>
+    <div class="lh-panel" style="border-color:#004a4a;">
+      <div class="lh-header" style="background:#0a1a1a;border-bottom-color:#004a4a;color:#006070;">
+        <span>Indicativo</span><span>Nombre</span><span>Hora</span><span>Src</span>
+      </div>
+      <div class="lh-body" id="dstarLhBody"><div class="lh-empty">Sin actividad D-STAR</div></div>
+    </div>
+  </div>
+</div>
+<div class="log-grid" id="dstarLogPanels" style="display:none;">
+<div id="dstarPanelMmd" class="log-panel"><div class="log-panel-header"><span class="svc-name" style="color:#80f0ff;">▸ MMDVMHost DStar</span><button class="btn-clear" onclick="clearLog('logDstarMmd')">limpiar</button></div><div class="log-output" id="logDstarMmd">Esperando MMDVMHost DStar…</div></div>
+<div id="dstarPanelGw" class="log-panel"><div class="log-panel-header"><span class="svc-name" style="color:#00e5ff;">▸ DStarGateway</span><button class="btn-clear" onclick="clearLog('logDstarGw')">limpiar</button></div><div class="log-output" id="logDstarGw">Esperando DStarGateway…</div></div>
+</div>
+<div class="display-row" style="margin-top:1.2rem;">
   <div id="nxdnDisplayPanel">
     <div class="panel-label" style="color:#ffd700;">▸ NXDN Display</div>
     <div class="nextion-nxdn">
@@ -1125,33 +1178,6 @@ button.btn-header { font-family: var(--font-mono); }
       <div class="nx-botbar nxdn-bar"><span style="color:#707000;font-family:var(--font-mono);font-size:.65rem;">NXDN · DIGITAL VOICE</span><span style="color:#ff0;font-family:var(--font-mono);font-size:.65rem;"><?php $nxdnGwIni=parseMMDVMIni('/home/pi/NXDNClients/NXDNGateway/NXDNGateway.ini');$nxdnRef=trim($nxdnGwIni['Network']['Static']??'—');echo 'Reflector: ' . htmlspecialchars($nxdnRef); ?></span><span class="nx-source" id="nxdnSource"></span></div>
     </div>
   </div>
-</div>
-<div class="display-row" style="margin-top:1rem;">
-  <div id="dmrLastHeardPanel">
-    <div class="panel-label">▸ Últimos escuchados DMR</div>
-    <div class="lh-panel">
-      <div class="lh-header"><span>Indicativo</span><span>Nombre</span><span>TG</span><span>Hora</span><span>Src</span></div>
-      <div class="lh-body" id="lhBody"><div class="lh-empty">Sin actividad reciente</div></div>
-    </div>
-  </div>
-  <div id="ysfLastHeardPanel">
-    <div class="panel-label ysf-label">▸ Últimos escuchados C4FM</div>
-    <div class="lh-panel-ysf">
-      <div class="lh-header-ysf"><span>Indicativo</span><span>Nombre</span><span>Hora</span><span>Src</span></div>
-      <div class="lh-body" id="ysfLhBody"><div class="lh-empty">Sin actividad C4FM</div></div>
-    </div>
-  </div>
-</div>
-<div class="display-row" style="margin-top:1rem;">
-  <div id="dstarLastHeardPanel">
-    <div class="panel-label" style="color:#00e5ff;">▸ Últimos escuchados D-STAR</div>
-    <div class="lh-panel" style="border-color:#004a4a;">
-      <div class="lh-header" style="background:#0a1a1a;border-bottom-color:#004a4a;color:#006070;">
-        <span>Indicativo</span><span>Nombre</span><span>Hora</span><span>Src</span>
-      </div>
-      <div class="lh-body" id="dstarLhBody"><div class="lh-empty">Sin actividad D-STAR</div></div>
-    </div>
-  </div>
   <div id="nxdnLastHeardPanel">
     <div class="panel-label" style="color:#ffd700;">▸ Últimos escuchados NXDN</div>
     <div class="lh-panel-nxdn">
@@ -1159,18 +1185,6 @@ button.btn-header { font-family: var(--font-mono); }
       <div class="lh-body" id="nxdnLhBody"><div class="lh-empty">Sin actividad NXDN</div></div>
     </div>
   </div>
-</div>
-<div class="log-grid" id="dmrLogPanels">
-<div class="log-panel"><div class="log-panel-header"><span class="svc-name">▸ MMDVMHost</span><button class="btn-clear" onclick="clearLog('logMmd')">limpiar</button></div><div class="log-output" id="logMmd">Esperando servicios…</div></div>
-<div class="log-panel"><div class="log-panel-header"><span class="svc-name gw">▸ DMRGateway</span><button class="btn-clear" onclick="clearLog('logGw')">limpiar</button></div><div class="log-output" id="logGw">Esperando servicios…</div></div>
-</div>
-<div class="log-grid" id="ysfLogPanels">
-<div class="log-panel"><div class="log-panel-header"><span class="svc-name" style="color:#26c6da">▸ MMDVMHost YSF</span><button class="btn-clear" onclick="clearLog('logMmdvmYsf')">limpiar</button></div><div class="log-output" id="logMmdvmYsf">Esperando MMDVMHost YSF…</div></div>
-<div class="log-panel"><div class="log-panel-header"><span class="svc-name ysf">▸ YSFGateway</span><button class="btn-clear" onclick="clearLog('logYsf')">limpiar</button></div><div class="log-output" id="logYsf">Esperando YSFGateway…</div></div>
-</div>
-<div class="log-grid" id="dstarLogPanels" style="display:none;">
-<div id="dstarPanelMmd" class="log-panel"><div class="log-panel-header"><span class="svc-name" style="color:#80f0ff;">▸ MMDVMHost DStar</span><button class="btn-clear" onclick="clearLog('logDstarMmd')">limpiar</button></div><div class="log-output" id="logDstarMmd">Esperando MMDVMHost DStar…</div></div>
-<div id="dstarPanelGw" class="log-panel"><div class="log-panel-header"><span class="svc-name" style="color:#00e5ff;">▸ DStarGateway</span><button class="btn-clear" onclick="clearLog('logDstarGw')">limpiar</button></div><div class="log-output" id="logDstarGw">Esperando DStarGateway…</div></div>
 </div>
 <div class="log-grid" id="nxdnLogPanels" style="display:none;">
 <div id="nxdnPanelMmd" class="log-panel"><div class="log-panel-header"><span class="svc-name" style="color:#ffd700;">▸ MMDVMHost NXDN</span><button class="btn-clear" onclick="clearLog('logNxdnMmd')">limpiar</button></div><div class="log-output" id="logNxdnMmd">Esperando MMDVMHost NXDN…</div></div>
@@ -1409,9 +1423,8 @@ function stopNXDNTxPoll(){clearInterval(nxdnTxTimer);nxdnTxTimer=null;}
 async function toggleServices(chk){const wasOn=!chk.checked;const sw=document.getElementById('swDMR');chk.checked=wasOn;sw.classList.add('busy');try{await fetch(wasOn?'?action=stop':'?action=start');await new Promise(r=>setTimeout(r,2200));const r=await fetch('?action=status');const d=await r.json();const gw=d.gateway==='active',mmd=d.mmdvm==='active';running=gw||mmd;setDot('dot-gateway',gw?'active':'off');setDot('dot-mmdvm',mmd?'active':'off');setDot('dot-mosquitto',gw?'active':'off');setDMRToggle(running);if(wasOn){stopRefresh();clearLog('logGw');clearLog('logMmd');showIdle();document.getElementById('lhBody').innerHTML='<div class="lh-empty">Sin actividad reciente</div>';}else startRefresh();}finally{sw.classList.remove('busy');}}
 async function toggleYSF(chk){const wasOn=!chk.checked;const sw=document.getElementById('swYSF');chk.checked=wasOn;sw.classList.add('busy');try{if(wasOn){await fetch('?action=ysf-stop');await new Promise(r=>setTimeout(r,1000));await fetch('?action=mmdvmysf-stop');await new Promise(r=>setTimeout(r,2000));clearLog('logYsf');clearLog('logMmdvmYsf');stopYSFLogs();stopMMDVMYSFLogs();showYSFIdle();document.getElementById('ysfLhBody').innerHTML='<div class="lh-empty">Sin actividad C4FM</div>';}else{await fetch('?action=mmdvmysf-start');await new Promise(r=>setTimeout(r,2000));await fetch('?action=ysf-start');await new Promise(r=>setTimeout(r,1500));startYSFLogs();startMMDVMYSFLogs();}await checkYSFStatus();await checkMMDVMYSFStatus();}finally{sw.classList.remove('busy');}}
 
-function toggleDropdown(e){e.stopPropagation();document.getElementById('dropActualizaciones').classList.toggle('open');document.getElementById('dropBridge').classList.remove('open');}
-function toggleDropdownBridge(e){e.stopPropagation();document.getElementById('dropBridge').classList.toggle('open');document.getElementById('dropActualizaciones').classList.remove('open');}
-document.addEventListener('click',()=>{document.getElementById('dropActualizaciones').classList.remove('open');document.getElementById('dropBridge').classList.remove('open');});
+function toggleDropdown(e){e.stopPropagation();document.getElementById('dropActualizaciones').classList.toggle('open');}
+document.addEventListener('click',()=>document.getElementById('dropActualizaciones').classList.remove('open'));
 function closeUpdate(){document.getElementById('updateModal').classList.remove('open');}
 const UPDATE_TITLES={imagen:'🖼 Actualizar Imagen',ids:'📋 Actualizar IDs',ysf:'📡 Actualizar Reflectores YSF'};
 const UPDATE_ACTIONS={imagen:'?action=update-imagen',ids:'?action=update-ids',ysf:'?action=update-ysf'};
