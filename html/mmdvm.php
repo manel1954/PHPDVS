@@ -1,5 +1,16 @@
 <?php
 require_once __DIR__ . '/auth.php';
+$maquina_json_path = '/var/www/html/maquina.json';
+$maquina_nombre = 'Raspberry Pi';
+$maquina_ip = '—';
+if (file_exists($maquina_json_path)) {
+    $maquina_conte = file_get_contents($maquina_json_path);
+    $maquina_data = json_decode($maquina_conte, true);
+    if (json_last_error() === JSON_ERROR_NONE && is_array($maquina_data)) {
+        $maquina_nombre = $maquina_data['nombre'] ?? $maquina_nombre;
+        $maquina_ip = $maquina_data['ip'] ?? $maquina_ip;
+    }
+}
 header('X-Content-Type-Options: nosniff');
 $action = $_GET['action'] ?? '';
 
@@ -866,6 +877,53 @@ button.btn-header { font-family: var(--font-mono); }
 .flag-emoji-img { height: 20px; width: auto; vertical-align: middle; margin-right: 4px; border-radius: 2px; }
 .nx-callsign .flag-emoji { font-size: 3.2rem; }
 .nx-callsign .flag-emoji-img { height: 42px; }
+.maquina-info-box {
+    display: flex;
+    align-items: center;
+    background: rgba(17, 23, 32, 0.6);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 0.5rem 1rem;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    position: relative;
+    margin: 0;
+    order: 2;
+}
+.maquina-info-box:hover {
+    border-color: var(--cyan);
+    box-shadow: 0 0 10px rgba(0, 212, 255, 0.3);
+    background: rgba(30, 45, 61, 0.7);
+}
+.maquina-badge {
+    background-color: var(--green);
+    color: #000;
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    font-weight: bold;
+    padding: 0.2rem 0.5rem;
+    border-radius: 4px;
+    margin-right: 0.8rem;
+    letter-spacing: 1px;
+    box-shadow: 0 0 8px var(--green);
+}
+.maquina-detalles {
+    display: flex;
+    flex-direction: column;
+}
+.maquina-nom {
+    font-family: var(--font-ui);
+    font-weight: 700;
+    color: #ffffff;
+    font-size: 1.1rem;
+    line-height: 1.2;
+    text-transform: uppercase;
+}
+.maquina-dir-ip {
+    font-family: var(--font-mono);
+    color: var(--cyan);
+    font-size: 0.9rem;
+}
 </style>
 </head>
 <body>
@@ -873,6 +931,15 @@ button.btn-header { font-family: var(--font-mono); }
 <div class="ctrl-header-top">
 <a href="https://associacioader.com" target="_blank">
   <img src="Logo_Ader.png" alt="EA3EIZ" style="height:40px; width:auto;">
+</a>
+<a href="info_maquina.php" style="text-decoration: none; color: inherit; order: 2;" title="Configurar equipo">
+    <div class="maquina-info-box">
+        <span class="maquina-badge">ONLINE</span>
+        <div class="maquina-detalles" style="display: flex; flex-direction: column; align-items: center; text-align: center;">
+            <div class="maquina-nom"><?php echo htmlspecialchars($maquina_nombre); ?></div>
+            <div class="maquina-dir-ip"><?php echo htmlspecialchars($maquina_ip); ?></div>
+        </div>
+    </div>
 </a>
 <span style="color:amber;font-size:1.9rem;font-family: Bebas Neue, sans-serif;">PANEL SISTEMAS DIGITALES</span>
 <span style="color:#ff8c00;font-size:1.9rem;font-family: Bebas Neue, sans-serif;">PARA RADIOAFICIONADOS</span>
