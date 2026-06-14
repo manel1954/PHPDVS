@@ -245,7 +245,6 @@ if (file_exists($ysf_hosts_file)) {
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>⚡ DVSwitch Control · EA3EIZ</title>
-<script src="/dvswitch/scripts/pcm-player.min.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Share+Tech+Mono&display=swap" rel="stylesheet">
 <style>
   :root {
@@ -331,15 +330,7 @@ if (file_exists($ysf_hosts_file)) {
   .section-title { font-family: 'Orbitron', sans-serif; font-size: .72rem; letter-spacing: 3px; padding: .5rem 0; margin: 1rem 0 .5rem; border-bottom: 1px solid var(--border); }
   #toast { position: fixed; bottom: 1.5rem; right: 1.5rem; background: var(--card); border-left: 3px solid var(--green); color: var(--green); font-size: .85rem; padding: .6rem 1.2rem; display: none; z-index: 200; }
   #toast.err { border-color: var(--red); color: var(--red); }
-  /* VU METER */
-  #vuPanel { display:none; position:fixed; bottom:4rem; right:1.5rem; background:#0f1520; border:1px solid var(--green); padding:.8rem; z-index:300; width:320px; box-shadow:0 0 25px rgba(0,255,136,.15); }
-  #vuPanel .vu-hdr { display:flex; justify-content:space-between; align-items:center; margin-bottom:.7rem; }
-  #vuPanel .vu-title { font-family:'Orbitron',sans-serif; font-size:.72rem; color:var(--green); letter-spacing:2px; }
-  #vuPanel .vu-close { background:transparent; border:none; color:var(--red); font-size:1.1rem; cursor:pointer; }
-  #vuPanel .vu-meter-wrap { background:#1a1408; border:2px solid #3a2a08; padding:.4rem; margin-bottom:.7rem; }
-  #vuPanel .vu-footer { display:flex; justify-content:space-between; align-items:center; font-size:.68rem; }
-  #vuConnBtn { background:var(--green); color:#000; border:none; font-family:'Share Tech Mono',monospace; font-size:.7rem; padding:.3rem .8rem; cursor:pointer; font-weight:700; letter-spacing:1px; }
-  .btn-hdr.vu-active { border-color:var(--green) !important; color:var(--green) !important; background:rgba(0,255,136,.08); }
+
 </style>
 </head>
 <body>
@@ -348,7 +339,7 @@ if (file_exists($ysf_hosts_file)) {
   <h1>⚡ DVSWITCH CONTROL · EA3EIZ</h1>
   <div class="header-btns">
     <a href="/dvswitch" class="btn-hdr accent">📊 DVSWITCH DASHBOARD</a>
-    <button class="btn-hdr" id="btnVU" onclick="toggleVU()" style="border-color:#00ff88;color:#00ff88;">🎙️ RX MONITOR</button>
+    <button class="btn-hdr" id="btnVU" onclick="playAudioToggle(8090, this)" style="border-color:#00ff88;color:#00ff88;">🎙️ RX MONITOR</button>
     <a href="mmdvm.php" class="btn-hdr">🏠 PANEL PHPPLUS</a>
   </div>
 </div>
@@ -650,24 +641,7 @@ if (file_exists($ysf_hosts_file)) {
   <div class="term-box" id="termBox">Cargando...</div>
 </div>
 
-<!-- VU METER PANEL -->
-<div id="vuPanel">
-  <div class="vu-hdr">
-    <span class="vu-title">🎙️ RX MONITOR · DVSwitch</span>
-    <button class="vu-close" onclick="closeVU()">✕</button>
-  </div>
-  <div class="vu-meter-wrap">
-    <canvas id="vuCanvas" width="300" height="160"></canvas>
-  </div>
-  <div style="font-family:'Share Tech Mono',monospace;font-size:.75rem;text-align:center;padding:.3rem 0;letter-spacing:2px;">
-    <span style="color:#4a6080;font-size:.6rem;">EN EL AIRE</span><br>
-    <span id="vuCallsign" style="color:#ffb300;font-family:'Orbitron',sans-serif;font-size:.85rem;">—</span>
-  </div>
-  <div class="vu-footer">
-    <span id="vuStatus" style="color:#4a6080;">⬤ DESCONECTADO</span>
-    <button id="vuConnBtn" onclick="vuConnect()">CONECTAR</button>
-  </div>
-</div>
+
 
 <div id="toast">✔ OK</div>
 
@@ -834,63 +808,6 @@ function showToast(msg, err=false) {
   setTimeout(() => t.style.display='none', 3500);
 }
 
-// ── VU METER ANALÓGICO
-var _vuConnected=false,_vuCtx=null,_vuLevel=0,_vuPeak=0,_vuRafId=null,_vuCallTimer=null,_vuDvsp=null,_vuPeakWs=null;
-
-function toggleVU(){
-  var p=document.getElementById('vuPanel'),btn=document.getElementById('btnVU');
-  if(p.style.display==='none'||p.style.display===''){
-    p.style.display='block';btn.classList.add('vu-active');
-    if(!_vuCtx){_vuCtx=document.getElementById('vuCanvas').getContext('2d');vuStartRaf();}
-  } else {p.style.display='none';btn.classList.remove('vu-active');}
-}
-function closeVU(){
-  document.getElementById('vuPanel').style.display='none';
-  document.getElementById('btnVU').classList.remove('vu-active');
-  vuDisconnect();
-}
-function vuStartRaf(){
-  if(_vuRafId)return;
-  (function loop(){_vuLevel=Math.max(0,_vuLevel*0.88);_vuPeak=Math.max(0,_vuPeak*0.97);vuRender(_vuLevel);_vuRafId=requestAnimationFrame(loop);})();
-}
-function vuConnect(){
-  if(_vuConnected){vuDisconnect();return;}
-  // Usar DVSwitchPlayer original para el audio (mismo que el dashboard)
-  var fakeBtn=document.getElementById('vuConnBtn');
-  _vuDvsp=new DVSwitchPlayer(8090, fakeBtn);
-  _vuDvsp.play();
-  // WebSocket separado SOLO para leer el peak (sin reproducir)
-  _vuPeakWs=new WebSocket('ws://192.168.1.126:8090');
-  _vuPeakWs.binaryType='arraybuffer';
-  _vuPeakWs.onmessage=function(e){
-    if(!(e.data instanceof ArrayBuffer))return;
-    var i16=new Int16Array(e.data),peak=0;
-    for(var i=0;i<i16.length;i++){var s=Math.abs(i16[i]/32768.0);if(s>peak)peak=s;}
-    if(peak>_vuLevel)_vuLevel=peak;
-    if(peak>_vuPeak)_vuPeak=peak;
-  };
-  _vuConnected=true;
-  document.getElementById('vuStatus').innerHTML='<span style="color:#00ff88;">⬤ CONECTADO</span>';
-  if(!_vuCtx){_vuCtx=document.getElementById('vuCanvas').getContext('2d');vuStartRaf();}
-  vuPollCall();
-}
-function vuPollCall(){
-  fetch('?action=callsign&t='+Date.now()).then(function(r){return r.json();}).then(function(d){
-    var el=document.getElementById('vuCallsign');if(el)el.textContent=d.call||'—';
-  }).catch(function(){});
-  _vuCallTimer=setTimeout(vuPollCall,2000);
-}
-function vuDisconnect(){
-  if(_vuCallTimer){clearTimeout(_vuCallTimer);_vuCallTimer=null;}
-  if(_vuDvsp){try{_vuDvsp.stop();}catch(e){}_vuDvsp=null;}
-  if(_vuPeakWs){try{_vuPeakWs.close();}catch(e){}_vuPeakWs=null;}
-  _vuConnected=false;_vuLevel=0;_vuPeak=0;
-  document.getElementById('vuStatus').innerHTML='<span style="color:#4a6080;">⬤ DESCONECTADO</span>';
-  document.getElementById('vuConnBtn').textContent='CONECTAR';
-  document.getElementById('vuConnBtn').style.background='#00ff88';
-  document.getElementById('vuConnBtn').style.color='#000';
-  var el=document.getElementById('vuCallsign');if(el)el.textContent='—';
-}
 
 loadStatus(); loadLog();
 setInterval(loadStatus, 3000);
