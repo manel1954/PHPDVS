@@ -331,7 +331,7 @@ if (file_exists($ysf_hosts_file)) {
   #toast { position: fixed; bottom: 1.5rem; right: 1.5rem; background: var(--card); border-left: 3px solid var(--green); color: var(--green); font-size: .85rem; padding: .6rem 1.2rem; display: none; z-index: 200; }
   #toast.err { border-color: var(--red); color: var(--red); }
   /* VU METER */
-  #vuPanel { display:none; position:fixed; bottom:4rem; right:1.5rem; background:#0f1520; border:1px solid var(--green); padding:.8rem; z-index:300; width:270px; box-shadow:0 0 25px rgba(0,255,136,.15); }
+  #vuPanel { display:none; position:fixed; bottom:4rem; right:1.5rem; background:#0f1520; border:1px solid var(--green); padding:.8rem; z-index:300; width:320px; box-shadow:0 0 25px rgba(0,255,136,.15); }
   #vuPanel .vu-hdr { display:flex; justify-content:space-between; align-items:center; margin-bottom:.7rem; }
   #vuPanel .vu-title { font-family:'Orbitron',sans-serif; font-size:.72rem; color:var(--green); letter-spacing:2px; }
   #vuPanel .vu-close { background:transparent; border:none; color:var(--red); font-size:1.1rem; cursor:pointer; }
@@ -656,7 +656,7 @@ if (file_exists($ysf_hosts_file)) {
     <button class="vu-close" onclick="closeVU()">✕</button>
   </div>
   <div class="vu-meter-wrap">
-    <canvas id="vuCanvas" width="240" height="130"></canvas>
+    <canvas id="vuCanvas" width="300" height="160"></canvas>
   </div>
   <div style="font-family:'Share Tech Mono',monospace;font-size:.75rem;text-align:center;padding:.3rem 0;letter-spacing:2px;">
     <span style="color:#4a6080;font-size:.6rem;">EN EL AIRE</span><br>
@@ -838,54 +838,39 @@ var _vuWs=null,_vuAudio=null,_vuConnected=false,_vuCtx=null,_vuLevel=0,_vuPeak=0
 function toggleVU(){var p=document.getElementById('vuPanel'),btn=document.getElementById('btnVU');if(p.style.display==='none'||p.style.display===''){p.style.display='block';btn.classList.add('vu-active');if(!_vuCtx){_vuCtx=document.getElementById('vuCanvas').getContext('2d');vuStartRaf();}}else{p.style.display='none';btn.classList.remove('vu-active');}}
 function closeVU(){document.getElementById('vuPanel').style.display='none';document.getElementById('btnVU').classList.remove('vu-active');vuDisconnect();}
 function vuStartRaf(){if(_vuRafId)return;(function loop(){_vuLevel=Math.max(0,_vuLevel*0.88);_vuPeak=Math.max(0,_vuPeak*0.97);vuRender(_vuLevel);_vuRafId=requestAnimationFrame(loop);})();}
-function dbToAng(db){return(210-(((db+20)/23)*120))*Math.PI/180;}
+function dbToAng(db){
+  // -20dB=izquierda (215°), +3dB=derecha (325°) — arco de 110°
+  var t=(db+20)/23; // 0..1
+  var deg=215-(t*110); // 215° a 105° (sentido antihorario = izquierda a derecha)
+  return deg*Math.PI/180;
+}
 function vuRender(level){
   if(!_vuCtx)return;
-  var c=document.getElementById('vuCanvas'),W=c.width,H=c.height,cx=W/2,cy=H+10,R=H+5;
+  var c=document.getElementById('vuCanvas'),W=c.width,H=c.height;
+  // Centro del arco: parte baja central, fuera del canvas
+  var cx=W/2, cy=H+55, R=H+40;
   _vuCtx.clearRect(0,0,W,H);
-  var bg=_vuCtx.createLinearGradient(0,0,0,H);bg.addColorStop(0,'#e8d98a');bg.addColorStop(1,'#c8b84a');
-  _vuCtx.fillStyle=bg;_vuCtx.fillRect(0,0,W,H);
-  _vuCtx.strokeStyle='#8a7020';_vuCtx.lineWidth=2;_vuCtx.strokeRect(3,3,W-6,H-6);
-  _vuCtx.beginPath();_vuCtx.moveTo(cx,cy);_vuCtx.arc(cx,cy,R-2,dbToAng(1),dbToAng(3),false);_vuCtx.arc(cx,cy,R-22,dbToAng(3),dbToAng(1),true);_vuCtx.closePath();_vuCtx.fillStyle='rgba(200,30,30,0.18)';_vuCtx.fill();
-  _vuCtx.beginPath();_vuCtx.arc(cx,cy,R-12,dbToAng(-20),dbToAng(3),false);_vuCtx.strokeStyle='#5a4010';_vuCtx.lineWidth=1;_vuCtx.stroke();
-  [{db:-20,mj:true},{db:-10,mj:true},{db:-7,mj:false},{db:-5,mj:true},{db:-3,mj:false},{db:-2,mj:false},{db:-1,mj:false},{db:0,mj:true},{db:1,mj:false},{db:2,mj:false},{db:3,mj:true}].forEach(function(m){
-    var ang=dbToAng(m.db),red=m.db>=0,len=m.mj?16:9;
-    _vuCtx.beginPath();_vuCtx.moveTo(cx+(R-2)*Math.cos(ang),cy+(R-2)*Math.sin(ang));_vuCtx.lineTo(cx+(R-2-len)*Math.cos(ang),cy+(R-2-len)*Math.sin(ang));_vuCtx.strokeStyle=red?'#cc1515':'#3a2800';_vuCtx.lineWidth=m.mj?2:1;_vuCtx.stroke();
-    if(m.mj||Math.abs(m.db)<=3){var rL=R-2-len-11;_vuCtx.save();_vuCtx.translate(cx+rL*Math.cos(ang),cy+rL*Math.sin(ang));_vuCtx.font=(m.mj?'bold ':'')+'9px Share Tech Mono';_vuCtx.fillStyle=red?'#cc1515':'#3a2800';_vuCtx.textAlign='center';_vuCtx.textBaseline='middle';_vuCtx.fillText(m.db>0?'+'+m.db:String(m.db),0,0);_vuCtx.restore();}
-  });
-  _vuCtx.font='bold italic 20px Georgia,serif';_vuCtx.fillStyle='rgba(60,40,0,0.35)';_vuCtx.textAlign='center';_vuCtx.fillText('VU',cx,H-28);
-  var ledOn=_vuPeak>0.89;_vuCtx.beginPath();_vuCtx.arc(cx+80,16,6,0,Math.PI*2);var lg=_vuCtx.createRadialGradient(cx+78,14,1,cx+80,16,6);lg.addColorStop(0,ledOn?'#ff8080':'#551010');lg.addColorStop(1,ledOn?'#cc0000':'#330000');_vuCtx.fillStyle=lg;_vuCtx.fill();_vuCtx.strokeStyle='#220000';_vuCtx.lineWidth=1;_vuCtx.stroke();
-  var db=level>0.0001?20*Math.log10(level):-60;db=Math.max(-20,Math.min(3,db));
-  var na=dbToAng(db),nL=R-8,nx=cx+nL*Math.cos(na),ny=cy+nL*Math.sin(na);
-  _vuCtx.beginPath();_vuCtx.moveTo(cx+1,cy+1);_vuCtx.lineTo(nx+1,ny+1);_vuCtx.strokeStyle='rgba(0,0,0,0.25)';_vuCtx.lineWidth=2;_vuCtx.stroke();
-  _vuCtx.beginPath();_vuCtx.moveTo(cx,cy);_vuCtx.lineTo(nx,ny);_vuCtx.strokeStyle='#111';_vuCtx.lineWidth=1.8;_vuCtx.stroke();
-  _vuCtx.beginPath();_vuCtx.arc(cx,cy,5,0,Math.PI*2);_vuCtx.fillStyle='#2a1a00';_vuCtx.fill();
-}
-function vuConnect(){
-  if(_vuConnected){vuDisconnect();return;}
-  try{
-    _vuAudio=new(window.AudioContext||window.webkitAudioContext)({sampleRate:8000});
-    _vuWs=new WebSocket('ws://192.168.1.126:8090');_vuWs.binaryType='arraybuffer';
-    _vuWs.onopen=function(){_vuConnected=true;document.getElementById('vuStatus').innerHTML='<span style="color:#00ff88;">⬤ CONECTADO</span>';document.getElementById('vuConnBtn').textContent='DESCONECTAR';document.getElementById('vuConnBtn').style.background='#ff4444';document.getElementById('vuConnBtn').style.color='#fff';if(!_vuCtx){_vuCtx=document.getElementById('vuCanvas').getContext('2d');vuStartRaf();}vuPollCall();};
-    _vuWs.onmessage=function(e){if(!(e.data instanceof ArrayBuffer))return;var pcm=new Int16Array(e.data),buf=_vuAudio.createBuffer(1,pcm.length,8000),ch=buf.getChannelData(0),peak=0;for(var i=0;i<pcm.length;i++){ch[i]=pcm[i]/32768.0;if(Math.abs(ch[i])>peak)peak=Math.abs(ch[i]);}if(peak>_vuLevel)_vuLevel=peak;if(peak>_vuPeak)_vuPeak=peak;var src=_vuAudio.createBufferSource();src.buffer=buf;src.connect(_vuAudio.destination);src.start();};
-    _vuWs.onerror=function(){document.getElementById('vuStatus').innerHTML='<span style="color:#ff4444;">⬤ ERROR · puerto 8090</span>';vuDisconnect();};
-    _vuWs.onclose=function(){_vuConnected=false;document.getElementById('vuStatus').innerHTML='<span style="color:#4a6080;">⬤ DESCONECTADO</span>';document.getElementById('vuConnBtn').textContent='CONECTAR';document.getElementById('vuConnBtn').style.background='#00ff88';document.getElementById('vuConnBtn').style.color='#000';};
-  }catch(err){document.getElementById('vuStatus').innerHTML='<span style="color:#ff4444;">⬤ '+err.message+'</span>';}
-}
-var _vuCallTimer=null;
-function vuPollCall(){
-  fetch('?action=callsign&t='+Date.now()).then(function(r){return r.json();}).then(function(d){
-    var el=document.getElementById('vuCallsign');if(el)el.textContent=d.call||'—';
-  }).catch(function(){});
-  _vuCallTimer=setTimeout(vuPollCall,2000);
-}
-function vuDisconnect(){
-  if(_vuCallTimer){clearTimeout(_vuCallTimer);_vuCallTimer=null;}
-  var el=document.getElementById('vuCallsign');if(el)el.textContent='—';if(_vuWs){try{_vuWs.close();}catch(e){}_vuWs=null;}if(_vuAudio){try{_vuAudio.close();}catch(e){}_vuAudio=null;}_vuConnected=false;_vuLevel=0;_vuPeak=0;}
 
-loadStatus(); loadLog();
-setInterval(loadStatus, 3000);
-setInterval(loadLog, 4000);
-</script>
-</body>
-</html>
+  // Fondo degradado crema
+  var bg=_vuCtx.createLinearGradient(0,0,0,H);
+  bg.addColorStop(0,'#f0e4a0');bg.addColorStop(1,'#d4bc60');
+  _vuCtx.fillStyle=bg;_vuCtx.fillRect(0,0,W,H);
+
+  // Marco exterior oscuro
+  _vuCtx.strokeStyle='#5a4010';_vuCtx.lineWidth=3;_vuCtx.strokeRect(2,2,W-4,H-4);
+  // Marco interior fino
+  _vuCtx.strokeStyle='#8a6820';_vuCtx.lineWidth=1;_vuCtx.strokeRect(6,6,W-12,H-12);
+
+  // Título "VU METER"
+  _vuCtx.font='bold 9px Arial,sans-serif';
+  _vuCtx.fillStyle='#3a2800';_vuCtx.textAlign='center';_vuCtx.letterSpacing='3px';
+  _vuCtx.fillText('VU METER',cx,20);
+
+  // Zona roja (+1 a +3) — sector relleno
+  var angR0=dbToAng(0), angR3=dbToAng(3);
+  _vuCtx.beginPath();
+  _vuCtx.moveTo(cx+R*Math.cos(angR0),cy+R*Math.sin(angR0));
+  _vuCtx.arc(cx,cy,R,angR0,angR3,true);
+  _vuCtx.arc(cx,cy,R-20,angR3,angR0,false);
+  _vuCtx.closePath();
+  _vuCtx.fillStyle='rgba(180,20,20,0.12)';_vuCtx.fill();
