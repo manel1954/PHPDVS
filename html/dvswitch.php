@@ -261,6 +261,9 @@ if (file_exists($ysf_hosts_file)) {
   .header-btns { display: flex; gap: .5rem; flex-wrap: wrap; }
   .btn-hdr { background: transparent; border: 1px solid var(--muted); color: var(--muted); font-family: 'Share Tech Mono', monospace; font-size: .78rem; padding: .4rem .9rem; cursor: pointer; text-decoration: none; transition: all .2s; }
   .btn-hdr:hover, .btn-hdr.accent { border-color: var(--cyan); color: var(--cyan); }
+  /* === AÑADIDO VU === */
+  .btn-hdr.vu-active { border-color: var(--green) !important; color: var(--green) !important; background: rgba(0,255,136,.08); }
+  /* ================== */
   .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
   .full  { grid-column: 1 / -1; }
   @media (max-width: 900px) { .grid2 { grid-template-columns: 1fr; } }
@@ -322,6 +325,18 @@ if (file_exists($ysf_hosts_file)) {
   .section-title { font-family: 'Orbitron', sans-serif; font-size: .72rem; letter-spacing: 3px; padding: .5rem 0; margin: 1rem 0 .5rem; border-bottom: 1px solid var(--border); }
   #toast { position: fixed; bottom: 1.5rem; right: 1.5rem; background: var(--card); border-left: 3px solid var(--green); color: var(--green); font-size: .85rem; padding: .6rem 1.2rem; display: none; z-index: 200; }
   #toast.err { border-color: var(--red); color: var(--red); }
+  /* === AÑADIDO VU METER PANEL === */
+  #vuPanel { display:none; position:fixed; bottom:4rem; right:1.5rem; background:#0f1520;
+    border:1px solid var(--green); padding:1rem; z-index:300; width:340px;
+    box-shadow:0 0 25px rgba(0,255,136,.15); }
+  #vuPanel .vu-hdr { display:flex; justify-content:space-between; align-items:center; margin-bottom:.7rem; }
+  #vuPanel .vu-title { font-family:'Orbitron',sans-serif; font-size:.72rem; color:var(--green); letter-spacing:2px; }
+  #vuPanel .vu-close { background:transparent; border:none; color:var(--red); font-size:1.1rem; cursor:pointer; }
+  #vuPanel .vu-meter-wrap { background:#1a1408; border:2px solid #3a2a08; padding:.4rem; margin-bottom:.7rem; }
+  #vuPanel .vu-footer { display:flex; justify-content:space-between; align-items:center; font-size:.68rem; }
+  #vuConnBtn { background:var(--green); color:#000; border:none; font-family:'Share Tech Mono',monospace;
+    font-size:.7rem; padding:.3rem .8rem; cursor:pointer; font-weight:700; letter-spacing:1px; }
+  /* =============================== */
 </style>
 </head>
 <body>
@@ -330,6 +345,9 @@ if (file_exists($ysf_hosts_file)) {
   <h1>⚡ DVSWITCH CONTROL · EA3EIZ</h1>
   <div class="header-btns">
     <a href="/dvswitch" class="btn-hdr accent">📊 DVSWITCH DASHBOARD</a>
+    <!-- === AÑADIDO VU === -->
+    <button class="btn-hdr" id="btnVU" onclick="toggleVU()" style="border-color:#00ff88;color:#00ff88;">🎙️ RX MONITOR</button>
+    <!-- ================== -->
     <a href="mmdvm.php" class="btn-hdr">🏠 PANEL PHPPLUS</a>
   </div>
 </div>
@@ -601,204 +619,3 @@ if (file_exists($ysf_hosts_file)) {
       <div class="form-group"><label>Gateway Address</label><input type="text" id="dstar_gw" value="<?= htmlspecialchars($dstar_gw) ?>"></div>
       <div class="form-group"><label>Gateway Port</label><input type="number" id="dstar_gwport" value="<?= htmlspecialchars($dstar_gwport) ?>"></div>
       <div class="form-group"><label>Local Port</label><input type="number" id="dstar_lport" value="<?= htmlspecialchars($dstar_lport) ?>"></div>
-    </div>
-  </div>
-
-  <!-- Panel NXDN -->
-  <div class="sys-panel <?= $sistema_activo==='nxdn'?'visible':'' ?>" id="panel-nxdn">
-    <div class="section-title violet">🟣 NXDN · Reflector 21465</div>
-    <div class="form-row3">
-      <div class="form-group"><label>Gateway Address</label><input type="text" id="nxdn_gw" value="<?= htmlspecialchars($nxdn_gw) ?>"></div>
-      <div class="form-group"><label>Gateway Port</label><input type="number" id="nxdn_gwport" value="<?= htmlspecialchars($nxdn_gwport) ?>"></div>
-      <div class="form-group"><label>Local Port</label><input type="number" id="nxdn_lport" value="<?= htmlspecialchars($nxdn_lport) ?>"></div>
-    </div>
-  </div>
-
-</div><!-- /card selector -->
-
-<button class="btn-save" id="btnSave" onclick="saveAll()">
-  💾 GUARDAR CONFIGURACIÓN Y REINICIAR SERVICIOS
-</button>
-
-<div class="term-wrap">
-  <div class="term-header">
-    <span>📋 JOURNAL LOG</span>
-    <div class="term-tabs">
-      <button class="term-tab active" id="tab-mb" onclick="switchLog('mmdvm_bridge')">MMDVM_Bridge</button>
-      <button class="term-tab" id="tab-ab" onclick="switchLog('analog_bridge')">Analog_Bridge</button>
-    </div>
-  </div>
-  <div class="term-box" id="termBox">Cargando...</div>
-</div>
-
-<div id="toast">✔ OK</div>
-
-<script>
-let _logSvc = 'mmdvm_bridge';
-
-async function loadStatus() {
-  try {
-    const r = await fetch('?action=status&t=' + Date.now());
-    const d = await r.json();
-    setSvcUI('ab', d.ab === 'active');
-    setSvcUI('mb', d.mb === 'active');
-  } catch(e) {}
-}
-function setSvcUI(prefix, active) {
-  document.getElementById(prefix+'-badge').textContent = active ? 'ACTIVO' : 'DETENIDO';
-  document.getElementById(prefix+'-badge').className   = 'badge ' + (active ? 'on' : 'off');
-  document.getElementById('sw-'+prefix).checked        = active;
-}
-async function toggleSvc(svc, el) {
-  el.disabled = true;
-  try {
-    const fd = new FormData(); fd.append('svc', svc);
-    const r = await fetch('?action=toggle', {method:'POST',body:fd});
-    const d = await r.json();
-    if (d.ok) { setSvcUI(svc==='analog_bridge'?'ab':'mb', d.active); showToast(svc+(d.active?' ACTIVADO':' DETENIDO')); }
-  } catch(e) {}
-  setTimeout(() => el.disabled = false, 800);
-}
-
-function selectBM(sel) {
-  const val = sel.value; if (!val) return;
-  const p = val.split('|'); if (p.length < 2) return;
-  document.getElementById('bm_address').value = p[0];
-  document.getElementById('bm_port').value    = p[1];
-}
-function selectIPSC2(sel) {
-  const val = sel.value; if (!val) return;
-  const p = val.split('|'); if (p.length < 3) return;
-  document.getElementById('dmrplus_address').value = p[0];
-  document.getElementById('dmrplus_port').value    = p[1];
-  document.getElementById('dmrplus_essid').value   = p[2];
-  document.getElementById('dmrplus_essid_preview').textContent = p[2];
-}
-function selectYSF(sel) {
-  const val = sel.value; if (!val) return;
-  const p = val.split('|'); if (p.length < 3) return;
-  document.getElementById('ysf_gw').value     = p[0];
-  document.getElementById('ysf_gwport').value  = p[1];
-  document.getElementById('ysf_lport').value   = p[2];
-}
-
-// ── Buscador YSF ─────────────────────────────
-var _ysfAllOpts = null;
-function filterYSF(q) {
-  var sel = document.getElementById('ysf_selector');
-  if (!_ysfAllOpts) {
-    _ysfAllOpts = [];
-    var ogs = sel.querySelectorAll('optgroup');
-    for (var i=0; i<ogs.length; i++) {
-      var opts = ogs[i].querySelectorAll('option');
-      for (var j=0; j<opts.length; j++) {
-        _ysfAllOpts.push({t: opts[j].textContent.trim(), v: opts[j].value, g: ogs[i].label});
-      }
-    }
-  }
-  var term = q.trim().toLowerCase();
-  var filtered = term === '' ? _ysfAllOpts : _ysfAllOpts.filter(function(o){
-    return o.t.toLowerCase().indexOf(term) >= 0 || o.g.toLowerCase().indexOf(term) >= 0;
-  });
-  sel.innerHTML = '';
-  var groups = {};
-  for (var k=0; k<filtered.length; k++) {
-    var g = filtered[k].g;
-    if (!groups[g]) groups[g] = [];
-    groups[g].push(filtered[k]);
-  }
-  var gkeys = Object.keys(groups);
-  for (var m=0; m<gkeys.length; m++) {
-    var og = document.createElement('optgroup');
-    og.label = term ? gkeys[m]+' ('+groups[gkeys[m]].length+')' : gkeys[m];
-    for (var n=0; n<groups[gkeys[m]].length; n++) {
-      var opt = document.createElement('option');
-      opt.value = groups[gkeys[m]][n].v;
-      opt.textContent = groups[gkeys[m]][n].t;
-      og.appendChild(opt);
-    }
-    sel.appendChild(og);
-  }
-  var all = sel.querySelectorAll('option');
-  if (all.length === 1) { all[0].selected = true; selectYSF(sel); }
-}
-
-const sisColors = { dmr_bm:'var(--cyan)', dmr_plus:'var(--orange)', ysf:'var(--green)', dstar:'var(--blue)', nxdn:'var(--violet)' };
-const sisLabels = { dmr_bm:'DMR BRANDMEISTER', dmr_plus:'DMR+ IPSC2', ysf:'YSF / C4FM', dstar:'D-STAR', nxdn:'NXDN' };
-
-function setSistema(sis, btn) {
-  document.querySelectorAll('.sys-panel').forEach(p => p.classList.remove('visible'));
-  document.querySelectorAll('.sis-btn').forEach(b => b.className = 'sis-btn');
-  btn.classList.add('active-' + sis);
-  document.getElementById('panel-' + sis).classList.add('visible');
-  document.getElementById('sistema').value = sis;
-  const lbl = document.getElementById('sisActivoLabel');
-  lbl.textContent = sisLabels[sis];
-  lbl.style.borderColor = sisColors[sis];
-  lbl.style.color = sisColors[sis];
-}
-
-function setTG(tg, btn) {
-  document.getElementById('ab_txTg').value = tg;
-  document.getElementById('tgActivo').textContent = tg;
-  document.querySelectorAll('.tg-btn').forEach(b => b.classList.remove('active'));
-  btn.classList.add('active');
-}
-document.getElementById('ab_txTg').addEventListener('input', function() {
-  document.getElementById('tgActivo').textContent = this.value;
-  document.querySelectorAll('.tg-btn').forEach(b => b.classList.remove('active'));
-});
-
-document.addEventListener('input', e => {
-  if (e.target.id === 'dmrplus_essid')
-    document.getElementById('dmrplus_essid_preview').textContent = e.target.value;
-});
-
-async function saveAll() {
-  const btn = document.getElementById('btnSave');
-  btn.disabled = true; btn.textContent = '⏳ GUARDANDO...';
-  const fd = new FormData();
-  const ids = ['ab_gatewayDmrId','ab_repeaterID','ab_txTg','ab_txTs','ab_ambeMode','mb_Callsign','mb_Id','sistema','bm_address','bm_port','bm_password','bm_slot1','bm_slot2','dmrplus_address','dmrplus_port','dmrplus_password','dmrplus_essid','dmrplus_slot1','dmrplus_slot2','ysf_gw','ysf_gwport','ysf_lport','dstar_gw','dstar_gwport','dstar_lport','nxdn_gw','nxdn_gwport','nxdn_lport'];
-  document.querySelectorAll('.sys-panel').forEach(p => p.style.display = 'block');
-  ids.forEach(id => { const el = document.getElementById(id); if(el) fd.append(id, el.value); });
-  document.querySelectorAll('.sys-panel').forEach(p => p.style.display = '');
-  const vis = document.getElementById('panel-' + document.getElementById('sistema').value);
-  if (vis) vis.classList.add('visible');
-  try {
-    const r = await fetch('?action=save', {method:'POST',body:fd});
-    const d = await r.json();
-    showToast(d.msg, !d.ok);
-  } catch(e) { showToast('Error de conexión', true); }
-  btn.disabled = false;
-  btn.textContent = '💾 GUARDAR CONFIGURACIÓN Y REINICIAR SERVICIOS';
-}
-
-async function loadLog() {
-  try {
-    const fd = new FormData(); fd.append('svc', _logSvc);
-    const r = await fetch('?action=log', {method:'POST',body:fd});
-    const box = document.getElementById('termBox');
-    box.textContent = await r.text();
-    box.scrollTop = box.scrollHeight;
-  } catch(e) {}
-}
-function switchLog(svc) {
-  _logSvc = svc;
-  document.getElementById('tab-mb').classList.toggle('active', svc==='mmdvm_bridge');
-  document.getElementById('tab-ab').classList.toggle('active', svc==='analog_bridge');
-  loadLog();
-}
-function showToast(msg, err=false) {
-  const t = document.getElementById('toast');
-  t.textContent = (err?'✕ ':'✔ ') + msg;
-  t.className = err ? 'err' : '';
-  t.style.display = 'block';
-  setTimeout(() => t.style.display='none', 3500);
-}
-
-loadStatus(); loadLog();
-setInterval(loadStatus, 3000);
-setInterval(loadLog, 4000);
-</script>
-</body>
-</html>
