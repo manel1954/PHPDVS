@@ -165,14 +165,6 @@ if (isset($_GET['action'])) {
             shell_exec('sudo systemctl restart mmdvm_bridge 2>/dev/null');
             echo json_encode(['ok'=>empty($errors),'msg'=>empty($errors)?"Sistema [$sistema] activado y servicios reiniciados":'Errores: '.implode(', ',$errors)]);
             break;
-        case 'callsign':
-            $line = shell_exec("sudo journalctl -u analog_bridge -n 50 --no-pager --output=short 2>/dev/null");
-            $call = '—';
-            if ($line && preg_match_all('/Begin TX:.*call=([A-Z0-9\/]+)/i', $line, $m)) {
-                $call = end($m[1]);
-            }
-            echo json_encode(['call' => $call]);
-            exit;
         case 'log':
             $svc = in_array($_POST['svc'] ?? '', ['analog_bridge','mmdvm_bridge']) ? $_POST['svc'] : 'mmdvm_bridge';
             header('Content-Type: text/plain');
@@ -330,7 +322,6 @@ if (file_exists($ysf_hosts_file)) {
   .section-title { font-family: 'Orbitron', sans-serif; font-size: .72rem; letter-spacing: 3px; padding: .5rem 0; margin: 1rem 0 .5rem; border-bottom: 1px solid var(--border); }
   #toast { position: fixed; bottom: 1.5rem; right: 1.5rem; background: var(--card); border-left: 3px solid var(--green); color: var(--green); font-size: .85rem; padding: .6rem 1.2rem; display: none; z-index: 200; }
   #toast.err { border-color: var(--red); color: var(--red); }
-
 </style>
 </head>
 <body>
@@ -339,7 +330,6 @@ if (file_exists($ysf_hosts_file)) {
   <h1>⚡ DVSWITCH CONTROL · EA3EIZ</h1>
   <div class="header-btns">
     <a href="/dvswitch" class="btn-hdr accent">📊 DVSWITCH DASHBOARD</a>
-    <button class="btn-hdr" id="btnVU" onclick="playAudioToggle(8090, this)" style="border-color:#00ff88;color:#00ff88;">🎙️ RX MONITOR</button>
     <a href="mmdvm.php" class="btn-hdr">🏠 PANEL PHPPLUS</a>
   </div>
 </div>
@@ -641,8 +631,6 @@ if (file_exists($ysf_hosts_file)) {
   <div class="term-box" id="termBox">Cargando...</div>
 </div>
 
-
-
 <div id="toast">✔ OK</div>
 
 <script>
@@ -807,7 +795,6 @@ function showToast(msg, err=false) {
   t.style.display = 'block';
   setTimeout(() => t.style.display='none', 3500);
 }
-
 
 loadStatus(); loadLog();
 setInterval(loadStatus, 3000);
