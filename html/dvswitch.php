@@ -331,7 +331,7 @@ if (file_exists($ysf_hosts_file)) {
   <h1>⚡ DVSWITCH CONTROL · EA3EIZ</h1>
   <div class="header-btns">
     <a href="/dvswitch" class="btn-hdr accent">📊 DVSWITCH DASHBOARD</a>
-    <button class="btn-hdr" id="btnVU" onclick="playAudioToggle(8090, this)" style="border-color:#00ff88;color:#00ff88;">🎙️ RX MONITOR</button>
+    <!-- <button class="btn-hdr" id="btnVU" onclick="playAudioToggle(8090, this)" style="border-color:#00ff88;color:#00ff88;">🎙️ RX MONITOR</button> -->
     <a href="mmdvm.php" class="btn-hdr">🏠 PANEL PHPPLUS</a>
   </div>
 </div>
