@@ -165,14 +165,6 @@ if (isset($_GET['action'])) {
             shell_exec('sudo systemctl restart mmdvm_bridge 2>/dev/null');
             echo json_encode(['ok'=>empty($errors),'msg'=>empty($errors)?"Sistema [$sistema] activado y servicios reiniciados":'Errores: '.implode(', ',$errors)]);
             break;
-        case 'callsign':
-            $line = shell_exec("sudo journalctl -u analog_bridge -n 50 --no-pager --output=short 2>/dev/null");
-            $call = '—';
-            if ($line && preg_match_all('/Begin TX:.*call=([A-Z0-9\/]+)/i', $line, $m)) {
-                $call = end($m[1]);
-            }
-            echo json_encode(['call' => $call]);
-            exit;
         case 'log':
             $svc = in_array($_POST['svc'] ?? '', ['analog_bridge','mmdvm_bridge']) ? $_POST['svc'] : 'mmdvm_bridge';
             header('Content-Type: text/plain');
