@@ -834,7 +834,7 @@ function showToast(msg, err=false) {
 }
 
 // ── VU METER ANALÓGICO
-var _vuWs=null,_vuAudio=null,_vuConnected=false,_vuCtx=null,_vuLevel=0,_vuPeak=0,_vuRafId=null;
+var _vuWs=null,_vuAudio=null,_vuConnected=false,_vuCtx=null,_vuLevel=0,_vuPeak=0,_vuRafId=null,_vuNextTime=0;
 function toggleVU(){var p=document.getElementById('vuPanel'),btn=document.getElementById('btnVU');if(p.style.display==='none'||p.style.display===''){p.style.display='block';btn.classList.add('vu-active');if(!_vuCtx){_vuCtx=document.getElementById('vuCanvas').getContext('2d');vuStartRaf();}}else{p.style.display='none';btn.classList.remove('vu-active');}}
 function closeVU(){document.getElementById('vuPanel').style.display='none';document.getElementById('btnVU').classList.remove('vu-active');vuDisconnect();}
 function vuStartRaf(){if(_vuRafId)return;(function loop(){_vuLevel=Math.max(0,_vuLevel*0.88);_vuPeak=Math.max(0,_vuPeak*0.97);vuRender(_vuLevel);_vuRafId=requestAnimationFrame(loop);})();}
@@ -915,10 +915,28 @@ function vuRender(level){
 function vuConnect(){
   if(_vuConnected){vuDisconnect();return;}
   try{
-    _vuAudio=new(window.AudioContext||window.webkitAudioContext)({sampleRate:8000});
+    _vuAudio=new(window.AudioContext||window.webkitAudioContext)({sampleRate:8000});_vuNextTime=0;
     _vuWs=new WebSocket('ws://192.168.1.126:8090');_vuWs.binaryType='arraybuffer';
     _vuWs.onopen=function(){_vuConnected=true;document.getElementById('vuStatus').innerHTML='<span style="color:#00ff88;">⬤ CONECTADO</span>';document.getElementById('vuConnBtn').textContent='DESCONECTAR';document.getElementById('vuConnBtn').style.background='#ff4444';document.getElementById('vuConnBtn').style.color='#fff';if(!_vuCtx){_vuCtx=document.getElementById('vuCanvas').getContext('2d');vuStartRaf();}vuPollCall();};
-    _vuWs.onmessage=function(e){if(!(e.data instanceof ArrayBuffer))return;var pcm=new Int16Array(e.data),buf=_vuAudio.createBuffer(1,pcm.length,8000),ch=buf.getChannelData(0),peak=0;for(var i=0;i<pcm.length;i++){ch[i]=pcm[i]/32768.0;if(Math.abs(ch[i])>peak)peak=Math.abs(ch[i]);}if(peak>_vuLevel)_vuLevel=peak;if(peak>_vuPeak)_vuPeak=peak;var src=_vuAudio.createBufferSource();src.buffer=buf;src.connect(_vuAudio.destination);src.start();};
+    _vuWs.onmessage=function(e){
+      if(!(e.data instanceof ArrayBuffer))return;
+      var raw=new Int16Array(e.data);
+      var frames=Math.floor(raw.length/2);
+      var buf=_vuAudio.createBuffer(2,frames,8000);
+      var chL=buf.getChannelData(0),chR=buf.getChannelData(1),peak=0;
+      for(var i=0;i<frames;i++){
+        chL[i]=raw[i*2]/32768.0;
+        chR[i]=raw[i*2+1]/32768.0;
+        var s=Math.abs(chL[i]);if(s>peak)peak=s;
+      }
+      if(peak>_vuLevel)_vuLevel=peak;if(peak>_vuPeak)_vuPeak=peak;
+      var node=_vuAudio.createBufferSource();
+      node.buffer=buf;node.connect(_vuAudio.destination);
+      var now=_vuAudio.currentTime;
+      if(_vuNextTime<now+0.05)_vuNextTime=now+0.05;
+      node.start(_vuNextTime);
+      _vuNextTime+=buf.duration;
+    };
     _vuWs.onerror=function(){document.getElementById('vuStatus').innerHTML='<span style="color:#ff4444;">⬤ ERROR · puerto 8090</span>';vuDisconnect();};
     _vuWs.onclose=function(){_vuConnected=false;document.getElementById('vuStatus').innerHTML='<span style="color:#4a6080;">⬤ DESCONECTADO</span>';document.getElementById('vuConnBtn').textContent='CONECTAR';document.getElementById('vuConnBtn').style.background='#00ff88';document.getElementById('vuConnBtn').style.color='#000';};
   }catch(err){document.getElementById('vuStatus').innerHTML='<span style="color:#ff4444;">⬤ '+err.message+'</span>';}
