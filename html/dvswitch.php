@@ -930,12 +930,18 @@ function vuConnect(){
         var s=Math.abs(chL[i]);if(s>peak)peak=s;
       }
       if(peak>_vuLevel)_vuLevel=peak;if(peak>_vuPeak)_vuPeak=peak;
-      var node=_vuAudio.createBufferSource();
-      node.buffer=buf;node.connect(_vuAudio.destination);
-      var now=_vuAudio.currentTime;
-      if(_vuNextTime<now+0.05)_vuNextTime=now+0.05;
-      node.start(_vuNextTime);
-      _vuNextTime+=buf.duration;
+      // Solo reproducir si hay señal real (no silencio)
+      if(peak > 0.002){
+        var node=_vuAudio.createBufferSource();
+        node.buffer=buf;node.connect(_vuAudio.destination);
+        var now=_vuAudio.currentTime;
+        if(_vuNextTime<now)_vuNextTime=now;
+        node.start(_vuNextTime);
+        _vuNextTime+=buf.duration;
+      } else {
+        // En silencio resetear el puntero para evitar acumulación
+        _vuNextTime=0;
+      }
     };
     _vuWs.onerror=function(){document.getElementById('vuStatus').innerHTML='<span style="color:#ff4444;">⬤ ERROR · puerto 8090</span>';vuDisconnect();};
     _vuWs.onclose=function(){_vuConnected=false;document.getElementById('vuStatus').innerHTML='<span style="color:#4a6080;">⬤ DESCONECTADO</span>';document.getElementById('vuConnBtn').textContent='CONECTAR';document.getElementById('vuConnBtn').style.background='#00ff88';document.getElementById('vuConnBtn').style.color='#000';};
