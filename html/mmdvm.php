@@ -895,7 +895,6 @@ button.btn-header { font-family: var(--font-mono); }
 <button class="btn btn-secondary btn-sm" onclick="xtTtydOpen()">🖥️ TERMINAL</button>
 <a href="extra.php" class="btn btn-warning btn-sm">⚙️ MENÚ EXTRA</a>
 <a href="transcoding.php" class="btn btn-primary btn-sm">🔗 BRIDGES</a>
-<a href="https://ader.c4fm.es" target="_blank" class="btn btn-sm" style="background:#00b894;color:#000;font-weight:700;">🥜 PEANUT</a>
 <button id="btnReboot" class="btn btn-danger btn-sm" onclick="rebootPi()">⏻ REINICIAR PI</button>
 </div>
 </header>
