@@ -839,7 +839,6 @@ function toggleVU(){var p=document.getElementById('vuPanel'),btn=document.getEle
 function closeVU(){document.getElementById('vuPanel').style.display='none';document.getElementById('btnVU').classList.remove('vu-active');vuDisconnect();}
 function vuStartRaf(){if(_vuRafId)return;(function loop(){_vuLevel=Math.max(0,_vuLevel*0.88);_vuPeak=Math.max(0,_vuPeak*0.97);vuRender(_vuLevel);_vuRafId=requestAnimationFrame(loop);})();}
 function dbToAng(db){
-  // -20dB=210°, +3dB=330° — arco de 120° con 0 en torno a 300°
   var t=(db+20)/23;
   return (210-t*120)*Math.PI/180;
 }
@@ -850,63 +849,61 @@ function vuRender(level){
 
   _vuCtx.clearRect(0,0,W,H);
 
-  // Fondo crema
+  // Fondo crema degradado
   var bg=_vuCtx.createLinearGradient(0,0,0,H);
-  bg.addColorStop(0,'#f2e8a8');bg.addColorStop(1,'#d8c060');
+  bg.addColorStop(0,'#f5edba');bg.addColorStop(1,'#dfc96a');
   _vuCtx.fillStyle=bg;_vuCtx.fillRect(0,0,W,H);
 
-  // Marco exterior
-  _vuCtx.strokeStyle='#4a3208';_vuCtx.lineWidth=3;_vuCtx.strokeRect(2,2,W-4,H-4);
-  _vuCtx.strokeStyle='#8a6820';_vuCtx.lineWidth=1;_vuCtx.strokeRect(6,6,W-12,H-12);
-
-  // Zona roja (0 a +3)
-  var a0=dbToAng(0), a3=dbToAng(3);
-  _vuCtx.beginPath();
-  _vuCtx.arc(cx,cy,R+2,a3,a0,false);
-  _vuCtx.arc(cx,cy,R-16,a0,a3,true);
-  _vuCtx.closePath();
-  _vuCtx.fillStyle='rgba(200,20,20,0.15)';_vuCtx.fill();
-
-  // Marcas menores intermedias
+  // Marcas menores intermedias (negras)
   [-18,-16,-14,-12,-9,-8,-6,-4].forEach(function(db){
     var ang=dbToAng(db);
     _vuCtx.beginPath();
-    _vuCtx.moveTo(cx+R*Math.cos(ang),cy+R*Math.sin(ang));
-    _vuCtx.lineTo(cx+(R-7)*Math.cos(ang),cy+(R-7)*Math.sin(ang));
-    _vuCtx.strokeStyle='#5a4010';_vuCtx.lineWidth=0.8;_vuCtx.stroke();
+    _vuCtx.moveTo(cx+R*Math.cos(ang),     cy+R*Math.sin(ang));
+    _vuCtx.lineTo(cx+(R-8)*Math.cos(ang), cy+(R-8)*Math.sin(ang));
+    _vuCtx.strokeStyle='#222';_vuCtx.lineWidth=1;_vuCtx.stroke();
   });
 
-  // Marcas principales y etiquetas
+  // Marcas principales con etiquetas
   var marks=[
-    {db:-20,mj:true,lbl:'-20'},{db:-10,mj:true,lbl:'-10'},
-    {db:-7,mj:false,lbl:'-7'},{db:-5,mj:true,lbl:'-5'},
-    {db:-3,mj:false,lbl:'-3'},{db:-2,mj:false,lbl:'-2'},
-    {db:-1,mj:false,lbl:'-1'},{db:0,mj:true,lbl:'0'},
-    {db:1,mj:false,lbl:'+1'},{db:2,mj:false,lbl:'+2'},
-    {db:3,mj:true,lbl:'+3'}
+    {db:-20,len:18,lbl:'-20',red:false},
+    {db:-10,len:18,lbl:'-10',red:false},
+    {db:-7, len:12,lbl:'-7', red:false},
+    {db:-5, len:18,lbl:'-5', red:false},
+    {db:-3, len:12,lbl:'-3', red:false},
+    {db:-2, len:12,lbl:'-2', red:false},
+    {db:-1, len:12,lbl:'-1', red:false},
+    {db:0,  len:18,lbl:'0',  red:true},
+    {db:1,  len:12,lbl:'+1', red:true},
+    {db:2,  len:12,lbl:'+2', red:true},
+    {db:3,  len:18,lbl:'+3', red:true}
   ];
+
   marks.forEach(function(m){
-    var ang=dbToAng(m.db), red=m.db>=0, len=m.mj?16:10;
+    var ang=dbToAng(m.db);
+    var color=m.red?'#cc0000':'#1a1a1a';
+    // Línea de marca
     _vuCtx.beginPath();
-    _vuCtx.moveTo(cx+R*Math.cos(ang),cy+R*Math.sin(ang));
-    _vuCtx.lineTo(cx+(R-len)*Math.cos(ang),cy+(R-len)*Math.sin(ang));
-    _vuCtx.strokeStyle=red?'#cc0000':'#3a2800';
-    _vuCtx.lineWidth=m.mj?2:1.2;_vuCtx.stroke();
+    _vuCtx.moveTo(cx+R*Math.cos(ang),         cy+R*Math.sin(ang));
+    _vuCtx.lineTo(cx+(R-m.len)*Math.cos(ang), cy+(R-m.len)*Math.sin(ang));
+    _vuCtx.strokeStyle=color;
+    _vuCtx.lineWidth=(m.len===18)?2:1.2;
+    _vuCtx.stroke();
     // Etiqueta
-    var rL=R-len-12;
+    var rL=R-m.len-13;
     var lx=cx+rL*Math.cos(ang), ly=cy+rL*Math.sin(ang);
     _vuCtx.save();_vuCtx.translate(lx,ly);
-    _vuCtx.font=(m.mj?'bold ':'')+( red?'10':'9')+'px Arial,sans-serif';
-    _vuCtx.fillStyle=red?'#cc0000':'#3a2800';
+    _vuCtx.font=(m.len===18?'bold ':'')+( m.red?'11':'10')+'px Arial,sans-serif';
+    _vuCtx.fillStyle=color;
     _vuCtx.textAlign='center';_vuCtx.textBaseline='middle';
-    _vuCtx.fillText(m.lbl,0,0);_vuCtx.restore();
+    _vuCtx.fillText(m.lbl,0,0);
+    _vuCtx.restore();
   });
 
-  // Label "VU" grande
-  _vuCtx.font='bold italic 26px Georgia,serif';
-  _vuCtx.fillStyle='rgba(50,35,0,0.20)';
+  // Label "VU" grande semitransparente
+  _vuCtx.font='bold italic 30px Georgia,serif';
+  _vuCtx.fillStyle='rgba(50,35,0,0.18)';
   _vuCtx.textAlign='center';
-  _vuCtx.fillText('VU',cx+30,cy-20);
+  _vuCtx.fillText('VU',cx+35,cy-18);
 
   // LED rojo esquina sup derecha
   var ledOn=_vuPeak>0.89;
@@ -922,16 +919,16 @@ function vuRender(level){
   db=Math.max(-20,Math.min(3,db));
   var na=dbToAng(db), nLen=R-2;
   var nx=cx+nLen*Math.cos(na), ny=cy+nLen*Math.sin(na);
-  // Sombra aguja
+  // Sombra
   _vuCtx.beginPath();_vuCtx.moveTo(cx+1,cy+1);_vuCtx.lineTo(nx+1,ny+1);
-  _vuCtx.strokeStyle='rgba(0,0,0,0.18)';_vuCtx.lineWidth=2;_vuCtx.stroke();
-  // Aguja
+  _vuCtx.strokeStyle='rgba(0,0,0,0.15)';_vuCtx.lineWidth=2;_vuCtx.stroke();
+  // Aguja principal
   _vuCtx.beginPath();_vuCtx.moveTo(cx,cy);_vuCtx.lineTo(nx,ny);
   _vuCtx.strokeStyle='#111';_vuCtx.lineWidth=1.5;_vuCtx.stroke();
   // Pivote
-  _vuCtx.beginPath();_vuCtx.arc(cx,cy,5,0,Math.PI*2);
-  var pg=_vuCtx.createRadialGradient(cx-1,cy-1,1,cx,cy,5);
-  pg.addColorStop(0,'#888');pg.addColorStop(1,'#222');
+  _vuCtx.beginPath();_vuCtx.arc(cx,cy,6,0,Math.PI*2);
+  var pg=_vuCtx.createRadialGradient(cx-1,cy-1,1,cx,cy,6);
+  pg.addColorStop(0,'#888');pg.addColorStop(1,'#111');
   _vuCtx.fillStyle=pg;_vuCtx.fill();
 }
 function vuConnect(){
