@@ -734,7 +734,7 @@ function vuConnect() {
   if (_vuConnected) { vuDisconnect(); return; }
   try {
     _vuAudio = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: 8000 });
-    _vuWs = new WebSocket('ws://192.168.1.126:8080');
+    _vuWs = new WebSocket('ws://192.168.1.126:8090');
     _vuWs.binaryType = 'arraybuffer';
     _vuWs.onopen = function() {
       _vuConnected = true;
