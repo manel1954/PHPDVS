@@ -212,7 +212,7 @@ elseif ($mode_dstar==='1') $sistema_activo='dstar';
 elseif ($mode_nxdn==='1')  $sistema_activo='nxdn';
 $tgs = ['214'=>'España','2141'=>'Cataluña','21465'=>'ADER','9'=>'Local 9','8'=>'Local 8','91'=>'Mundial','113'=>'Europa','2'=>'Echo BM'];
 
-// ── Leer YSFHosts.txt ─────────────────
+// ── NUEVO: Leer YSFHosts.txt ─────────────────
 $ysf_hosts_file = '/home/pi/YSFClients/YSFGateway/YSFHosts.txt';
 $ysf_es   = [];
 $ysf_rest = [];
@@ -261,7 +261,6 @@ if (file_exists($ysf_hosts_file)) {
   .header-btns { display: flex; gap: .5rem; flex-wrap: wrap; }
   .btn-hdr { background: transparent; border: 1px solid var(--muted); color: var(--muted); font-family: 'Share Tech Mono', monospace; font-size: .78rem; padding: .4rem .9rem; cursor: pointer; text-decoration: none; transition: all .2s; }
   .btn-hdr:hover, .btn-hdr.accent { border-color: var(--cyan); color: var(--cyan); }
-  .btn-hdr.vu-active { border-color: var(--green) !important; color: var(--green) !important; background: rgba(0,255,136,.08); }
   .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
   .full  { grid-column: 1 / -1; }
   @media (max-width: 900px) { .grid2 { grid-template-columns: 1fr; } }
@@ -323,63 +322,6 @@ if (file_exists($ysf_hosts_file)) {
   .section-title { font-family: 'Orbitron', sans-serif; font-size: .72rem; letter-spacing: 3px; padding: .5rem 0; margin: 1rem 0 .5rem; border-bottom: 1px solid var(--border); }
   #toast { position: fixed; bottom: 1.5rem; right: 1.5rem; background: var(--card); border-left: 3px solid var(--green); color: var(--green); font-size: .85rem; padding: .6rem 1.2rem; display: none; z-index: 200; }
   #toast.err { border-color: var(--red); color: var(--red); }
-
-  /* ── VU METER PANEL ── */
-  #vuPanel {
-    display: none;
-    position: fixed;
-    bottom: 4rem;
-    right: 1.5rem;
-    background: #0f1520;
-    border: 1px solid var(--green);
-    padding: 1rem;
-    z-index: 300;
-    width: 340px;
-    box-shadow: 0 0 25px rgba(0,255,136,.15);
-  }
-  #vuPanel .vu-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: .7rem;
-  }
-  #vuPanel .vu-title {
-    font-family: 'Orbitron', sans-serif;
-    font-size: .72rem;
-    color: var(--green);
-    letter-spacing: 2px;
-  }
-  #vuPanel .vu-close {
-    background: transparent;
-    border: none;
-    color: var(--red);
-    font-size: 1.1rem;
-    cursor: pointer;
-    line-height: 1;
-  }
-  #vuPanel .vu-meter-wrap {
-    background: #1a1408;
-    border: 2px solid #3a2a08;
-    padding: .4rem;
-    margin-bottom: .7rem;
-  }
-  #vuPanel .vu-footer {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    font-size: .68rem;
-  }
-  #vuConnBtn {
-    background: var(--green);
-    color: #000;
-    border: none;
-    font-family: 'Share Tech Mono', monospace;
-    font-size: .7rem;
-    padding: .3rem .8rem;
-    cursor: pointer;
-    font-weight: 700;
-    letter-spacing: 1px;
-  }
 </style>
 </head>
 <body>
@@ -388,7 +330,6 @@ if (file_exists($ysf_hosts_file)) {
   <h1>⚡ DVSWITCH CONTROL · EA3EIZ</h1>
   <div class="header-btns">
     <a href="/dvswitch" class="btn-hdr accent">📊 DVSWITCH DASHBOARD</a>
-    <button class="btn-hdr" id="btnVU" onclick="toggleVU()" style="border-color:#00ff88;color:#00ff88;">🎙️ RX MONITOR</button>
     <a href="mmdvm.php" class="btn-hdr">🏠 PANEL PHPPLUS</a>
   </div>
 </div>
@@ -610,7 +551,6 @@ if (file_exists($ysf_hosts_file)) {
       Se guardará como: <span style="color:var(--orange)">Options=<span id="dmrplus_essid_preview"><?= htmlspecialchars($dmrplus_essid) ?></span></span>
     </div>
   </div>
-
   <!-- Panel YSF -->
   <div class="sys-panel <?= $sistema_activo==='ysf'?'visible':'' ?>" id="panel-ysf">
     <div class="section-title green">🟢 SYSTEM FUSION · ES-ADER</div>
@@ -654,7 +594,6 @@ if (file_exists($ysf_hosts_file)) {
       <div class="form-group"><label>Local Port</label><input type="number" id="ysf_lport" value="<?= htmlspecialchars($ysf_lport) ?>"></div>
     </div>
   </div>
-
   <!-- Panel D-Star -->
   <div class="sys-panel <?= $sistema_activo==='dstar'?'visible':'' ?>" id="panel-dstar">
     <div class="section-title blue">🔵 D-STAR · XLX266</div>
@@ -692,27 +631,11 @@ if (file_exists($ysf_hosts_file)) {
   <div class="term-box" id="termBox">Cargando...</div>
 </div>
 
-<!-- ═══════════════════════════════ RX MONITOR VU METER PANEL -->
-<div id="vuPanel">
-  <div class="vu-header">
-    <span class="vu-title">🎙️ RX MONITOR · DVSwitch</span>
-    <button class="vu-close" onclick="closeVU()">✕</button>
-  </div>
-  <div class="vu-meter-wrap">
-    <canvas id="vuCanvas" width="308" height="170"></canvas>
-  </div>
-  <div class="vu-footer">
-    <span id="vuStatus" style="color:#4a6080;">⬤ DESCONECTADO</span>
-    <button id="vuConnBtn" onclick="vuConnect()">CONECTAR</button>
-  </div>
-</div>
-
 <div id="toast">✔ OK</div>
 
 <script>
 let _logSvc = 'mmdvm_bridge';
 
-// ══════════════════════════════════════════ SERVICIOS
 async function loadStatus() {
   try {
     const r = await fetch('?action=status&t=' + Date.now());
@@ -737,7 +660,6 @@ async function toggleSvc(svc, el) {
   setTimeout(() => el.disabled = false, 800);
 }
 
-// ══════════════════════════════════════════ SELECTORES
 function selectBM(sel) {
   const val = sel.value; if (!val) return;
   const p = val.split('|'); if (p.length < 2) return;
@@ -760,7 +682,7 @@ function selectYSF(sel) {
   document.getElementById('ysf_lport').value   = p[2];
 }
 
-// ── Buscador YSF
+// ── Buscador YSF ─────────────────────────────
 var _ysfAllOpts = null;
 function filterYSF(q) {
   var sel = document.getElementById('ysf_selector');
@@ -801,7 +723,6 @@ function filterYSF(q) {
   if (all.length === 1) { all[0].selected = true; selectYSF(sel); }
 }
 
-// ══════════════════════════════════════════ SISTEMA
 const sisColors = { dmr_bm:'var(--cyan)', dmr_plus:'var(--orange)', ysf:'var(--green)', dstar:'var(--blue)', nxdn:'var(--violet)' };
 const sisLabels = { dmr_bm:'DMR BRANDMEISTER', dmr_plus:'DMR+ IPSC2', ysf:'YSF / C4FM', dstar:'D-STAR', nxdn:'NXDN' };
 
@@ -833,7 +754,6 @@ document.addEventListener('input', e => {
     document.getElementById('dmrplus_essid_preview').textContent = e.target.value;
 });
 
-// ══════════════════════════════════════════ GUARDAR
 async function saveAll() {
   const btn = document.getElementById('btnSave');
   btn.disabled = true; btn.textContent = '⏳ GUARDANDO...';
@@ -853,7 +773,6 @@ async function saveAll() {
   btn.textContent = '💾 GUARDAR CONFIGURACIÓN Y REINICIAR SERVICIOS';
 }
 
-// ══════════════════════════════════════════ LOG
 async function loadLog() {
   try {
     const fd = new FormData(); fd.append('svc', _logSvc);
@@ -877,162 +796,9 @@ function showToast(msg, err=false) {
   setTimeout(() => t.style.display='none', 3500);
 }
 
-// ══════════════════════════════════════════ VU METER ANALÓGICO
-var _vuWs        = null;
-var _vuAudio     = null;
-var _vuConnected = false;
-var _vuCtx       = null;
-var _vuLevel     = 0;   // nivel actual (decay)
-var _vuPeak      = 0;   // peak hold
-var _vuRafId     = null;
-
-function toggleVU() {
-  var p = document.getElementById('vuPanel');
-  var btn = document.getElementById('btnVU');
-  if (p.style.display === 'none' || p.style.display === '') {
-    p.style.display = 'block';
-    btn.classList.add('vu-active');
-    if (!_vuCtx) {
-      _vuCtx = document.getElementById('vuCanvas').getContext('2d');
-      vuStartRaf();
-    }
-  } else {
-    p.style.display = 'none';
-    btn.classList.remove('vu-active');
-  }
-}
-
-function closeVU() {
-  document.getElementById('vuPanel').style.display = 'none';
-  document.getElementById('btnVU').classList.remove('vu-active');
-  vuDisconnect();
-}
-
-// ── Loop de animación continuo
-function vuStartRaf() {
-  if (_vuRafId) return;
-  function loop() {
-    // Decay suave
-    _vuLevel = Math.max(0, _vuLevel * 0.88);
-    _vuPeak  = Math.max(0, _vuPeak  * 0.97);
-    vuRender(_vuLevel);
-    _vuRafId = requestAnimationFrame(loop);
-  }
-  _vuRafId = requestAnimationFrame(loop);
-}
-
-// ── Render del VU meter analógico
-function vuRender(level) {
-  if (!_vuCtx) return;
-  var c  = document.getElementById('vuCanvas');
-  var W  = c.width, H = c.height;
-  var cx = W / 2;
-  var cy = H + 10;      // centro del arco (fuera del canvas abajo)
-  var R  = H + 5;       // radio de la aguja
-
-  _vuCtx.clearRect(0, 0, W, H);
-
-  // ── Fondo crema tipo instrumento analógico
-  var bgGrad = _vuCtx.createLinearGradient(0, 0, 0, H);
-  bgGrad.addColorStop(0, '#e8d98a');
-  bgGrad.addColorStop(1, '#c8b84a');
-  _vuCtx.fillStyle = bgGrad;
-  _vuCtx.fillRect(0, 0, W, H);
-
-  // Marco interior
-  _vuCtx.strokeStyle = '#8a7020';
-  _vuCtx.lineWidth = 2;
-  _vuCtx.strokeRect(3, 3, W-6, H-6);
-
-  // ── Zona roja en el arco (+1..+3)
-  var angRed0 = dbToAng(1);
-  var angRed1 = dbToAng(3);
-  _vuCtx.beginPath();
-  _vuCtx.moveTo(cx, cy);
-  _vuCtx.arc(cx, cy, R - 2,  angRed0, angRed1, false);
-  _vuCtx.arc(cx, cy, R - 22, angRed1, angRed0, true);
-  _vuCtx.closePath();
-  _vuCtx.fillStyle = 'rgba(200,30,30,0.18)';
-  _vuCtx.fill();
-
-  // ── Arco principal de escala
-  _vuCtx.beginPath();
-  _vuCtx.arc(cx, cy, R - 12, dbToAng(-20), dbToAng(3), false);
-  _vuCtx.strokeStyle = '#5a4010';
-  _vuCtx.lineWidth = 1;
-  _vuCtx.stroke();
-
-  // ── Marcas y etiquetas
-  var marks = [
-    {db:-20,major:true},  {db:-10,major:true},
-    {db:-7, major:false}, {db:-5, major:true},
-    {db:-3, major:false}, {db:-2, major:false},
-    {db:-1, major:false}, {db:0,  major:true},
-    {db:1,  major:false}, {db:2,  major:false},
-    {db:3,  major:true}
-  ];
-  marks.forEach(function(m) {
-    var ang  = dbToAng(m.db);
-    var isRed = m.db >= 0;
-    var len   = m.major ? 16 : 9;
-    var r1 = R - 2;
-    var r2 = R - 2 - len;
-    _vuCtx.beginPath();
-    _vuCtx.moveTo(cx + r1*Math.cos(ang), cy + r1*Math.sin(ang));
-    _vuCtx.lineTo(cx + r2*Math.cos(ang), cy + r2*Math.sin(ang));
-    _vuCtx.strokeStyle = isRed ? '#cc1515' : '#3a2800';
-    _vuCtx.lineWidth   = m.major ? 2 : 1;
-    _vuCtx.stroke();
-
-    // Etiqueta solo en marcas principales y ±1,±2,±3
-    if (m.major || Math.abs(m.db) <= 3) {
-      var rLbl = R - 2 - len - 11;
-      var lx = cx + rLbl * Math.cos(ang);
-      var ly = cy + rLbl * Math.sin(ang);
-      _vuCtx.save();
-      _vuCtx.translate(lx, ly);
-      _vuCtx.font = (m.major ? 'bold ' : '') + '9px Share Tech Mono';
-      _vuCtx.fillStyle = isRed ? '#cc1515' : '#3a2800';
-      _vuCtx.textAlign = 'center';
-      _vuCtx.textBaseline = 'middle';
-      _vuCtx.fillText(m.db > 0 ? '+'+m.db : String(m.db), 0, 0);
-      _vuCtx.restore();
-    }
-  });
-
-  // ── Label "VU"
-  _vuCtx.font = 'bold italic 20px Georgia, serif';
-  _vuCtx.fillStyle = 'rgba(60,40,0,0.35)';
-  _vuCtx.textAlign = 'center';
-  _vuCtx.fillText('VU', cx, H - 28);
-
-  // ── LED rojo (clipping)
-  var ledOn = _vuPeak > 0.89;
-  _vuCtx.beginPath();
-  _vuCtx.arc(cx + 80, 16, 6, 0, Math.PI*2);
-  var ledGrad = _vuCtx.createRadialGradient(cx+78, 14, 1, cx+80, 16, 6);
-  if (ledOn) {
-    ledGrad.addColorStop(0, '#ff8080');
-    ledGrad.addColorStop(1, '#cc0000');
-  } else {
-    ledGrad.addColorStop(0, '#551010');
-    ledGrad.addColorStop(1, '#330000');
-  }
-  _vuCtx.fillStyle = ledGrad;
-  _vuCtx.fill();
-  _vuCtx.strokeStyle = '#220000';
-  _vuCtx.lineWidth = 1;
-  _vuCtx.stroke();
-
-  // ── Sombra aguja
-  var db      = level > 0.0001 ? 20 * Math.log10(level) : -60;
-  db          = Math.max(-20, Math.min(3, db));
-  var needAng = dbToAng(db);
-  var nLen    = R - 8;
-  var nxE = cx + nLen * Math.cos(needAng);
-  var nyE = cy + nLen * Math.sin(needAng);
-
-  _vuCtx.beginPath();
-  _vuCtx.moveTo(cx + 1, cy + 1);
-  _vuCtx.lineTo(nxE + 1, nyE + 1);
-  _vuCtx.strokeStyle = 'rgba(0,0,0,0.25)';
+loadStatus(); loadLog();
+setInterval(loadStatus, 3000);
+setInterval(loadLog, 4000);
+</script>
+</body>
+</html>
