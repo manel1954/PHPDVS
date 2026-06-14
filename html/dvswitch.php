@@ -835,14 +835,14 @@ function showToast(msg, err=false) {
 }
 
 // ── VU METER ANALÓGICO
-var _vuWs=null,_vuConnected=false,_vuCtx=null,_vuLevel=0,_vuPeak=0,_vuRafId=null,_vuCallTimer=null,_vuPlayer=null;
+var _vuConnected=false,_vuCtx=null,_vuLevel=0,_vuPeak=0,_vuRafId=null,_vuCallTimer=null,_vuDvsp=null,_vuPeakWs=null;
 
 function toggleVU(){
   var p=document.getElementById('vuPanel'),btn=document.getElementById('btnVU');
   if(p.style.display==='none'||p.style.display===''){
     p.style.display='block';btn.classList.add('vu-active');
     if(!_vuCtx){_vuCtx=document.getElementById('vuCanvas').getContext('2d');vuStartRaf();}
-  } else { p.style.display='none';btn.classList.remove('vu-active'); }
+  } else {p.style.display='none';btn.classList.remove('vu-active');}
 }
 function closeVU(){
   document.getElementById('vuPanel').style.display='none';
@@ -855,42 +855,25 @@ function vuStartRaf(){
 }
 function vuConnect(){
   if(_vuConnected){vuDisconnect();return;}
-  try{
-    // Usar exactamente DVSwitchPlayer del pcm-player.min.js ya cargado
-    var fakeBtn={style:{backgroundColor:''},};
-    _vuPlayer=new DVSwitchPlayer(8090, fakeBtn);
-    // Interceptar el WebSocket interno para leer peak
-    _vuPlayer.play();
-    // Parchear el onmessage del ws interno para calcular peak
-    var origWs=_vuPlayer.ws;
-    var patchInterval=setInterval(function(){
-      if(_vuPlayer.ws && _vuPlayer.ws!==origWs || _vuPlayer.ws){
-        clearInterval(patchInterval);
-        var ws=_vuPlayer.ws;
-        if(!ws)return;
-        var origMsg=ws.onmessage;
-        ws.addEventListener('message',function(e){
-          if(!(e.data instanceof ArrayBuffer))return;
-          var i16=new Int16Array(e.data);
-          var peak=0;
-          for(var i=0;i<i16.length;i++){var s=Math.abs(i16[i]/32768.0);if(s>peak)peak=s;}
-          if(peak>_vuLevel)_vuLevel=peak;
-          if(peak>_vuPeak)_vuPeak=peak;
-        });
-      }
-    },100);
-    _vuConnected=true;
-    document.getElementById('vuStatus').innerHTML='<span style="color:#00ff88;">⬤ CONECTADO</span>';
-    document.getElementById('vuConnBtn').textContent='DESCONECTAR';
-    document.getElementById('vuConnBtn').style.background='#ff4444';
-    document.getElementById('vuConnBtn').style.color='#fff';
-    if(!_vuCtx){_vuCtx=document.getElementById('vuCanvas').getContext('2d');vuStartRaf();}
-    vuPollCall();
-  }catch(err){
-    document.getElementById('vuStatus').innerHTML='<span style="color:#ff4444;">⬤ '+err.message+'</span>';
-  }
+  // Usar DVSwitchPlayer original para el audio (mismo que el dashboard)
+  var fakeBtn=document.getElementById('vuConnBtn');
+  _vuDvsp=new DVSwitchPlayer(8090, fakeBtn);
+  _vuDvsp.play();
+  // WebSocket separado SOLO para leer el peak (sin reproducir)
+  _vuPeakWs=new WebSocket('ws://192.168.1.126:8090');
+  _vuPeakWs.binaryType='arraybuffer';
+  _vuPeakWs.onmessage=function(e){
+    if(!(e.data instanceof ArrayBuffer))return;
+    var i16=new Int16Array(e.data),peak=0;
+    for(var i=0;i<i16.length;i++){var s=Math.abs(i16[i]/32768.0);if(s>peak)peak=s;}
+    if(peak>_vuLevel)_vuLevel=peak;
+    if(peak>_vuPeak)_vuPeak=peak;
+  };
+  _vuConnected=true;
+  document.getElementById('vuStatus').innerHTML='<span style="color:#00ff88;">⬤ CONECTADO</span>';
+  if(!_vuCtx){_vuCtx=document.getElementById('vuCanvas').getContext('2d');vuStartRaf();}
+  vuPollCall();
 }
-var _vuCallTimer2=null;
 function vuPollCall(){
   fetch('?action=callsign&t='+Date.now()).then(function(r){return r.json();}).then(function(d){
     var el=document.getElementById('vuCallsign');if(el)el.textContent=d.call||'—';
@@ -899,7 +882,8 @@ function vuPollCall(){
 }
 function vuDisconnect(){
   if(_vuCallTimer){clearTimeout(_vuCallTimer);_vuCallTimer=null;}
-  if(_vuPlayer){try{_vuPlayer.stop();}catch(e){}_vuPlayer=null;}
+  if(_vuDvsp){try{_vuDvsp.stop();}catch(e){}_vuDvsp=null;}
+  if(_vuPeakWs){try{_vuPeakWs.close();}catch(e){}_vuPeakWs=null;}
   _vuConnected=false;_vuLevel=0;_vuPeak=0;
   document.getElementById('vuStatus').innerHTML='<span style="color:#4a6080;">⬤ DESCONECTADO</span>';
   document.getElementById('vuConnBtn').textContent='CONECTAR';
