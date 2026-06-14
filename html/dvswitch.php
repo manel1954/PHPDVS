@@ -839,73 +839,72 @@ function toggleVU(){var p=document.getElementById('vuPanel'),btn=document.getEle
 function closeVU(){document.getElementById('vuPanel').style.display='none';document.getElementById('btnVU').classList.remove('vu-active');vuDisconnect();}
 function vuStartRaf(){if(_vuRafId)return;(function loop(){_vuLevel=Math.max(0,_vuLevel*0.88);_vuPeak=Math.max(0,_vuPeak*0.97);vuRender(_vuLevel);_vuRafId=requestAnimationFrame(loop);})();}
 function dbToAng(db){
+  // -20dB=210°, +3dB=330°, arco de 120°
   var t=(db+20)/23;
   return (210-t*120)*Math.PI/180;
 }
 function vuRender(level){
   if(!_vuCtx)return;
   var c=document.getElementById('vuCanvas'),W=c.width,H=c.height;
-  var cx=W/2, cy=H-8, R=H-22;
+  // Centro FUERA del canvas hacia abajo para semicírculo natural
+  var cx=W/2, cy=H+15, R=H+2;
 
   _vuCtx.clearRect(0,0,W,H);
 
-  // Fondo crema degradado
+  // Fondo crema
   var bg=_vuCtx.createLinearGradient(0,0,0,H);
   bg.addColorStop(0,'#f5edba');bg.addColorStop(1,'#dfc96a');
   _vuCtx.fillStyle=bg;_vuCtx.fillRect(0,0,W,H);
 
-  // Marcas menores intermedias (negras)
+  // Marcas menores intermedias
   [-18,-16,-14,-12,-9,-8,-6,-4].forEach(function(db){
     var ang=dbToAng(db);
-    _vuCtx.beginPath();
-    _vuCtx.moveTo(cx+R*Math.cos(ang),     cy+R*Math.sin(ang));
-    _vuCtx.lineTo(cx+(R-8)*Math.cos(ang), cy+(R-8)*Math.sin(ang));
+    var x1=cx+(R-2)*Math.cos(ang),   y1=cy+(R-2)*Math.sin(ang);
+    var x2=cx+(R-10)*Math.cos(ang),  y2=cy+(R-10)*Math.sin(ang);
+    _vuCtx.beginPath();_vuCtx.moveTo(x1,y1);_vuCtx.lineTo(x2,y2);
     _vuCtx.strokeStyle='#222';_vuCtx.lineWidth=1;_vuCtx.stroke();
   });
 
-  // Marcas principales con etiquetas
+  // Marcas principales + etiquetas
   var marks=[
-    {db:-20,len:18,lbl:'-20',red:false},
-    {db:-10,len:18,lbl:'-10',red:false},
-    {db:-7, len:12,lbl:'-7', red:false},
-    {db:-5, len:18,lbl:'-5', red:false},
-    {db:-3, len:12,lbl:'-3', red:false},
-    {db:-2, len:12,lbl:'-2', red:false},
-    {db:-1, len:12,lbl:'-1', red:false},
-    {db:0,  len:18,lbl:'0',  red:true},
-    {db:1,  len:12,lbl:'+1', red:true},
-    {db:2,  len:12,lbl:'+2', red:true},
-    {db:3,  len:18,lbl:'+3', red:true}
+    {db:-20,len:20,lbl:'-20',red:false,bold:true},
+    {db:-10,len:20,lbl:'-10',red:false,bold:true},
+    {db:-7, len:13,lbl:'-7', red:false,bold:false},
+    {db:-5, len:20,lbl:'-5', red:false,bold:true},
+    {db:-3, len:13,lbl:'-3', red:false,bold:false},
+    {db:-2, len:13,lbl:'-2', red:false,bold:false},
+    {db:-1, len:13,lbl:'-1', red:false,bold:false},
+    {db:0,  len:20,lbl:'0',  red:true, bold:true},
+    {db:1,  len:13,lbl:'+1', red:true, bold:false},
+    {db:2,  len:13,lbl:'+2', red:true, bold:false},
+    {db:3,  len:20,lbl:'+3', red:true, bold:true}
   ];
-
   marks.forEach(function(m){
     var ang=dbToAng(m.db);
     var color=m.red?'#cc0000':'#1a1a1a';
-    // Línea de marca
-    _vuCtx.beginPath();
-    _vuCtx.moveTo(cx+R*Math.cos(ang),         cy+R*Math.sin(ang));
-    _vuCtx.lineTo(cx+(R-m.len)*Math.cos(ang), cy+(R-m.len)*Math.sin(ang));
-    _vuCtx.strokeStyle=color;
-    _vuCtx.lineWidth=(m.len===18)?2:1.2;
-    _vuCtx.stroke();
+    var x1=cx+(R-2)*Math.cos(ang),      y1=cy+(R-2)*Math.sin(ang);
+    var x2=cx+(R-2-m.len)*Math.cos(ang),y2=cy+(R-2-m.len)*Math.sin(ang);
+    _vuCtx.beginPath();_vuCtx.moveTo(x1,y1);_vuCtx.lineTo(x2,y2);
+    _vuCtx.strokeStyle=color;_vuCtx.lineWidth=m.bold?2:1.2;_vuCtx.stroke();
     // Etiqueta
-    var rL=R-m.len-13;
+    var rL=R-2-m.len-14;
     var lx=cx+rL*Math.cos(ang), ly=cy+rL*Math.sin(ang);
-    _vuCtx.save();_vuCtx.translate(lx,ly);
-    _vuCtx.font=(m.len===18?'bold ':'')+( m.red?'11':'10')+'px Arial,sans-serif';
-    _vuCtx.fillStyle=color;
-    _vuCtx.textAlign='center';_vuCtx.textBaseline='middle';
-    _vuCtx.fillText(m.lbl,0,0);
-    _vuCtx.restore();
+    // Solo dibujar si está dentro del canvas
+    if(ly>4&&ly<H-2&&lx>4&&lx<W-4){
+      _vuCtx.save();_vuCtx.translate(lx,ly);
+      _vuCtx.font=(m.bold?'bold ':'')+( m.red?'11':'10')+'px Arial,sans-serif';
+      _vuCtx.fillStyle=color;_vuCtx.textAlign='center';_vuCtx.textBaseline='middle';
+      _vuCtx.fillText(m.lbl,0,0);_vuCtx.restore();
+    }
   });
 
-  // Label "VU" grande semitransparente
-  _vuCtx.font='bold italic 30px Georgia,serif';
+  // Label VU semitransparente
+  _vuCtx.font='bold italic 28px Georgia,serif';
   _vuCtx.fillStyle='rgba(50,35,0,0.18)';
   _vuCtx.textAlign='center';
-  _vuCtx.fillText('VU',cx+35,cy-18);
+  _vuCtx.fillText('VU',cx+40,H-30);
 
-  // LED rojo esquina sup derecha
+  // LED rojo
   var ledOn=_vuPeak>0.89;
   _vuCtx.beginPath();_vuCtx.arc(W-16,16,6,0,Math.PI*2);
   var lg=_vuCtx.createRadialGradient(W-18,14,1,W-16,16,6);
@@ -917,12 +916,12 @@ function vuRender(level){
   // Aguja
   var db=level>0.0001?20*Math.log10(level):-60;
   db=Math.max(-20,Math.min(3,db));
-  var na=dbToAng(db), nLen=R-2;
-  var nx=cx+nLen*Math.cos(na), ny=cy+nLen*Math.sin(na);
+  var na=dbToAng(db);
+  var nx=cx+(R-2)*Math.cos(na), ny=cy+(R-2)*Math.sin(na);
   // Sombra
   _vuCtx.beginPath();_vuCtx.moveTo(cx+1,cy+1);_vuCtx.lineTo(nx+1,ny+1);
   _vuCtx.strokeStyle='rgba(0,0,0,0.15)';_vuCtx.lineWidth=2;_vuCtx.stroke();
-  // Aguja principal
+  // Aguja
   _vuCtx.beginPath();_vuCtx.moveTo(cx,cy);_vuCtx.lineTo(nx,ny);
   _vuCtx.strokeStyle='#111';_vuCtx.lineWidth=1.5;_vuCtx.stroke();
   // Pivote
