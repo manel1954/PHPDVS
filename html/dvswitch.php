@@ -711,3 +711,160 @@ function selectYSF(sel) {
 var _ysfAllOpts = null;
 function filterYSF(q) {
   var sel = document.getElementById('ysf_selector');
+  if (!_ysfAllOpts) {
+    _ysfAllOpts = [];
+    var ogs = sel.querySelectorAll('optgroup');
+    for (var i=0; i<ogs.length; i++) {
+      var opts = ogs[i].querySelectorAll('option');
+      for (var j=0; j<opts.length; j++) {
+        _ysfAllOpts.push({t: opts[j].textContent.trim(), v: opts[j].value, g: ogs[i].label});
+      }
+    }
+  }
+  var term = q.trim().toLowerCase();
+  var filtered = term === '' ? _ysfAllOpts : _ysfAllOpts.filter(function(o){
+    return o.t.toLowerCase().indexOf(term) >= 0 || o.g.toLowerCase().indexOf(term) >= 0;
+  });
+  sel.innerHTML = '';
+  var groups = {};
+  for (var k=0; k<filtered.length; k++) {
+    var g = filtered[k].g;
+    if (!groups[g]) groups[g] = [];
+    groups[g].push(filtered[k]);
+  }
+  var gkeys = Object.keys(groups);
+  for (var m=0; m<gkeys.length; m++) {
+    var og = document.createElement('optgroup');
+    og.label = term ? gkeys[m]+' ('+groups[gkeys[m]].length+')' : gkeys[m];
+    for (var n=0; n<groups[gkeys[m]].length; n++) {
+      var opt = document.createElement('option');
+      opt.value = groups[gkeys[m]][n].v;
+      opt.textContent = groups[gkeys[m]][n].t;
+      og.appendChild(opt);
+    }
+    sel.appendChild(og);
+  }
+  var all = sel.querySelectorAll('option');
+  if (all.length === 1) { all[0].selected = true; selectYSF(sel); }
+}
+
+const sisColors = { dmr_bm:'var(--cyan)', dmr_plus:'var(--orange)', ysf:'var(--green)', dstar:'var(--blue)', nxdn:'var(--violet)' };
+const sisLabels = { dmr_bm:'DMR BRANDMEISTER', dmr_plus:'DMR+ IPSC2', ysf:'YSF / C4FM', dstar:'D-STAR', nxdn:'NXDN' };
+
+function setSistema(sis, btn) {
+  document.querySelectorAll('.sys-panel').forEach(p => p.classList.remove('visible'));
+  document.querySelectorAll('.sis-btn').forEach(b => b.className = 'sis-btn');
+  btn.classList.add('active-' + sis);
+  document.getElementById('panel-' + sis).classList.add('visible');
+  document.getElementById('sistema').value = sis;
+  const lbl = document.getElementById('sisActivoLabel');
+  lbl.textContent = sisLabels[sis];
+  lbl.style.borderColor = sisColors[sis];
+  lbl.style.color = sisColors[sis];
+}
+
+function setTG(tg, btn) {
+  document.getElementById('ab_txTg').value = tg;
+  document.getElementById('tgActivo').textContent = tg;
+  document.querySelectorAll('.tg-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+}
+document.getElementById('ab_txTg').addEventListener('input', function() {
+  document.getElementById('tgActivo').textContent = this.value;
+  document.querySelectorAll('.tg-btn').forEach(b => b.classList.remove('active'));
+});
+
+document.addEventListener('input', e => {
+  if (e.target.id === 'dmrplus_essid')
+    document.getElementById('dmrplus_essid_preview').textContent = e.target.value;
+});
+
+async function saveAll() {
+  const btn = document.getElementById('btnSave');
+  btn.disabled = true; btn.textContent = '⏳ GUARDANDO...';
+  const fd = new FormData();
+  const ids = ['ab_gatewayDmrId','ab_repeaterID','ab_txTg','ab_txTs','ab_ambeMode','mb_Callsign','mb_Id','sistema','bm_address','bm_port','bm_password','bm_slot1','bm_slot2','dmrplus_address','dmrplus_port','dmrplus_password','dmrplus_essid','dmrplus_slot1','dmrplus_slot2','ysf_gw','ysf_gwport','ysf_lport','dstar_gw','dstar_gwport','dstar_lport','nxdn_gw','nxdn_gwport','nxdn_lport'];
+  document.querySelectorAll('.sys-panel').forEach(p => p.style.display = 'block');
+  ids.forEach(id => { const el = document.getElementById(id); if(el) fd.append(id, el.value); });
+  document.querySelectorAll('.sys-panel').forEach(p => p.style.display = '');
+  const vis = document.getElementById('panel-' + document.getElementById('sistema').value);
+  if (vis) vis.classList.add('visible');
+  try {
+    const r = await fetch('?action=save', {method:'POST',body:fd});
+    const d = await r.json();
+    showToast(d.msg, !d.ok);
+  } catch(e) { showToast('Error de conexión', true); }
+  btn.disabled = false;
+  btn.textContent = '💾 GUARDAR CONFIGURACIÓN Y REINICIAR SERVICIOS';
+}
+
+async function loadLog() {
+  try {
+    const fd = new FormData(); fd.append('svc', _logSvc);
+    const r = await fetch('?action=log', {method:'POST',body:fd});
+    const box = document.getElementById('termBox');
+    box.textContent = await r.text();
+    box.scrollTop = box.scrollHeight;
+  } catch(e) {}
+}
+function switchLog(svc) {
+  _logSvc = svc;
+  document.getElementById('tab-mb').classList.toggle('active', svc==='mmdvm_bridge');
+  document.getElementById('tab-ab').classList.toggle('active', svc==='analog_bridge');
+  loadLog();
+}
+function showToast(msg, err=false) {
+  const t = document.getElementById('toast');
+  t.textContent = (err?'✕ ':'✔ ') + msg;
+  t.className = err ? 'err' : '';
+  t.style.display = 'block';
+  setTimeout(() => t.style.display='none', 3500);
+}
+
+// ── VU METER ANALÓGICO
+var _vuWs=null,_vuAudio=null,_vuConnected=false,_vuCtx=null,_vuLevel=0,_vuPeak=0,_vuRafId=null;
+function toggleVU(){var p=document.getElementById('vuPanel'),btn=document.getElementById('btnVU');if(p.style.display==='none'||p.style.display===''){p.style.display='block';btn.classList.add('vu-active');if(!_vuCtx){_vuCtx=document.getElementById('vuCanvas').getContext('2d');vuStartRaf();}}else{p.style.display='none';btn.classList.remove('vu-active');}}
+function closeVU(){document.getElementById('vuPanel').style.display='none';document.getElementById('btnVU').classList.remove('vu-active');vuDisconnect();}
+function vuStartRaf(){if(_vuRafId)return;(function loop(){_vuLevel=Math.max(0,_vuLevel*0.88);_vuPeak=Math.max(0,_vuPeak*0.97);vuRender(_vuLevel);_vuRafId=requestAnimationFrame(loop);})();}
+function dbToAng(db){return(210-(((db+20)/23)*120))*Math.PI/180;}
+function vuRender(level){
+  if(!_vuCtx)return;
+  var c=document.getElementById('vuCanvas'),W=c.width,H=c.height,cx=W/2,cy=H+10,R=H+5;
+  _vuCtx.clearRect(0,0,W,H);
+  var bg=_vuCtx.createLinearGradient(0,0,0,H);bg.addColorStop(0,'#e8d98a');bg.addColorStop(1,'#c8b84a');
+  _vuCtx.fillStyle=bg;_vuCtx.fillRect(0,0,W,H);
+  _vuCtx.strokeStyle='#8a7020';_vuCtx.lineWidth=2;_vuCtx.strokeRect(3,3,W-6,H-6);
+  _vuCtx.beginPath();_vuCtx.moveTo(cx,cy);_vuCtx.arc(cx,cy,R-2,dbToAng(1),dbToAng(3),false);_vuCtx.arc(cx,cy,R-22,dbToAng(3),dbToAng(1),true);_vuCtx.closePath();_vuCtx.fillStyle='rgba(200,30,30,0.18)';_vuCtx.fill();
+  _vuCtx.beginPath();_vuCtx.arc(cx,cy,R-12,dbToAng(-20),dbToAng(3),false);_vuCtx.strokeStyle='#5a4010';_vuCtx.lineWidth=1;_vuCtx.stroke();
+  [{db:-20,mj:true},{db:-10,mj:true},{db:-7,mj:false},{db:-5,mj:true},{db:-3,mj:false},{db:-2,mj:false},{db:-1,mj:false},{db:0,mj:true},{db:1,mj:false},{db:2,mj:false},{db:3,mj:true}].forEach(function(m){
+    var ang=dbToAng(m.db),red=m.db>=0,len=m.mj?16:9;
+    _vuCtx.beginPath();_vuCtx.moveTo(cx+(R-2)*Math.cos(ang),cy+(R-2)*Math.sin(ang));_vuCtx.lineTo(cx+(R-2-len)*Math.cos(ang),cy+(R-2-len)*Math.sin(ang));_vuCtx.strokeStyle=red?'#cc1515':'#3a2800';_vuCtx.lineWidth=m.mj?2:1;_vuCtx.stroke();
+    if(m.mj||Math.abs(m.db)<=3){var rL=R-2-len-11;_vuCtx.save();_vuCtx.translate(cx+rL*Math.cos(ang),cy+rL*Math.sin(ang));_vuCtx.font=(m.mj?'bold ':'')+'9px Share Tech Mono';_vuCtx.fillStyle=red?'#cc1515':'#3a2800';_vuCtx.textAlign='center';_vuCtx.textBaseline='middle';_vuCtx.fillText(m.db>0?'+'+m.db:String(m.db),0,0);_vuCtx.restore();}
+  });
+  _vuCtx.font='bold italic 20px Georgia,serif';_vuCtx.fillStyle='rgba(60,40,0,0.35)';_vuCtx.textAlign='center';_vuCtx.fillText('VU',cx,H-28);
+  var ledOn=_vuPeak>0.89;_vuCtx.beginPath();_vuCtx.arc(cx+80,16,6,0,Math.PI*2);var lg=_vuCtx.createRadialGradient(cx+78,14,1,cx+80,16,6);lg.addColorStop(0,ledOn?'#ff8080':'#551010');lg.addColorStop(1,ledOn?'#cc0000':'#330000');_vuCtx.fillStyle=lg;_vuCtx.fill();_vuCtx.strokeStyle='#220000';_vuCtx.lineWidth=1;_vuCtx.stroke();
+  var db=level>0.0001?20*Math.log10(level):-60;db=Math.max(-20,Math.min(3,db));
+  var na=dbToAng(db),nL=R-8,nx=cx+nL*Math.cos(na),ny=cy+nL*Math.sin(na);
+  _vuCtx.beginPath();_vuCtx.moveTo(cx+1,cy+1);_vuCtx.lineTo(nx+1,ny+1);_vuCtx.strokeStyle='rgba(0,0,0,0.25)';_vuCtx.lineWidth=2;_vuCtx.stroke();
+  _vuCtx.beginPath();_vuCtx.moveTo(cx,cy);_vuCtx.lineTo(nx,ny);_vuCtx.strokeStyle='#111';_vuCtx.lineWidth=1.8;_vuCtx.stroke();
+  _vuCtx.beginPath();_vuCtx.arc(cx,cy,5,0,Math.PI*2);_vuCtx.fillStyle='#2a1a00';_vuCtx.fill();
+}
+function vuConnect(){
+  if(_vuConnected){vuDisconnect();return;}
+  try{
+    _vuAudio=new(window.AudioContext||window.webkitAudioContext)({sampleRate:8000});
+    _vuWs=new WebSocket('ws://192.168.1.126:8090');_vuWs.binaryType='arraybuffer';
+    _vuWs.onopen=function(){_vuConnected=true;document.getElementById('vuStatus').innerHTML='<span style="color:#00ff88;">⬤ CONECTADO</span>';document.getElementById('vuConnBtn').textContent='DESCONECTAR';document.getElementById('vuConnBtn').style.background='#ff4444';document.getElementById('vuConnBtn').style.color='#fff';if(!_vuCtx){_vuCtx=document.getElementById('vuCanvas').getContext('2d');vuStartRaf();}};
+    _vuWs.onmessage=function(e){if(!(e.data instanceof ArrayBuffer))return;var pcm=new Int16Array(e.data),buf=_vuAudio.createBuffer(1,pcm.length,8000),ch=buf.getChannelData(0),peak=0;for(var i=0;i<pcm.length;i++){ch[i]=pcm[i]/32768.0;if(Math.abs(ch[i])>peak)peak=Math.abs(ch[i]);}if(peak>_vuLevel)_vuLevel=peak;if(peak>_vuPeak)_vuPeak=peak;var src=_vuAudio.createBufferSource();src.buffer=buf;src.connect(_vuAudio.destination);src.start();};
+    _vuWs.onerror=function(){document.getElementById('vuStatus').innerHTML='<span style="color:#ff4444;">⬤ ERROR · puerto 8090</span>';vuDisconnect();};
+    _vuWs.onclose=function(){_vuConnected=false;document.getElementById('vuStatus').innerHTML='<span style="color:#4a6080;">⬤ DESCONECTADO</span>';document.getElementById('vuConnBtn').textContent='CONECTAR';document.getElementById('vuConnBtn').style.background='#00ff88';document.getElementById('vuConnBtn').style.color='#000';};
+  }catch(err){document.getElementById('vuStatus').innerHTML='<span style="color:#ff4444;">⬤ '+err.message+'</span>';}
+}
+function vuDisconnect(){if(_vuWs){try{_vuWs.close();}catch(e){}_vuWs=null;}if(_vuAudio){try{_vuAudio.close();}catch(e){}_vuAudio=null;}_vuConnected=false;_vuLevel=0;_vuPeak=0;}
+
+loadStatus(); loadLog();
+setInterval(loadStatus, 3000);
+setInterval(loadLog, 4000);
+</script>
+</body>
+</html>
