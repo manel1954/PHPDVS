@@ -165,6 +165,14 @@ if (isset($_GET['action'])) {
             shell_exec('sudo systemctl restart mmdvm_bridge 2>/dev/null');
             echo json_encode(['ok'=>empty($errors),'msg'=>empty($errors)?"Sistema [$sistema] activado y servicios reiniciados":'Errores: '.implode(', ',$errors)]);
             break;
+        case 'callsign':
+            $line = shell_exec("sudo journalctl -u analog_bridge -n 50 --no-pager --output=short 2>/dev/null");
+            $call = '—';
+            if ($line && preg_match_all('/Begin TX:.*call=([A-Z0-9\/]+)/i', $line, $m)) {
+                $call = end($m[1]);
+            }
+            echo json_encode(['call' => $call]);
+            exit;
         case 'log':
             $svc = in_array($_POST['svc'] ?? '', ['analog_bridge','mmdvm_bridge']) ? $_POST['svc'] : 'mmdvm_bridge';
             header('Content-Type: text/plain');
@@ -323,7 +331,7 @@ if (file_exists($ysf_hosts_file)) {
   #toast { position: fixed; bottom: 1.5rem; right: 1.5rem; background: var(--card); border-left: 3px solid var(--green); color: var(--green); font-size: .85rem; padding: .6rem 1.2rem; display: none; z-index: 200; }
   #toast.err { border-color: var(--red); color: var(--red); }
   /* VU METER */
-  #vuPanel { display:none; position:fixed; bottom:4rem; right:1.5rem; background:#0f1520; border:1px solid var(--green); padding:1rem; z-index:300; width:340px; box-shadow:0 0 25px rgba(0,255,136,.15); }
+  #vuPanel { display:none; position:fixed; bottom:4rem; right:1.5rem; background:#0f1520; border:1px solid var(--green); padding:.8rem; z-index:300; width:270px; box-shadow:0 0 25px rgba(0,255,136,.15); }
   #vuPanel .vu-hdr { display:flex; justify-content:space-between; align-items:center; margin-bottom:.7rem; }
   #vuPanel .vu-title { font-family:'Orbitron',sans-serif; font-size:.72rem; color:var(--green); letter-spacing:2px; }
   #vuPanel .vu-close { background:transparent; border:none; color:var(--red); font-size:1.1rem; cursor:pointer; }
@@ -648,7 +656,11 @@ if (file_exists($ysf_hosts_file)) {
     <button class="vu-close" onclick="closeVU()">✕</button>
   </div>
   <div class="vu-meter-wrap">
-    <canvas id="vuCanvas" width="308" height="170"></canvas>
+    <canvas id="vuCanvas" width="240" height="130"></canvas>
+  </div>
+  <div style="font-family:'Share Tech Mono',monospace;font-size:.75rem;text-align:center;padding:.3rem 0;letter-spacing:2px;">
+    <span style="color:#4a6080;font-size:.6rem;">EN EL AIRE</span><br>
+    <span id="vuCallsign" style="color:#ffb300;font-family:'Orbitron',sans-serif;font-size:.85rem;">—</span>
   </div>
   <div class="vu-footer">
     <span id="vuStatus" style="color:#4a6080;">⬤ DESCONECTADO</span>
@@ -854,13 +866,22 @@ function vuConnect(){
   try{
     _vuAudio=new(window.AudioContext||window.webkitAudioContext)({sampleRate:8000});
     _vuWs=new WebSocket('ws://192.168.1.126:8090');_vuWs.binaryType='arraybuffer';
-    _vuWs.onopen=function(){_vuConnected=true;document.getElementById('vuStatus').innerHTML='<span style="color:#00ff88;">⬤ CONECTADO</span>';document.getElementById('vuConnBtn').textContent='DESCONECTAR';document.getElementById('vuConnBtn').style.background='#ff4444';document.getElementById('vuConnBtn').style.color='#fff';if(!_vuCtx){_vuCtx=document.getElementById('vuCanvas').getContext('2d');vuStartRaf();}};
+    _vuWs.onopen=function(){_vuConnected=true;document.getElementById('vuStatus').innerHTML='<span style="color:#00ff88;">⬤ CONECTADO</span>';document.getElementById('vuConnBtn').textContent='DESCONECTAR';document.getElementById('vuConnBtn').style.background='#ff4444';document.getElementById('vuConnBtn').style.color='#fff';if(!_vuCtx){_vuCtx=document.getElementById('vuCanvas').getContext('2d');vuStartRaf();}vuPollCall();};
     _vuWs.onmessage=function(e){if(!(e.data instanceof ArrayBuffer))return;var pcm=new Int16Array(e.data),buf=_vuAudio.createBuffer(1,pcm.length,8000),ch=buf.getChannelData(0),peak=0;for(var i=0;i<pcm.length;i++){ch[i]=pcm[i]/32768.0;if(Math.abs(ch[i])>peak)peak=Math.abs(ch[i]);}if(peak>_vuLevel)_vuLevel=peak;if(peak>_vuPeak)_vuPeak=peak;var src=_vuAudio.createBufferSource();src.buffer=buf;src.connect(_vuAudio.destination);src.start();};
     _vuWs.onerror=function(){document.getElementById('vuStatus').innerHTML='<span style="color:#ff4444;">⬤ ERROR · puerto 8090</span>';vuDisconnect();};
     _vuWs.onclose=function(){_vuConnected=false;document.getElementById('vuStatus').innerHTML='<span style="color:#4a6080;">⬤ DESCONECTADO</span>';document.getElementById('vuConnBtn').textContent='CONECTAR';document.getElementById('vuConnBtn').style.background='#00ff88';document.getElementById('vuConnBtn').style.color='#000';};
   }catch(err){document.getElementById('vuStatus').innerHTML='<span style="color:#ff4444;">⬤ '+err.message+'</span>';}
 }
-function vuDisconnect(){if(_vuWs){try{_vuWs.close();}catch(e){}_vuWs=null;}if(_vuAudio){try{_vuAudio.close();}catch(e){}_vuAudio=null;}_vuConnected=false;_vuLevel=0;_vuPeak=0;}
+var _vuCallTimer=null;
+function vuPollCall(){
+  fetch('?action=callsign&t='+Date.now()).then(function(r){return r.json();}).then(function(d){
+    var el=document.getElementById('vuCallsign');if(el)el.textContent=d.call||'—';
+  }).catch(function(){});
+  _vuCallTimer=setTimeout(vuPollCall,2000);
+}
+function vuDisconnect(){
+  if(_vuCallTimer){clearTimeout(_vuCallTimer);_vuCallTimer=null;}
+  var el=document.getElementById('vuCallsign');if(el)el.textContent='—';if(_vuWs){try{_vuWs.close();}catch(e){}_vuWs=null;}if(_vuAudio){try{_vuAudio.close();}catch(e){}_vuAudio=null;}_vuConnected=false;_vuLevel=0;_vuPeak=0;}
 
 loadStatus(); loadLog();
 setInterval(loadStatus, 3000);
