@@ -11,6 +11,8 @@ printf "🔧 Ajustando permisos en directorios MMDVM...\n"
 sudo chmod 777 -R /home/pi/MMDVMHost > /dev/null 2>&1
 sudo chmod 777 -R /home/pi/MMDVM_CM > /dev/null 2>&1
 sudo chmod 777 -R /home/pi/NXDNClients/NXDNGateway > /dev/null 2>&1
+sudo chmod 777 -R /home/pi/MMDVM_CM/DMR2NXDN > /dev/null 2>&1
+
 printf "✅ Permisos configurados correctamente.\n"
 
 # Descarga del archivo
@@ -38,7 +40,9 @@ fi
 printf "📤 Distribuyendo DMRIds.dat a MMDVMHost y puentes...\n"
 cp /home/pi/MMDVMHost/DMRIds.dat /home/pi/MMDVM_CM/DMR2YSF/DMRIds.dat && \
 cp /home/pi/MMDVMHost/DMRIds.dat /home/pi/MMDVM_CM/YSF2DMR/DMRIds.dat && \
-cp /home/pi/MMDVMHost/DMRIds.dat /home/pi/MMDVM_CM/DMR2NXDN/DMRIds.dat
+cp /home/pi/MMDVMHost/DMRIds.dat /home/pi/MMDVM_CM/DMR2NXDN/DMRIds.dat && \
+cp /home/pi/NXDNClients/NXDNGateway/NXDN.csv /home/pi/MMDVM_CM/DMR2NXDN/NXDN.csv
+
 
 if [ $? -eq 0 ]; then
     printf "✅ Archivo copiado en MMDVMHost, DMR2YSF, YSF2DMR, DMR2NXDN, NXDNGateway.\n"
