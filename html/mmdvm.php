@@ -965,16 +965,16 @@ button.btn-header { font-family: var(--font-mono); }
 <a href="editor_general_config.php" class="btn btn-primary btn-sm"> ✏️ Editor General </a>
 <a href="?action=backup-configs" class="btn btn-success btn-sm"> 💾 Hacer copia de seguridad </a>
 <button onclick="openRestore()" class="btn btn-info btn-sm"> 💿 Restaurar copia de seguridad </button>
-<div class="dropdown-wrap" id="dropActualizaciones">
-  <button class="btn btn-light btn-sm">⬇ Actualizaciones ▾</button>
-  <div class="dropdown-menu-custom">
-    <button class="dropdown-item-custom" onclick="runUpdate('imagen')">⬇ Actualizar Imagen</button>
-    <button class="dropdown-item-custom" onclick="runUpdate('ids')">📋 Actualizar IDs dmr</button>
-    <button class="dropdown-item-custom" onclick="runUpdate('nxdn')">📡 Actualizar Reflectores NXDN</button>
-    <button class="dropdown-item-custom" onclick="runUpdate('ysf')">📡 Actualizar Reflectores YSF</button>
-    <button class="dropdown-item-custom" onclick="window.location.href='dstar_json_converter.php'">📡 Actualizar Reflectores D-STAR</button>
-  </div>
-</div>
+        <div class="dropdown-wrap" id="dropActualizaciones">
+            <button class="btn-header green">⬇ Actualizaciones ▾</button>
+            <div class="dropdown-menu-custom">
+                <button class="dropdown-item-custom" onclick="runUpdate('imagen')">🖼 Actualizar Imagen</button>
+                <button class="dropdown-item-custom" onclick="runUpdate('ids')">📋 Actualizar IDS DMR</button>
+                <button class="dropdown-item-custom" onclick="runUpdate('nxdn')">📡 Actualizar Reflectores NXDN</button>
+                <button class="dropdown-item-custom" onclick="runUpdate('ysf')">📡 Actualizar Reflectores YSF</button>
+                <button class="dropdown-item-custom" onclick="window.location.href='dstar_json_converter.php'">📡 Actualizar Reflectores D-STAR</button>
+            </div>
+        </div>
 <button class="btn btn-secondary btn-sm" onclick="xtTtydOpen()">🖥️ Terminal</button>
 <a href="extra.php" class="btn btn-warning btn-sm">⚙️ Menu Extra</a>
 <a href="bridge.php" class="btn btn-primary btn-sm"> 🔗 BRIDGES </a>
