@@ -618,7 +618,7 @@ if ($action === 'nxdn-transmission') {
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Panel PHPDVS ADER</title>
+<title>Panel PHPLUS ADER</title>
 <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
 <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Rajdhani:wght@500;700&family=Orbitron:wght@700;900&display=swap" rel="stylesheet">
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&display=swap" rel="stylesheet">
@@ -723,17 +723,152 @@ button.btn-header { font-family: var(--font-mono); }
 .toggle-label.on-ysf { color: var(--violet); }
 .toggle-status { font-family: var(--font-mono); font-size: .72rem; letter-spacing: .1em; color: var(--text-dim); min-width: 3rem; text-align: right; transition: color .3s; }
 .toggle-status.on { color: var(--green); }
-.sw { position: relative; width: 56px; height: 28px; flex-shrink: 0; cursor: pointer; }
-.sw input { opacity: 0; width: 0; height: 0; position: absolute; }
-.sw-track { position: absolute; inset: 0; border-radius: 2px; background: #1a2535; border: 2px solid #f00; transition: background .3s, border-color .3s, box-shadow .3s; }
-.sw-knob { position: absolute; top: 3px; left: 3px; width: 20px; height: 20px; background: #f00; box-shadow: 0 1px 4px rgba(0,0,0,.5); transition: transform .3s cubic-bezier(.4,0,.2,1), background .3s, box-shadow .3s; }
-.sw.dmr input:checked ~ .sw-track, .sw.ysf input:checked ~ .sw-track, .sw.dstar input:checked ~ .sw-track { border-radius: 2px; background: #1a2535; border: 2px solid #00ff4c }
-.sw.dmr input:checked ~ .sw-knob, .sw.ysf input:checked ~ .sw-knob, .sw.dstar input:checked ~ .sw-knob { transform: translateX(28px); background:#00ff4c; box-shadow: 0 0 8px rgba(0,255,159,.6); }
-.sw#swNXDN input:checked ~ .sw-knob { transform: translateX(28px); background: #00ff4c; box-shadow: 0 0 8px rgba(255,215,0,.6); }
-.sw#swNXDN input:checked ~ .sw-track { border-color: #00ff4c; }
-.sw-busy-dot { display: none; position: absolute; top: 50%; right: -18px; transform: translateY(-50%); width: 8px; height: 8px; border-radius: 50%; border: 2px solid var(--amber); border-top-color: transparent; animation: spin .7s linear infinite; }
-.sw.busy .sw-busy-dot { display: block; }
-@keyframes spin { to { transform: translateY(-50%) rotate(360deg); } }
+
+
+
+
+
+
+/* ═══════════════════════════════════════════════════════
+   SWITCH UNIFICADO - DMR / YSF / D-STAR / NXDN
+   ══════════════════════════════════════════════════════ */
+
+/* ─ Contenedor base ── */
+.sw { 
+    position: relative; 
+    width: 56px; 
+    height: 28px; 
+    flex-shrink: 0; 
+    cursor: pointer; 
+}
+.sw input { 
+    opacity: 0; 
+    width: 0; 
+    height: 0; 
+    position: absolute; 
+}
+
+/* ── Track / fondo ── */
+.sw-track { 
+    position: absolute; 
+    inset: 0; 
+    border-radius: 5px; 
+    background: #1a2535; 
+    border: 2px solid #ff2244; 
+    transition: background .3s, border-color .3s, box-shadow .3s; 
+    box-shadow: 0 0 4px rgba(255,34,68,0.4);
+}
+
+/* ── Knob / botón ── */
+.sw-knob { 
+    position: absolute; 
+    top: 4px; 
+    left: 3.5px; 
+    width: 20px; 
+    height: 20px; 
+    background: #ff2244; 
+    border-radius: 2%; 
+    box-shadow: 0 0 4px rgba(255,34,68,0.6);
+    transition: transform .3s cubic-bezier(.4,0,.2,1), background .3s, box-shadow .3s; 
+}
+
+/* ── Estado ACTIVADO: track verde ─ */
+.sw.dmr input:checked ~ .sw-track  { 
+    border-radius: 5px; 
+    background: #0f2a15; 
+    border: 2px solid #00ff4c;
+    box-shadow: 0 0 6px rgba(0,255,76,0.5);
+}
+.sw.ysf input:checked ~ .sw-track   { 
+    border-radius: 5px; 
+    background: #0f2a15; 
+    border: 2px solid #00ff4c;
+    box-shadow: 0 0 6px rgba(0,255,76,0.5);
+}
+.sw.dstar input:checked ~ .sw-track  { 
+    border-radius: 5px; 
+    background: #0f2a15; 
+    border: 2px solid #00ff4c;
+    box-shadow: 0 0 6px rgba(0,255,76,0.5);
+}
+.sw.nxdn input:checked ~ .sw-track { 
+    border-radius: 5px; 
+    background: #0f2a15; 
+    border: 2px solid #00ff4c;
+    box-shadow: 0 0 6px rgba(0,255,76,0.5);
+}
+
+/* ── Estado ACTIVADO: knob verde ── */
+.sw.dmr input:checked ~ .sw-knob  { 
+    transform: translateX(28px); 
+    background: #00ff4c; 
+    box-shadow: 0 0 8px rgba(0,255,76,0.8); 
+}
+.sw.ysf input:checked ~ .sw-knob  { 
+    transform: translateX(28px); 
+    background: #00ff4c; 
+    box-shadow: 0 0 8px rgba(0,255,76,0.8); 
+}
+.sw.dstar input:checked ~ .sw-knob { 
+    transform: translateX(28px); 
+    background: #00ff4c; 
+    box-shadow: 0 0 8px rgba(0,255,76,0.8); 
+}
+.sw.nxdn input:checked ~ .sw-knob { 
+    transform: translateX(28px); 
+    background: #00ff4c; 
+    box-shadow: 0 0 8px rgba(0,255,76,0.8); 
+}
+
+
+/* ══════════════════════════════════════════════════════
+   EFECTO BUSY
+   ══════════════════════════════════════════════════════ */
+
+/* ── Glow neón en el borde cuando está en proceso ── */
+.sw.busy .sw-track { 
+    animation: neon-glow 1.2s ease-in-out infinite; 
+}
+@keyframes neon-glow { 
+    0%, 100% { 
+        box-shadow: 0 0 6px rgba(255,179,0,0.6),
+                    0 0 12px rgba(255,179,0,0.3),
+                    inset 0 0 4px rgba(255,179,0,0.2);
+    }
+    50% { 
+        box-shadow: 0 0 10px rgba(255,179,0,0.9),
+                    0 0 20px rgba(255,179,0,0.5),
+                    inset 0 0 6px rgba(255,179,0,0.4);
+    }
+}
+
+/* ── Punto indicador lateral (spin giratorio) ── */
+.sw-busy-dot { 
+    display: none; 
+    position: absolute; 
+    top: 50%; 
+    right: -18px; 
+    transform: translateY(-50%); 
+    width: 8px; 
+    height: 8px; 
+    border-radius: 50%; 
+    border: 2px solid var(--amber); 
+    border-top-color: transparent; 
+    animation: spin .7s linear infinite; 
+}
+.sw.busy .sw-busy-dot { 
+    display: block; 
+}
+@keyframes spin { 
+    to { transform: translateY(-50%) rotate(360deg); } 
+}
+
+
+
+
+
+
+
 .auto-badge { font-family: var(--font-mono); font-size: .72rem; color: var(--text-dim); display: flex; align-items: center; gap: .4rem; margin-top: .4rem; }
 .auto-badge .dot-sm { width: 6px; height: 6px; border-radius: 50%; background: var(--green); animation: pulse 2s infinite; }
 .auto-badge.ysf .dot-sm { background: var(--violet); }
@@ -965,16 +1100,17 @@ button.btn-header { font-family: var(--font-mono); }
 <a href="editor_general_config.php" class="btn btn-primary btn-sm"> ✏️ Editor General </a>
 <a href="?action=backup-configs" class="btn btn-success btn-sm"> 💾 Hacer copia de seguridad </a>
 <button onclick="openRestore()" class="btn btn-info btn-sm"> 💿 Restaurar copia de seguridad </button>
-        <div class="dropdown-wrap" id="dropActualizaciones">
-            <button class="btn-header green">⬇ Actualizaciones ▾</button>
-            <div class="dropdown-menu-custom">
-                <button class="dropdown-item-custom" onclick="runUpdate('imagen')">🖼 Actualizar Imagen</button>
-                <button class="dropdown-item-custom" onclick="runUpdate('ids')">📋 Actualizar IDS DMR</button>
-                <button class="dropdown-item-custom" onclick="runUpdate('nxdn')">📡 Actualizar Reflectores NXDN</button>
-                <button class="dropdown-item-custom" onclick="runUpdate('ysf')">📡 Actualizar Reflectores YSF</button>
-                <button class="dropdown-item-custom" onclick="window.location.href='dstar_json_converter.php'">📡 Actualizar Reflectores D-STAR</button>
-            </div>
-        </div> 
+<div class="dropdown-wrap" id="dropActualizaciones">
+  <button class="btn btn-light btn-sm">⬇ Actualizaciones ▾</button>
+  <div class="dropdown-menu-custom">
+    <button class="dropdown-item-custom" onclick="runUpdate('imagen')">⬇ Actualizar Imagen</button>
+    <button class="dropdown-item-custom" onclick="runUpdate('ids')">📋 Actualizar IDs DMR Y NXDN</button>
+    <button class="dropdown-item-custom" onclick="runUpdate('nxdn')">📡 Actualizar Reflectores NXDN</button> 
+    <button class="dropdown-item-custom" onclick="runUpdate('ysf')">📡 Actualizar Reflectores YSF</button>
+    <button class="dropdown-item-custom" onclick="window.location.href='dstar_json_converter.php'">📡 Actualizar Reflectores D-STAR</button>
+  </div>
+</div>
+        
 <button class="btn btn-secondary btn-sm" onclick="xtTtydOpen()">🖥️ Terminal</button>
 <a href="extra.php" class="btn btn-warning btn-sm">⚙️ Menu Extra</a>
 <a href="bridge.php" class="btn btn-primary btn-sm"> 🔗 BRIDGES </a>
