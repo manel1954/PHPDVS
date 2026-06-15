@@ -974,7 +974,7 @@ button.btn-header { font-family: var(--font-mono); }
                 <button class="dropdown-item-custom" onclick="runUpdate('ysf')">📡 Actualizar Reflectores YSF</button>
                 <button class="dropdown-item-custom" onclick="window.location.href='dstar_json_converter.php'">📡 Actualizar Reflectores D-STAR</button>
             </div>
-        </div>
+        </div> 
 <button class="btn btn-secondary btn-sm" onclick="xtTtydOpen()">🖥️ Terminal</button>
 <a href="extra.php" class="btn btn-warning btn-sm">⚙️ Menu Extra</a>
 <a href="bridge.php" class="btn btn-primary btn-sm"> 🔗 BRIDGES </a>
