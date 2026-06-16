@@ -1213,7 +1213,7 @@ button.btn-header { font-family: var(--font-mono); }
     <div class="service-card-label" style="color:#ffd700;">▸ NXDN · MMDVMHost + NXDNGateway</div>
     <div class="toggle-row">
       <span class="toggle-label" id="nxdnToggleLabel">NXDN</span>
-      <label class="sw" id="swNXDN">
+      <label class="swnxdn" id="swNXDN">
         <input type="checkbox" id="chkNXDN" onchange="toggleNXDN(this)">
         <span class="sw-track"></span><span class="sw-knob"></span><span class="sw-busy-dot"></span>
       </label>
