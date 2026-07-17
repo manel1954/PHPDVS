@@ -220,6 +220,23 @@ if (isset($_POST['accion']) && $_POST['accion'] === 'restaurar_fabrica') {
             </div>
         </div>
 
+        <!-- AIS / SHIP EXPLORER -->
+<div class="col-12 col-sm-6 col-lg-3">
+    <div class="card bg-secondary border-0 h-100">
+        <div class="card-body d-flex flex-column">
+            <h5 class="card-title">
+                <i class="bi bi-water me-2" style="color:#00d4ff;"></i>AIS / Ship Explorer
+            </h5>
+            <p class="card-text text-white-50 small flex-grow-1">
+                Monitorización AIS · Tráfico marítimo en tiempo real · barcos y rutas
+            </p>
+            <a href="/sxfeeder.php" class="btn btn-info btn-sm mt-2 text-dark fw-bold">
+                <i class="bi bi-box-arrow-up-right me-1"></i>Abrir
+            </a>
+        </div>
+    </div>
+</div>
+
         <!-- SVXLINK -->
         <div class="col-12 col-sm-6 col-lg-3">
             <div class="card bg-secondary border-0 h-100">

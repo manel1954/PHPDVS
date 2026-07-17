@@ -5,20 +5,20 @@ header('X-Content-Type-Options: nosniff');
 /* ========== FUNCIÓN PARA EXTRAER PUERTO WEB DINÁMICO ========== */
 function getWebPortFromConfig($configFile) {
     if (!file_exists($configFile) || filesize($configFile) === 0) {
-        return 8080;
+        return 8119;
     }
     
     $content = file_get_contents($configFile);
     
     if (empty(trim($content))) {
-        return 8080;
+        return 8119;
     }
     
     if (preg_match('/-N\s*(\d+)/', $content, $matches)) {
         return (int)$matches[1];
     }
     
-    return 8080;
+    return 8119;
 }
 
 $SERVICES = [
@@ -26,7 +26,7 @@ $SERVICES = [
         'name'    => 'AIS-catcher',
         'systemd' => 'ais-catcher.service',
         'config'  => '/etc/AIS-catcher/config.cmd',
-        'webport' => 8080
+        'webport' => 8119
     ],
     'sxfeeder' => [
         'name'    => 'SXFeeder',
@@ -811,14 +811,14 @@ async function toggle(){
 /* WEB AIS ONLY - Puerto Dinámico */
 function openWeb(){
     if(svc!=='ais') return alert('SXFeeder no tiene web');
-    const port = (webPort !== null && webPort > 0) ? webPort : 8080;
+    const port = (webPort !== null && webPort > 0) ? webPort : 8119;
     window.open('http://'+location.hostname+':'+port,'_blank');
 }
 
-/* WEB ADMIN - Puerto Fijo 8110 */
+/* WEB ADMIN - Puerto Fijo 8118 */
 function openAdmin(){
     if(svc!=='ais') return alert('SXFeeder no tiene panel Admin');
-    window.open('http://'+location.hostname+':8110','_blank');
+    window.open('http://'+location.hostname+':8118','_blank');
 }
 
 /* CONFIG TOGGLE */
